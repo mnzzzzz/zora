@@ -1,4 +1,4 @@
-   "use client";
+"use client";
 
 import { useState } from "react";
 import {
@@ -7,6 +7,7 @@ import {
   Flame,
   TrendingUp,
 } from "lucide-react";
+import DashboardButton from "@/components/dashboardbutton";
 
 type Goal = {
   title: string;
@@ -35,8 +36,16 @@ export default function GoalsPage() {
   };
 
   return (
-   <main className="min-h-screen p-10 text-white">
-      <h1 className="text-4xl font-bold">Goals</h1>
+    <main className="min-h-screen p-10 text-white">
+
+      {/* Dashboard Navigation */}
+      <div className="mb-6">
+        <DashboardButton />
+      </div>
+
+      <h1 className="text-4xl font-bold">
+        Goals
+      </h1>
 
       <p className="mt-2 text-gray-400">
         Set and track your personal goals.
@@ -68,8 +77,10 @@ export default function GoalsPage() {
           value={
             goals.length
               ? `${Math.round(
-                  goals.reduce((sum, goal) => sum + goal.progress, 0) /
-                    goals.length
+                  goals.reduce(
+                    (sum, goal) => sum + goal.progress,
+                    0
+                  ) / goals.length
                 )}%`
               : "0%"
           }

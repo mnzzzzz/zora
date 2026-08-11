@@ -8,9 +8,8 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
   PiggyBank,
-  Target,
-  TrendingUp,
 } from "lucide-react";
+import DashboardButton from "@/components/dashboardbutton";
 
 type Transaction = {
   id: number;
@@ -39,9 +38,7 @@ export default function FinancePage() {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
 
-  const [type, setType] = useState<"Income" | "Expense">(
-    "Expense"
-  );
+  const [type, setType] = useState<"Income" | "Expense">("Expense");
 
   // Budget Inputs
   const [budgetName, setBudgetName] = useState("");
@@ -75,10 +72,7 @@ export default function FinancePage() {
 
   const balance = income - expenses;
 
-  const savings = goals.reduce(
-    (a, b) => a + b.saved,
-    0
-  );
+  const savings = goals.reduce((a, b) => a + b.saved, 0);
 
   // Add Transaction
   function addTransaction() {
@@ -101,9 +95,7 @@ export default function FinancePage() {
   }
 
   function deleteTransaction(id: number) {
-    setTransactions(
-      transactions.filter((t) => t.id !== id)
-    );
+    setTransactions(transactions.filter((t) => t.id !== id));
   }
 
   // Add Budget
@@ -124,9 +116,7 @@ export default function FinancePage() {
   }
 
   function deleteBudget(id: number) {
-    setBudgets(
-      budgets.filter((b) => b.id !== id)
-    );
+    setBudgets(budgets.filter((b) => b.id !== id));
   }
 
   // Add Goal
@@ -152,11 +142,9 @@ export default function FinancePage() {
   }
 
   function addSavings(id: number) {
-    const value = Number(
-      prompt("Amount to save?")
-    );
+    const value = Number(prompt("Amount to save?"));
 
-    if (isNaN(value)) return;
+    if (isNaN(value) || value <= 0) return;
 
     setGoals(
       goals.map((g) =>
@@ -171,371 +159,324 @@ export default function FinancePage() {
   }
 
   return (
-  <main className="min-h-screen p-10 text-white">
-    {/* Header */}
-    <div className="mb-10">
-      <h1 className="text-4xl font-bold">Finance</h1>
-      <p className="mt-2 text-gray-400">
-        Track your finances, budgets and savings goals.
-      </p>
-    </div>
+    <main className="min-h-screen p-10 text-white">
+      {/* Dashboard Navigation */}
+      <div className="mb-6">
+        <DashboardButton />
+      </div>
 
-    {/* Top Stats */}
-    <div className="grid gap-6 lg:grid-cols-4">
-      <StatCard
-        title="Balance"
-        value={`₹${balance.toLocaleString()}`}
-        icon={<Wallet size={22} />}
-      />
+      {/* Header */}
+      <div className="mb-10">
+        <h1 className="text-4xl font-bold">Finance</h1>
 
-      <StatCard
-        title="Income"
-        value={`₹${income.toLocaleString()}`}
-        icon={<ArrowUpCircle size={22} />}
-      />
+        <p className="mt-2 text-gray-400">
+          Track your finances, budgets and savings goals.
+        </p>
+      </div>
 
-      <StatCard
-        title="Expenses"
-        value={`₹${expenses.toLocaleString()}`}
-        icon={<ArrowDownCircle size={22} />}
-      />
+      {/* Top Stats */}
+      <div className="grid gap-6 lg:grid-cols-4">
+        <StatCard
+          title="Balance"
+          value={`₹${balance.toLocaleString()}`}
+          icon={<Wallet size={22} />}
+        />
 
-      <StatCard
-        title="Savings"
-        value={`₹${savings.toLocaleString()}`}
-        icon={<PiggyBank size={22} />}
-      />
-    </div>
+        <StatCard
+          title="Income"
+          value={`₹${income.toLocaleString()}`}
+          icon={<ArrowUpCircle size={22} />}
+        />
 
-    {/* Main Grid */}
-    <div className="mt-8 grid gap-8 xl:grid-cols-3">
+        <StatCard
+          title="Expenses"
+          value={`₹${expenses.toLocaleString()}`}
+          icon={<ArrowDownCircle size={22} />}
+        />
 
-      {/* Left Side */}
-      <div className="space-y-8 xl:col-span-2">
+        <StatCard
+          title="Savings"
+          value={`₹${savings.toLocaleString()}`}
+          icon={<PiggyBank size={22} />}
+        />
+      </div>
 
-        {/* Add Transaction */}
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-          <div className="mb-5 flex items-center justify-between">
-            <h2 className="text-2xl font-semibold">
-              Transactions
-            </h2>
+      {/* Main Grid */}
+      <div className="mt-8 grid gap-8 xl:grid-cols-3">
+        {/* Left Side */}
+        <div className="space-y-8 xl:col-span-2">
+          {/* Add Transaction */}
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="text-2xl font-semibold">
+                Transactions
+              </h2>
+
+              <button
+                onClick={addTransaction}
+                className="rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-4 py-2 font-medium transition hover:scale-105"
+              >
+                <Plus size={18} />
+              </button>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Transaction title"
+                className="rounded-xl border border-white/10 bg-white/5 p-3 outline-none"
+              />
+
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="Amount"
+                className="rounded-xl border border-white/10 bg-white/5 p-3 outline-none"
+              />
+
+              <input
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                placeholder="Category"
+                className="rounded-xl border border-white/10 bg-white/5 p-3 outline-none"
+              />
+
+              <select
+                value={type}
+                onChange={(e) =>
+                  setType(e.target.value as "Income" | "Expense")
+                }
+                className="rounded-xl border border-white/10 bg-white/5 p-3 outline-none"
+              >
+                <option>Expense</option>
+                <option>Income</option>
+              </select>
+            </div>
 
             <button
               onClick={addTransaction}
-              className="rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-4 py-2 font-medium transition hover:scale-105"
+              className="mt-5 w-full rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 py-3 font-semibold transition hover:scale-[1.02]"
             >
-              <Plus size={18} />
+              Add Transaction
             </button>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          {/* Transaction List */}
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
+            <h2 className="mb-5 text-2xl font-semibold">
+              Recent Transactions
+            </h2>
 
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Transaction title"
-              className="rounded-xl border border-white/10 bg-white/5 p-3 outline-none"
-            />
-
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="Amount"
-              className="rounded-xl border border-white/10 bg-white/5 p-3 outline-none"
-            />
-
-            <input
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder="Category"
-              className="rounded-xl border border-white/10 bg-white/5 p-3 outline-none"
-            />
-
-            <select
-              value={type}
-              onChange={(e) =>
-                setType(e.target.value as "Income" | "Expense")
-              }
-              className="rounded-xl border border-white/10 bg-white/5 p-3 outline-none"
-            >
-              <option>Expense</option>
-              <option>Income</option>
-            </select>
-
-          </div>
-
-          <button
-            onClick={addTransaction}
-            className="mt-5 w-full rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 py-3 font-semibold transition hover:scale-[1.02]"
-          >
-            Add Transaction
-          </button>
-        </div>
-
-        {/* Transaction List */}
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-
-          <h2 className="mb-5 text-2xl font-semibold">
-            Recent Transactions
-          </h2>
-
-          {transactions.length === 0 ? (
-
-            <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-gray-400">
-              No transactions yet.
-            </div>
-
-          ) : (
-
-            <div className="space-y-4">
-
-              {transactions.map((transaction) => (
-
-                <div
-                  key={transaction.id}
-                  className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4"
-                >
-                  <div>
-
-                    <h3 className="font-semibold">
-                      {transaction.title}
-                    </h3>
-
-                    <p className="mt-1 text-sm text-gray-400">
-                      {transaction.category}
-                    </p>
-
-                  </div>
-
-                  <div className="flex items-center gap-4">
-
-                    <span
-                      className={`font-semibold ${
-                        transaction.type === "Income"
-                          ? "text-green-400"
-                          : "text-red-400"
-                      }`}
-                    >
-                      {transaction.type === "Income"
-                        ? "+"
-                        : "-"}
-                      ₹{transaction.amount.toLocaleString()}
-                    </span>
-
-                    <button
-                      onClick={() =>
-                        deleteTransaction(transaction.id)
-                      }
-                      className="text-red-400 hover:text-red-300"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-
-                  </div>
-
-                </div>
-
-              ))}
-
-            </div>
-
-          )}
-
-        </div>
-
-      </div>      {/* Right Side */}
-      <div className="space-y-8">
-
-        {/* Budgets */}
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-
-          <h2 className="mb-5 text-2xl font-semibold">
-            Budgets
-          </h2>
-
-          <div className="space-y-3">
-
-            <input
-              value={budgetName}
-              onChange={(e) => setBudgetName(e.target.value)}
-              placeholder="Budget category"
-              className="w-full rounded-xl border border-white/10 bg-white/5 p-3 outline-none"
-            />
-
-            <input
-              type="number"
-              value={budgetLimit}
-              onChange={(e) => setBudgetLimit(e.target.value)}
-              placeholder="Budget limit"
-              className="w-full rounded-xl border border-white/10 bg-white/5 p-3 outline-none"
-            />
-
-            <button
-              onClick={addBudget}
-              className="w-full rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 py-3 font-semibold transition hover:scale-[1.02]"
-            >
-              Add Budget
-            </button>
-
-          </div>
-
-          <div className="mt-6 space-y-3">
-
-            {budgets.length === 0 ? (
-
-              <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-gray-400">
-                No budgets created.
+            {transactions.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-gray-400">
+                No transactions yet.
               </div>
-
             ) : (
-
-              budgets.map((budget) => (
-
-                <div
-                  key={budget.id}
-                  className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4"
-                >
-                  <div>
-                    <h3 className="font-semibold">
-                      {budget.name}
-                    </h3>
-
-                    <p className="text-sm text-gray-400">
-                      ₹{budget.limit.toLocaleString()}
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => deleteBudget(budget.id)}
-                    className="text-red-400 hover:text-red-300"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-
-              ))
-
-            )}
-
-          </div>
-
-        </div>
-
-        {/* Savings Goals */}
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-
-          <h2 className="mb-5 text-2xl font-semibold">
-            Savings Goals
-          </h2>
-
-          <div className="space-y-3">
-
-            <input
-              value={goalTitle}
-              onChange={(e) => setGoalTitle(e.target.value)}
-              placeholder="Goal name"
-              className="w-full rounded-xl border border-white/10 bg-white/5 p-3 outline-none"
-            />
-
-            <input
-              type="number"
-              value={goalTarget}
-              onChange={(e) => setGoalTarget(e.target.value)}
-              placeholder="Target amount"
-              className="w-full rounded-xl border border-white/10 bg-white/5 p-3 outline-none"
-            />
-
-            <button
-              onClick={addGoal}
-              className="w-full rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 py-3 font-semibold transition hover:scale-[1.02]"
-            >
-              Add Goal
-            </button>
-
-          </div>
-
-          <div className="mt-6 space-y-4">
-
-            {goals.length === 0 ? (
-
-              <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-gray-400">
-                No savings goals.
-              </div>
-
-            ) : (
-
-              goals.map((goal) => {
-
-                const progress =
-                  goal.target === 0
-                    ? 0
-                    : (goal.saved / goal.target) * 100;
-
-                return (
-
+              <div className="space-y-4">
+                {transactions.map((transaction) => (
                   <div
-                    key={goal.id}
-                    className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                    key={transaction.id}
+                    className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4"
                   >
-                    <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold">
+                        {transaction.title}
+                      </h3>
 
-                      <div>
-                        <h3 className="font-semibold">
-                          {goal.title}
-                        </h3>
+                      <p className="mt-1 text-sm text-gray-400">
+                        {transaction.category}
+                      </p>
+                    </div>
 
-                        <p className="mt-1 text-sm text-gray-400">
-                          ₹{goal.saved.toLocaleString()} / ₹{goal.target.toLocaleString()}
-                        </p>
-                      </div>
+                    <div className="flex items-center gap-4">
+                      <span
+                        className={`font-semibold ${
+                          transaction.type === "Income"
+                            ? "text-green-400"
+                            : "text-red-400"
+                        }`}
+                      >
+                        {transaction.type === "Income" ? "+" : "-"}₹
+                        {transaction.amount.toLocaleString()}
+                      </span>
 
                       <button
-                        onClick={() => deleteGoal(goal.id)}
+                        onClick={() =>
+                          deleteTransaction(transaction.id)
+                        }
                         className="text-red-400 hover:text-red-300"
                       >
                         <Trash2 size={18} />
                       </button>
-
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
 
-                    <div className="mt-4 h-3 overflow-hidden rounded-full bg-white/10">
+        {/* Right Side */}
+        <div className="space-y-8">
+          {/* Budgets */}
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
+            <h2 className="mb-5 text-2xl font-semibold">
+              Budgets
+            </h2>
 
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all"
-                        style={{
-                          width: `${Math.min(progress, 100)}%`,
-                        }}
-                      />
+            <div className="space-y-3">
+              <input
+                value={budgetName}
+                onChange={(e) => setBudgetName(e.target.value)}
+                placeholder="Budget category"
+                className="w-full rounded-xl border border-white/10 bg-white/5 p-3 outline-none"
+              />
 
+              <input
+                type="number"
+                value={budgetLimit}
+                onChange={(e) => setBudgetLimit(e.target.value)}
+                placeholder="Budget limit"
+                className="w-full rounded-xl border border-white/10 bg-white/5 p-3 outline-none"
+              />
+
+              <button
+                onClick={addBudget}
+                className="w-full rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 py-3 font-semibold transition hover:scale-[1.02]"
+              >
+                Add Budget
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              {budgets.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-gray-400">
+                  No budgets created.
+                </div>
+              ) : (
+                budgets.map((budget) => (
+                  <div
+                    key={budget.id}
+                    className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4"
+                  >
+                    <div>
+                      <h3 className="font-semibold">
+                        {budget.name}
+                      </h3>
+
+                      <p className="text-sm text-gray-400">
+                        ₹{budget.limit.toLocaleString()}
+                      </p>
                     </div>
 
                     <button
-                      onClick={() => addSavings(goal.id)}
-                      className="mt-4 w-full rounded-xl bg-blue-500/20 py-2 transition hover:bg-blue-500/30"
+                      onClick={() => deleteBudget(budget.id)}
+                      className="text-red-400 hover:text-red-300"
                     >
-                      Add Savings
+                      <Trash2 size={18} />
                     </button>
-
                   </div>
-
-                );
-
-              })
-
-            )}
-
+                ))
+              )}
+            </div>
           </div>
 
+          {/* Savings Goals */}
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
+            <h2 className="mb-5 text-2xl font-semibold">
+              Savings Goals
+            </h2>
+
+            <div className="space-y-3">
+              <input
+                value={goalTitle}
+                onChange={(e) => setGoalTitle(e.target.value)}
+                placeholder="Goal name"
+                className="w-full rounded-xl border border-white/10 bg-white/5 p-3 outline-none"
+              />
+
+              <input
+                type="number"
+                value={goalTarget}
+                onChange={(e) => setGoalTarget(e.target.value)}
+                placeholder="Target amount"
+                className="w-full rounded-xl border border-white/10 bg-white/5 p-3 outline-none"
+              />
+
+              <button
+                onClick={addGoal}
+                className="w-full rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 py-3 font-semibold transition hover:scale-[1.02]"
+              >
+                Add Goal
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {goals.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-gray-400">
+                  No savings goals.
+                </div>
+              ) : (
+                goals.map((goal) => {
+                  const progress =
+                    goal.target === 0
+                      ? 0
+                      : (goal.saved / goal.target) * 100;
+
+                  return (
+                    <div
+                      key={goal.id}
+                      className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-semibold">
+                            {goal.title}
+                          </h3>
+
+                          <p className="mt-1 text-sm text-gray-400">
+                            ₹{goal.saved.toLocaleString()} / ₹
+                            {goal.target.toLocaleString()}
+                          </p>
+                        </div>
+
+                        <button
+                          onClick={() => deleteGoal(goal.id)}
+                          className="text-red-400 hover:text-red-300"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+
+                      <div className="mt-4 h-3 overflow-hidden rounded-full bg-white/10">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all"
+                          style={{
+                            width: `${Math.min(progress, 100)}%`,
+                          }}
+                        />
+                      </div>
+
+                      <button
+                        onClick={() => addSavings(goal.id)}
+                        className="mt-4 w-full rounded-xl bg-blue-500/20 py-2 transition hover:bg-blue-500/30"
+                      >
+                        Add Savings
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
         </div>
-
       </div>
-
-    </div>
-
-  </main>
-);
+    </main>
+  );
 }
+
 function StatCard({
   title,
   value,
@@ -547,8 +488,6 @@ function StatCard({
 }) {
   return (
     <div className="group relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 hover:border-cyan-400/40 hover:bg-white/10">
-
-      {/* Glow */}
       <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-cyan-500/10 blur-3xl transition-all duration-500 group-hover:bg-cyan-400/20" />
 
       <div className="relative flex items-start justify-between">

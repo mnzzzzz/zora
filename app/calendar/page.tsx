@@ -1,25 +1,37 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import DashboardButton from "@/components/dashboardbutton";
 
 interface Event {
   title: string;
-  date: string; // "YYYY-MM-DD"
+  date: string;
 }
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
 const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 function toKey(year: number, month: number, day: number) {
   const m = String(month + 1).padStart(2, "0");
   const d = String(day).padStart(2, "0");
+
   return `${year}-${m}-${d}`;
 }
 
-// Monday-first day index (0 = Mon ... 6 = Sun)
 function mondayIndex(jsDay: number) {
   return (jsDay + 6) % 7;
 }
@@ -29,10 +41,15 @@ function buildMonthGrid(year: number, month: number) {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const leadingBlanks = mondayIndex(firstOfMonth.getDay());
 
-  const cells: { day: number; year: number; month: number; inCurrentMonth: boolean }[] = [];
+  const cells: {
+    day: number;
+    year: number;
+    month: number;
+    inCurrentMonth: boolean;
+  }[] = [];
 
-  // Leading days from previous month
   const prevMonthDays = new Date(year, month, 0).getDate();
+
   for (let i = leadingBlanks - 1; i >= 0; i--) {
     cells.push({
       day: prevMonthDays - i,
@@ -42,15 +59,20 @@ function buildMonthGrid(year: number, month: number) {
     });
   }
 
-  // Current month days
   for (let day = 1; day <= daysInMonth; day++) {
-    cells.push({ day, year, month, inCurrentMonth: true });
+    cells.push({
+      day,
+      year,
+      month,
+      inCurrentMonth: true,
+    });
   }
 
-  // Trailing days to fill full weeks (multiple of 7)
   const nextMonth = month === 11 ? 0 : month + 1;
   const nextYear = month === 11 ? year + 1 : year;
+
   let trailingDay = 1;
+
   while (cells.length % 7 !== 0) {
     cells.push({
       day: trailingDay,
@@ -58,6 +80,7 @@ function buildMonthGrid(year: number, month: number) {
       month: nextMonth,
       inCurrentMonth: false,
     });
+
     trailingDay++;
   }
 
@@ -66,7 +89,12 @@ function buildMonthGrid(year: number, month: number) {
 
 export default function CalendarPage() {
   const today = useMemo(() => new Date(), []);
-  const todayKey = toKey(today.getFullYear(), today.getMonth(), today.getDate());
+
+  const todayKey = toKey(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
 
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
@@ -75,14 +103,22 @@ export default function CalendarPage() {
   const [title, setTitle] = useState("");
   const [events, setEvents] = useState<Event[]>([]);
 
-  const grid = useMemo(() => buildMonthGrid(viewYear, viewMonth), [viewYear, viewMonth]);
+  const grid = useMemo(
+    () => buildMonthGrid(viewYear, viewMonth),
+    [viewYear, viewMonth]
+  );
 
   const eventsByDate = useMemo(() => {
     const map: Record<string, Event[]> = {};
+
     for (const event of events) {
-      if (!map[event.date]) map[event.date] = [];
+      if (!map[event.date]) {
+        map[event.date] = [];
+      }
+
       map[event.date].push(event);
     }
+
     return map;
   }, [events]);
 
@@ -112,7 +148,15 @@ export default function CalendarPage() {
 
   const addEvent = () => {
     if (!title.trim() || !selectedDate) return;
-    setEvents((prev) => [...prev, { title: title.trim(), date: selectedDate }]);
+
+    setEvents((prev) => [
+      ...prev,
+      {
+        title: title.trim(),
+        date: selectedDate,
+      },
+    ]);
+
     setTitle("");
   };
 
@@ -122,6 +166,7 @@ export default function CalendarPage() {
 
   const selectedDateLabel = useMemo(() => {
     const [y, m, d] = selectedDate.split("-").map(Number);
+
     return new Date(y, m - 1, d).toLocaleDateString("en-US", {
       weekday: "long",
       month: "long",
@@ -131,23 +176,35 @@ export default function CalendarPage() {
   }, [selectedDate]);
 
   const selectedDateEvents = eventsByDate[selectedDate] ?? [];
+
   const monthEventCount = events.filter((e) =>
-    e.date.startsWith(`${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`)
+    e.date.startsWith(
+      `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`
+    )
   ).length;
 
-  // Mini calendar always reflects the currently viewed month
   const miniGrid = grid;
 
   return (
     <main className="min-h-screen bg-[#0b0f1a] p-6 text-white sm:p-10">
       <div className="mb-8">
-        <h1 className="mb-2 text-4xl font-bold">Calendar</h1>
-        <p className="text-gray-400">Schedule and manage your events.</p>
+        {/* Dashboard Navigation */}
+        <DashboardButton />
+
+        <h1 className="mb-2 text-4xl font-bold">
+          Calendar
+        </h1>
+
+        <p className="text-gray-400">
+          Schedule and manage your events.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_320px]">
+
         {/* Main calendar */}
         <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
             <h2 className="text-2xl font-semibold">
               {MONTH_NAMES[viewMonth]} {viewYear}
@@ -160,6 +217,7 @@ export default function CalendarPage() {
               >
                 Today
               </button>
+
               <button
                 onClick={goToPrevMonth}
                 aria-label="Previous month"
@@ -167,6 +225,7 @@ export default function CalendarPage() {
               >
                 ‹
               </button>
+
               <button
                 onClick={goToNextMonth}
                 aria-label="Next month"
@@ -187,7 +246,12 @@ export default function CalendarPage() {
 
           <div className="grid grid-cols-7 gap-2">
             {grid.map((cell, i) => {
-              const key = toKey(cell.year, cell.month, cell.day);
+              const key = toKey(
+                cell.year,
+                cell.month,
+                cell.day
+              );
+
               const isToday = key === todayKey;
               const isSelected = key === selectedDate;
               const dayEvents = eventsByDate[key] ?? [];
@@ -198,7 +262,9 @@ export default function CalendarPage() {
                   onClick={() => setSelectedDate(key)}
                   className={[
                     "flex min-h-[84px] flex-col items-start rounded-2xl border p-2 text-left transition",
-                    cell.inCurrentMonth ? "bg-white/[0.03]" : "bg-white/[0.01] opacity-40",
+                    cell.inCurrentMonth
+                      ? "bg-white/[0.03]"
+                      : "bg-white/[0.01] opacity-40",
                     isSelected
                       ? "border-blue-400 bg-blue-500/10"
                       : "border-white/10 hover:border-white/20 hover:bg-white/[0.06]",
@@ -224,8 +290,11 @@ export default function CalendarPage() {
                         {event.title}
                       </span>
                     ))}
+
                     {dayEvents.length > 2 && (
-                      <span className="text-[11px] text-gray-500">+{dayEvents.length - 2} more</span>
+                      <span className="text-[11px] text-gray-500">
+                        +{dayEvents.length - 2} more
+                      </span>
                     )}
                   </div>
                 </button>
@@ -236,6 +305,7 @@ export default function CalendarPage() {
 
         {/* Sidebar */}
         <div className="flex flex-col gap-6">
+
           {/* Mini calendar */}
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
             <div className="mb-3 flex items-center justify-between">
@@ -243,6 +313,7 @@ export default function CalendarPage() {
                 {MONTH_NAMES[viewMonth]} {viewYear}
               </span>
             </div>
+
             <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-gray-500">
               {WEEKDAYS.map((day) => (
                 <div key={day} className="py-1">
@@ -250,20 +321,33 @@ export default function CalendarPage() {
                 </div>
               ))}
             </div>
+
             <div className="grid grid-cols-7 gap-1">
               {miniGrid.map((cell, i) => {
-                const key = toKey(cell.year, cell.month, cell.day);
+                const key = toKey(
+                  cell.year,
+                  cell.month,
+                  cell.day
+                );
+
                 const isToday = key === todayKey;
                 const isSelected = key === selectedDate;
+
                 return (
                   <button
                     key={i}
                     onClick={() => setSelectedDate(key)}
                     className={[
-                      "flex h-7 w-7 items-center justify-center rounded-full text-xs mx-auto",
-                      !cell.inCurrentMonth ? "text-gray-600" : "text-gray-200",
-                      isToday ? "bg-gradient-to-r from-blue-500 to-purple-500 font-semibold text-white" : "",
-                      isSelected && !isToday ? "border border-blue-400" : "",
+                      "mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs",
+                      !cell.inCurrentMonth
+                        ? "text-gray-600"
+                        : "text-gray-200",
+                      isToday
+                        ? "bg-gradient-to-r from-blue-500 to-purple-500 font-semibold text-white"
+                        : "",
+                      isSelected && !isToday
+                        ? "border border-blue-400"
+                        : "",
                     ].join(" ")}
                   >
                     {cell.day}
@@ -275,24 +359,37 @@ export default function CalendarPage() {
 
           {/* Stats */}
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-            <p className="text-sm text-gray-400">Events this month</p>
-            <p className="mt-1 text-3xl font-bold">{monthEventCount}</p>
+            <p className="text-sm text-gray-400">
+              Events this month
+            </p>
+
+            <p className="mt-1 text-3xl font-bold">
+              {monthEventCount}
+            </p>
           </div>
 
           {/* Selected day + add event */}
           <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-            <p className="mb-1 text-sm text-gray-400">Selected date</p>
-            <p className="mb-4 text-sm font-semibold">{selectedDateLabel}</p>
+            <p className="mb-1 text-sm text-gray-400">
+              Selected date
+            </p>
+
+            <p className="mb-4 text-sm font-semibold">
+              {selectedDateLabel}
+            </p>
 
             <div className="mb-4 flex flex-col gap-3">
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addEvent()}
+                onKeyDown={(e) =>
+                  e.key === "Enter" && addEvent()
+                }
                 placeholder="Event title"
                 className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm outline-none focus:border-blue-400"
               />
+
               <button
                 onClick={addEvent}
                 className="rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 px-4 py-2.5 text-sm font-semibold"
@@ -303,16 +400,23 @@ export default function CalendarPage() {
 
             <div className="flex flex-col gap-2">
               {selectedDateEvents.length === 0 && (
-                <p className="text-sm text-gray-500">No events on this date.</p>
+                <p className="text-sm text-gray-500">
+                  No events on this date.
+                </p>
               )}
+
               {selectedDateEvents.map((event, index) => {
                 const globalIndex = events.indexOf(event);
+
                 return (
                   <div
                     key={index}
                     className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2"
                   >
-                    <span className="text-sm">{event.title}</span>
+                    <span className="text-sm">
+                      {event.title}
+                    </span>
+
                     <button
                       onClick={() => removeEvent(globalIndex)}
                       aria-label={`Remove ${event.title}`}

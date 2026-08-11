@@ -3,60 +3,45 @@
 import { Search, Bell } from "lucide-react";
 
 export default function Header() {
-  const hour = new Date().getHours();
-
-  let greeting = "Good Evening";
-
-  if (hour >= 5 && hour < 12) {
-    greeting = "Good Morning";
-  } else if (hour >= 12 && hour < 17) {
-    greeting = "Good Afternoon";
-  } else if (hour >= 17 && hour < 22) {
-    greeting = "Good Evening";
-  } else {
-    greeting = "Working late?";
-  }
-
   return (
-    <header className="flex items-center justify-between rounded-[32px] border border-white/10 bg-gradient-to-br from-white/[0.08] via-white/[0.05] to-white/[0.02] p-8 backdrop-blur-[35px] shadow-[0_10px_60px_rgba(0,0,0,.4)]">
+    <header className="mx-0 mb-4 rounded-[28px] border border-white/10 bg-[#101B2B]/90 px-6 py-4 shadow-lg backdrop-blur-xl">
+      <div className="flex items-center justify-between gap-6">
 
-      {/* Left */}
-      <div>
-        <h1 className="text-4xl font-bold text-white">
-          {greeting}, Early Bird 👋
-        </h1>
+        {/* LEFT — Greeting */}
+        <div className="min-w-0">
+          <h1 className="text-3xl font-bold leading-tight tracking-tight text-white">
+            Good Afternoon, Early Bird 👋
+          </h1>
 
-        <p className="mt-2 text-gray-400">
-          Ready to make today productive?
-        </p>
-      </div>
-
-      {/* Right */}
-      <div className="flex items-center gap-4">
-
-        {/* Search */}
-        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-5 py-3">
-
-          <Search
-            size={18}
-            className="text-gray-400"
-          />
-
-          <input
-            type="text"
-            placeholder="Search anything..."
-            className="w-64 bg-transparent text-white placeholder:text-gray-500 outline-none"
-          />
-
+          <p className="mt-1 text-sm text-slate-400">
+            Ready to make today productive?
+          </p>
         </div>
 
-        {/* Notifications */}
-        <button className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-gray-300 transition hover:border-blue-400/30 hover:bg-blue-500/10 hover:text-blue-400">
-          <Bell size={20} />
-        </button>
+        {/* RIGHT — Search + Notification */}
+        <div className="flex shrink-0 items-center gap-3">
 
+          {/* Search */}
+          <div className="flex h-12 w-[300px] items-center rounded-2xl border border-white/10 bg-[#182435] px-4">
+            <Search className="mr-3 h-5 w-5 shrink-0 text-slate-400" />
+
+            <input
+              type="text"
+              placeholder="Search anything..."
+              className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
+            />
+          </div>
+
+          {/* Notification */}
+          <button
+            type="button"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-[#182435] transition hover:bg-white/10"
+          >
+            <Bell className="h-5 w-5 text-slate-300" />
+          </button>
+
+        </div>
       </div>
-
     </header>
   );
 }
