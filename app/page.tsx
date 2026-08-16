@@ -2,7 +2,6 @@
 
 import ZoraCalls from "@/components/zonacalls";
 import Header from "@/components/header";
-import Sidebar from "@/components/sidebar";
 
 import AIassistant from "@/components/aiassistant";
 import TaskCard from "@/components/taskcard";
@@ -16,7 +15,7 @@ import ScrollReveal from "@/components/scrollreveal";
 export default function DashboardPage() {
   return (
     <div className="flex min-h-screen bg-[#07111F] text-white">
-      <Sidebar />
+      
 
       <main className="flex-1 overflow-y-auto">
         <Header />
