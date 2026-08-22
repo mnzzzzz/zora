@@ -1,7 +1,6 @@
-import type { Metadata } from "next";
-import ZoraCursor from "@/components/ZoraCursor";
+import type { Metadata } from "next"
 import ZoraBackground from "@/components/ZoraBackground";
-import FloatingSidebar from "@/components/floatingsidebar";
+import AppShell from "@/components/AppShell";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,19 +16,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-[#070B14] text-white antialiased">
-        {/* Background */}
         <ZoraBackground />
 
-        {/* Fixed Zora navigation */}
-        <FloatingSidebar />
-
-        {/* EVERYTHING starts after the sidebar */}
-        <main className="relative z-10 min-h-screen pl-[90px]">
+        <AppShell>
           {children}
-        </main>
+        </AppShell>
 
-        {/* Cursor glow */}
-        <ZoraCursor />
       </body>
     </html>
   );
