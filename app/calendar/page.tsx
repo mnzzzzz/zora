@@ -1,808 +1,676 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  Plus,
-  Trash2,
-  CheckCircle2,
   Clock3,
+  Plus,
+  Sparkles,
   X,
-  ArrowLeft,
+  Command,
+  Zap,
+  Check,
 } from "lucide-react";
+import FloatingSidebar from "@/components/floatingsidebar";
 
 type CalendarEvent = {
-  id: number;
+  id: string;
   title: string;
   date: string;
   time: string;
-  description: string;
-  completed: boolean;
+  description?: string;
 };
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [showCreate, setShowCreate] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [title, setTitle] = useState("");
+  const [time, setTime] = useState("");
+  const [description, setDescription] = useState("");
 
-  const [showModal, setShowModal] = useState(false);
+  const [now, setNow] = useState(new Date());
 
-  const [eventTitle, setEventTitle] = useState("");
-  const [eventTime, setEventTime] = useState("");
-  const [eventDescription, setEventDescription] = useState("");
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(new Date());
+    }, 1000);
 
-  /* =====================================================
-     DATE HELPERS
-  ===================================================== */
+    return () => clearInterval(interval);
+  }, []);
 
-  const formatDateKey = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
+  useEffect(() => {
+    try {
+      const saved =
+        localStorage.getItem("zora-calendar-events") ||
+        localStorage.getItem("calendar-events");
 
-    return `${year}-${month}-${day}`;
-  };
+      if (saved) {
+        setEvents(JSON.parse(saved));
+      }
+    } catch {
+      setEvents([]);
+    }
+  }, []);
 
-  const selectedDateKey = formatDateKey(selectedDate);
+  useEffect(() => {
+    localStorage.setItem(
+      "zora-calendar-events",
+      JSON.stringify(events)
+    );
+
+    localStorage.setItem(
+      "calendar-events",
+      JSON.stringify(events)
+    );
+  }, [events]);
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
 
   const monthName = currentDate.toLocaleDateString("en-US", {
     month: "long",
-    year: "numeric",
   });
 
-  /* =====================================================
-     CALENDAR DAYS
-  ===================================================== */
+  const daysInMonth = new Date(
+    year,
+    month + 1,
+    0
+  ).getDate();
+
+  const firstDay = new Date(
+    year,
+    month,
+    1
+  ).getDay();
 
   const calendarDays = useMemo(() => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
+    const days: (number | null)[] = [];
 
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-
-    const startingDay = firstDay.getDay();
-    const totalDays = lastDay.getDate();
-
-    const days: (Date | null)[] = [];
-
-    for (let i = 0; i < startingDay; i++) {
+    for (let i = 0; i < firstDay; i++) {
       days.push(null);
     }
 
-    for (let day = 1; day <= totalDays; day++) {
-      days.push(new Date(year, month, day));
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(day);
     }
 
     return days;
-  }, [currentDate]);
+  }, [firstDay, daysInMonth]);
 
-  /* =====================================================
-     EVENTS FOR SELECTED DAY
-  ===================================================== */
+  const previousMonth = () => {
+    setCurrentDate(new Date(year, month - 1, 1));
+  };
+
+  const nextMonth = () => {
+    setCurrentDate(new Date(year, month + 1, 1));
+  };
+
+  const goToday = () => {
+    const today = new Date();
+    setCurrentDate(today);
+    setSelectedDate(today);
+  };
+
+  const getDateKey = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+
+    return `${y}-${m}-${d}`;
+  };
+
+  const selectedDateKey = getDateKey(selectedDate);
+  const todayKey = getDateKey(new Date());
 
   const selectedEvents = events
     .filter((event) => event.date === selectedDateKey)
     .sort((a, b) => a.time.localeCompare(b.time));
 
-  /* =====================================================
-     UPCOMING EVENTS
-  ===================================================== */
-
-  const upcomingEvents = [...events]
-    .filter((event) => !event.completed)
-    .sort((a, b) => {
-      return `${a.date}${a.time}`.localeCompare(
-        `${b.date}${b.time}`
-      );
-    })
-    .slice(0, 5);
-
-  /* =====================================================
-     MONTH NAVIGATION
-  ===================================================== */
-
-  const changeMonth = (amount: number) => {
-    setCurrentDate(
-      new Date(
-        currentDate.getFullYear(),
-        currentDate.getMonth() + amount,
-        1
-      )
-    );
-  };
-
-  const goToday = () => {
-    const today = new Date();
-
-    setCurrentDate(today);
-    setSelectedDate(today);
-  };
-
-  /* =====================================================
-     ADD EVENT
-  ===================================================== */
-
-  const addEvent = () => {
-    if (!eventTitle.trim()) return;
+  const createEvent = () => {
+    if (!title.trim() || !time) return;
 
     const newEvent: CalendarEvent = {
-      id: Date.now(),
-      title: eventTitle.trim(),
+      id:
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random()}`,
+      title: title.trim(),
       date: selectedDateKey,
-      time: eventTime || "00:00",
-      description: eventDescription.trim(),
-      completed: false,
+      time,
+      description: description.trim() || undefined,
     };
 
     setEvents((current) => [...current, newEvent]);
 
-    setEventTitle("");
-    setEventTime("");
-    setEventDescription("");
-
-    setShowModal(false);
+    setTitle("");
+    setTime("");
+    setDescription("");
+    setShowCreate(false);
   };
 
-  /* =====================================================
-     DELETE EVENT
-  ===================================================== */
-
-  const deleteEvent = (id: number) => {
+  const deleteEvent = (id: string) => {
     setEvents((current) =>
       current.filter((event) => event.id !== id)
     );
   };
 
-  /* =====================================================
-     COMPLETE EVENT
-  ===================================================== */
+  const currentTime = now.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 
-  const toggleEvent = (id: number) => {
-    setEvents((current) =>
-      current.map((event) =>
-        event.id === id
-          ? {
-              ...event,
-              completed: !event.completed,
-            }
-          : event
-      )
-    );
-  };
-
-  /* =====================================================
-     FORMAT SELECTED DATE
-  ===================================================== */
-
-  const selectedDateLabel = selectedDate.toLocaleDateString(
-    "en-US",
-    {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    }
-  );
+  const currentDateText = now.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 
   return (
-    <main className="min-h-screen px-5 py-6 text-white sm:px-7 lg:px-10">
+    <div className="min-h-screen bg-[#050b16] text-white">
+      <FloatingSidebar />
 
-      {/* =================================================
-          HEADER
-      ================================================= */}
+      <main
+        className="
+          relative
+          min-h-screen
+          overflow-hidden
+          px-4
+          py-5
+          sm:px-5
+          md:pl-[205px]
+          md:pr-6
+          lg:pl-[220px]
+          lg:pr-7
+          xl:pl-[225px]
+          xl:pr-8
+        "
+      >
+        <div className="relative z-10 mx-auto w-full max-w-[1600px]">
 
-      <header className="mb-6 rounded-[30px] border border-white/10 bg-[#0b1422]/80 p-6 backdrop-blur-xl">
+          {/* HEADER */}
 
-        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-
-          <div className="flex items-center gap-4">
-
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 shadow-[0_0_30px_rgba(34,211,238,0.15)]">
-
-              <CalendarDays size={25} />
-
-            </div>
-
-            <div>
-
-              <p className="text-xs font-bold uppercase tracking-[0.25em] text-cyan-400">
-                Zora Calendar
-              </p>
-
-              <h1 className="mt-1 text-3xl font-bold">
-                Calendar
-              </h1>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Plan your time. Make it count.
-              </p>
-
-            </div>
-
-          </div>
-
-          <div className="flex items-center gap-3">
-
-            <Link
-              href="/"
-              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-400 transition hover:bg-white/[0.06] hover:text-white"
-            >
-              <ArrowLeft size={16} />
-              Dashboard
-            </Link>
-
-            <button
-              onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-400 px-4 py-3 text-sm font-semibold transition hover:scale-[1.02]"
-            >
-              <Plus size={17} />
-              Add event
-            </button>
-
-          </div>
-
-        </div>
-
-      </header>
-
-      {/* =================================================
-          MAIN GRID
-      ================================================= */}
-
-      <div className="grid gap-6 xl:grid-cols-[1.5fr_0.8fr]">
-
-        {/* =================================================
-            CALENDAR
-        ================================================= */}
-
-        <section className="rounded-[30px] border border-white/10 bg-[#0b1422]/80 p-5 backdrop-blur-xl sm:p-7">
-
-          {/* Calendar navigation */}
-
-          <div className="mb-6 flex items-center justify-between">
-
-            <div>
-
-              <h2 className="text-xl font-bold">
-                {monthName}
-              </h2>
-
-              <p className="mt-1 text-xs text-slate-500">
-                Select a day to view your schedule.
-              </p>
-
-            </div>
-
-            <div className="flex items-center gap-2">
-
-              <button
-                onClick={goToday}
-                className="hidden rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-semibold text-slate-400 transition hover:bg-white/[0.06] hover:text-white sm:block"
-              >
-                Today
-              </button>
-
-              <button
-                onClick={() => changeMonth(-1)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-400 transition hover:bg-white/[0.06] hover:text-white"
-              >
-                <ChevronLeft size={18} />
-              </button>
-
-              <button
-                onClick={() => changeMonth(1)}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-400 transition hover:bg-white/[0.06] hover:text-white"
-              >
-                <ChevronRight size={18} />
-              </button>
-
-            </div>
-
-          </div>
-
-          {/* Weekdays */}
-
-          <div className="mb-2 grid grid-cols-7">
-
-            {[
-              "Sun",
-              "Mon",
-              "Tue",
-              "Wed",
-              "Thu",
-              "Fri",
-              "Sat",
-            ].map((day) => (
-              <div
-                key={day}
-                className="py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-600"
-              >
-                {day}
-              </div>
-            ))}
-
-          </div>
-
-          {/* Days */}
-
-          <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-
-            {calendarDays.map((day, index) => {
-
-              if (!day) {
-                return (
-                  <div
-                    key={`empty-${index}`}
-                    className="min-h-[70px] rounded-xl sm:min-h-[90px]"
-                  />
-                );
-              }
-
-              const dayKey = formatDateKey(day);
-
-              const dayEvents = events.filter(
-                (event) => event.date === dayKey
-              );
-
-              const isSelected =
-                dayKey === selectedDateKey;
-
-              const isToday =
-                dayKey === formatDateKey(new Date());
-
-              return (
-                <button
-                  key={dayKey}
-                  onClick={() => setSelectedDate(day)}
-                  className={`
-                    relative
-                    min-h-[70px]
-                    rounded-xl
-                    border
-                    p-2
-                    text-left
-                    transition
-                    sm:min-h-[90px]
-                    ${
-                      isSelected
-                        ? "border-cyan-400/40 bg-cyan-400/[0.08]"
-                        : "border-white/[0.06] bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.04]"
-                    }
-                  `}
-                >
-
-                  {/* Date number */}
-
-                  <div
-                    className={`
-                      flex
-                      h-7
-                      w-7
-                      items-center
-                      justify-center
-                      rounded-lg
-                      text-xs
-                      font-semibold
-                      ${
-                        isToday
-                          ? "bg-gradient-to-r from-blue-500 to-cyan-400 text-white"
-                          : isSelected
-                          ? "text-cyan-300"
-                          : "text-slate-400"
-                      }
-                    `}
-                  >
-                    {day.getDate()}
+          <header className="mb-5 overflow-hidden rounded-[26px] border border-white/10 bg-[#0b1525]/90 backdrop-blur-2xl">
+            <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div className="mb-2 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10">
+                    <CalendarDays
+                      className="text-cyan-300"
+                      size={20}
+                    />
                   </div>
-
-                  {/* Event indicators */}
-
-                  <div className="mt-2 space-y-1">
-
-                    {dayEvents
-                      .slice(0, 2)
-                      .map((event) => (
-                        <div
-                          key={event.id}
-                          className={`
-                            truncate
-                            rounded-md
-                            px-1.5
-                            py-1
-                            text-[9px]
-                            ${
-                              event.completed
-                                ? "bg-slate-700/40 text-slate-600 line-through"
-                                : "bg-cyan-400/10 text-cyan-300"
-                            }
-                          `}
-                        >
-                          {event.title}
-                        </div>
-                      ))}
-
-                    {dayEvents.length > 2 && (
-                      <p className="px-1 text-[9px] text-slate-600">
-                        +{dayEvents.length - 2} more
-                      </p>
-                    )}
-
-                  </div>
-
-                </button>
-              );
-            })}
-
-          </div>
-
-        </section>
-
-        {/* =================================================
-            SELECTED DAY
-        ================================================= */}
-
-        <section className="rounded-[30px] border border-white/10 bg-[#0b1422]/80 p-6 backdrop-blur-xl">
-
-          <div className="mb-6">
-
-            <p className="text-xs uppercase tracking-[0.2em] text-cyan-400">
-              Selected day
-            </p>
-
-            <h2 className="mt-2 text-2xl font-bold">
-              {selectedDateLabel}
-            </h2>
-
-          </div>
-
-          {/* Add event */}
-
-          <button
-            onClick={() => setShowModal(true)}
-            className="mb-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-cyan-400/20 bg-cyan-400/[0.04] py-4 text-sm font-semibold text-cyan-300 transition hover:border-cyan-400/40 hover:bg-cyan-400/[0.07]"
-          >
-            <Plus size={17} />
-            Add event to this day
-          </button>
-
-          {/* Events */}
-
-          {selectedEvents.length === 0 ? (
-
-            <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-center">
-
-              <Clock3
-                size={28}
-                className="mx-auto mb-3 text-slate-700"
-              />
-
-              <p className="text-sm text-slate-400">
-                Nothing scheduled.
-              </p>
-
-              <p className="mt-1 text-xs text-slate-600">
-                Your day is wide open.
-              </p>
-
-            </div>
-
-          ) : (
-
-            <div className="space-y-3">
-
-              {selectedEvents.map((event) => (
-
-                <div
-                  key={event.id}
-                  className="group rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4"
-                >
-
-                  <div className="flex items-start gap-3">
-
-                    <button
-                      onClick={() => toggleEvent(event.id)}
-                      className="mt-0.5 shrink-0"
-                    >
-                      <CheckCircle2
-                        size={20}
-                        className={
-                          event.completed
-                            ? "text-cyan-400"
-                            : "text-slate-600 transition hover:text-cyan-400"
-                        }
-                      />
-                    </button>
-
-                    <div className="min-w-0 flex-1">
-
-                      <p
-                        className={
-                          event.completed
-                            ? "font-semibold text-slate-600 line-through"
-                            : "font-semibold text-white"
-                        }
-                      >
-                        {event.title}
-                      </p>
-
-                      <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
-
-                        <Clock3 size={13} />
-
-                        {event.time}
-
-                      </div>
-
-                      {event.description && (
-                        <p className="mt-2 text-xs leading-5 text-slate-600">
-                          {event.description}
-                        </p>
-                      )}
-
-                    </div>
-
-                    <button
-                      onClick={() => deleteEvent(event.id)}
-                      className="rounded-lg p-2 text-slate-700 opacity-0 transition hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-
-                  </div>
-
-                </div>
-
-              ))}
-
-            </div>
-
-          )}
-
-        </section>
-
-      </div>
-
-      {/* =================================================
-          UPCOMING
-      ================================================= */}
-
-      <section className="mt-6 rounded-[30px] border border-white/10 bg-[#0b1422]/80 p-6 backdrop-blur-xl">
-
-        <div className="mb-5 flex items-center justify-between">
-
-          <div>
-
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-              Your schedule
-            </p>
-
-            <h2 className="mt-1 text-xl font-bold">
-              Upcoming events
-            </h2>
-
-          </div>
-
-          <CalendarDays
-            size={20}
-            className="text-slate-600"
-          />
-
-        </div>
-
-        {upcomingEvents.length === 0 ? (
-
-          <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-7 text-center">
-
-            <p className="text-sm text-slate-500">
-              No upcoming events.
-            </p>
-
-            <p className="mt-1 text-xs text-slate-700">
-              Add something to your calendar and it will appear here.
-            </p>
-
-          </div>
-
-        ) : (
-
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-
-            {upcomingEvents.map((event) => (
-
-              <button
-                key={event.id}
-                onClick={() => {
-                  const date = new Date(
-                    `${event.date}T00:00:00`
-                  );
-
-                  setSelectedDate(date);
-                  setCurrentDate(date);
-                }}
-                className="group rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4 text-left transition hover:border-cyan-400/20 hover:bg-white/[0.04]"
-              >
-
-                <div className="flex items-start justify-between">
 
                   <div>
-
-                    <p className="text-sm font-semibold text-white">
-                      {event.title}
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-cyan-400">
+                      ZORA / CALENDAR
                     </p>
 
-                    <p className="mt-2 text-xs text-slate-500">
-                      {new Date(
-                        `${event.date}T00:00:00`
-                      ).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                      })}{" "}
-                      · {event.time}
+                    <p className="mt-1 text-[11px] text-slate-600">
+                      Command center
                     </p>
-
                   </div>
-
-                  <ChevronRight
-                    size={15}
-                    className="text-slate-700 transition group-hover:translate-x-1 group-hover:text-cyan-400"
-                  />
-
                 </div>
 
-              </button>
+                <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
+                  Calendar
+                </h1>
 
-            ))}
+                <p className="mt-1 text-sm text-slate-500">
+                  Everything important, exactly when you need it.
+                </p>
+              </div>
 
-          </div>
+              <div className="flex items-center gap-2">
+                <div className="hidden rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-right md:block">
+                  <p className="font-mono text-base font-semibold text-cyan-300">
+                    {currentTime}
+                  </p>
 
-        )}
+                  <p className="text-[10px] text-slate-600">
+                    {currentDateText}
+                  </p>
+                </div>
 
-      </section>
+                <button
+                  type="button"
+                  onClick={goToday}
+                  className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs font-medium text-slate-300 transition hover:border-cyan-400/30 hover:bg-cyan-400/10 hover:text-white"
+                >
+                  Today
+                </button>
 
-      {/* =================================================
-          ADD EVENT MODAL
-      ================================================= */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedDate(new Date());
+                    setShowCreate(true);
+                  }}
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 px-4 py-2.5 text-xs font-bold shadow-[0_0_25px_rgba(34,211,238,0.12)] transition hover:scale-[1.02]"
+                >
+                  <Plus size={16} />
+                  Add event
+                </button>
+              </div>
+            </div>
 
-      {showModal && (
+            <div className="flex items-center gap-2 border-t border-white/10 px-5 py-2.5 text-[10px] text-slate-600">
+              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,.8)]" />
+              Zora calendar system online
 
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-5 backdrop-blur-md">
+              <span className="ml-auto hidden font-mono text-slate-700 md:block">
+                LOCAL STORAGE
+              </span>
+            </div>
+          </header>
 
-          <div className="w-full max-w-lg rounded-[30px] border border-white/10 bg-[#0b1422] p-6 shadow-2xl">
+          {/* COMMAND PANEL */}
 
-            {/* Modal header */}
+          <section className="mb-5 rounded-[22px] border border-cyan-400/10 bg-gradient-to-r from-cyan-400/[0.06] via-blue-500/[0.04] to-transparent p-4 backdrop-blur-xl">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-400/10">
+                <Sparkles
+                  size={18}
+                  className="text-cyan-300"
+                />
+              </div>
 
-            <div className="mb-6 flex items-center justify-between">
-
-              <div>
-
-                <p className="text-xs uppercase tracking-[0.2em] text-cyan-400">
-                  New event
+              <div className="flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-400">
+                  Zora Command
                 </p>
 
-                <h2 className="mt-1 text-2xl font-bold">
-                  Add to your calendar
-                </h2>
-
+                <p className="mt-1 text-xs text-slate-500">
+                  Your calendar is ready. Add events when you need them.
+                </p>
               </div>
 
               <button
-                onClick={() => setShowModal(false)}
-                className="rounded-xl p-2 text-slate-500 transition hover:bg-white/5 hover:text-white"
+                type="button"
+                onClick={() => {
+                  setSelectedDate(new Date());
+                  setShowCreate(true);
+                }}
+                className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs text-slate-400 transition hover:border-cyan-400/30 hover:text-cyan-300"
               >
-                <X size={19} />
+                <Command size={14} />
+                Create event
               </button>
-
             </div>
+          </section>
 
-            {/* Event title */}
+          {/* MAIN */}
 
-            <div className="space-y-5">
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_330px]">
 
-              <div>
+            {/* CALENDAR */}
 
-                <label className="mb-2 block text-sm font-medium text-slate-300">
-                  Event name
-                </label>
+            <section className="min-w-0 rounded-[26px] border border-white/10 bg-[#0b1525]/90 p-5 backdrop-blur-2xl md:p-6">
+              <div className="mb-6 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-slate-600">
+                    Timeline
+                  </p>
 
-                <input
-                  autoFocus
-                  value={eventTitle}
-                  onChange={(e) =>
-                    setEventTitle(e.target.value)
+                  <h2 className="mt-1 text-xl font-bold">
+                    {monthName} {year}
+                  </h2>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={previousMonth}
+                    aria-label="Previous month"
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-500 transition hover:bg-white/10 hover:text-white"
+                  >
+                    <ChevronLeft size={17} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={nextMonth}
+                    aria-label="Next month"
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-500 transition hover:bg-white/10 hover:text-white"
+                  >
+                    <ChevronRight size={17} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="mb-2 grid grid-cols-7">
+                {[
+                  "SUN",
+                  "MON",
+                  "TUE",
+                  "WED",
+                  "THU",
+                  "FRI",
+                  "SAT",
+                ].map((day) => (
+                  <div
+                    key={day}
+                    className="py-2 text-center text-[9px] font-semibold tracking-[0.2em] text-slate-700"
+                  >
+                    {day}
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-7 overflow-hidden rounded-2xl border border-white/10">
+                {calendarDays.map((day, index) => {
+                  if (day === null) {
+                    return (
+                      <div
+                        key={`empty-${index}`}
+                        className="min-h-[92px] border-b border-r border-white/5 bg-black/10"
+                      />
+                    );
                   }
-                  placeholder="What are you doing?"
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30"
-                />
 
+                  const date = new Date(year, month, day);
+                  const key = getDateKey(date);
+
+                  const dayEvents = events.filter(
+                    (event) => event.date === key
+                  );
+
+                  const isToday = key === todayKey;
+                  const isSelected = key === selectedDateKey;
+
+                  return (
+                    <button
+                      type="button"
+                      key={day}
+                      onClick={() => setSelectedDate(date)}
+                      className={`group relative min-h-[92px] min-w-0 border-b border-r border-white/5 p-2 text-left transition ${
+                        isSelected
+                          ? "bg-cyan-400/[0.08]"
+                          : "bg-white/[0.01] hover:bg-white/[0.04]"
+                      }`}
+                    >
+                      <div
+                        className={`flex h-7 w-7 items-center justify-center rounded-lg text-xs font-semibold ${
+                          isToday
+                            ? "bg-cyan-400 text-[#04111b] shadow-[0_0_15px_rgba(34,211,238,.3)]"
+                            : "text-slate-500 group-hover:text-white"
+                        }`}
+                      >
+                        {day}
+                      </div>
+
+                      <div className="mt-2 space-y-1">
+                        {dayEvents.slice(0, 2).map((event) => (
+                          <div
+                            key={event.id}
+                            className="truncate rounded-md border border-cyan-400/10 bg-cyan-400/10 px-1.5 py-1 text-[9px] text-cyan-300"
+                          >
+                            {event.title}
+                          </div>
+                        ))}
+
+                        {dayEvents.length > 2 && (
+                          <p className="px-1 text-[9px] text-slate-700">
+                            +{dayEvents.length - 2} more
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
+            </section>
 
-              {/* Time */}
+            {/* SIDE PANEL */}
 
-              <div>
+            <aside className="min-w-0 space-y-5">
 
-                <label className="mb-2 block text-sm font-medium text-slate-300">
-                  Time
-                </label>
+              <section className="rounded-[26px] border border-white/10 bg-[#0b1525]/90 p-5 backdrop-blur-2xl">
+                <div className="mb-5 flex items-center justify-between">
+                  <div>
+                    <p className="text-[9px] uppercase tracking-[0.2em] text-slate-700">
+                      Selected date
+                    </p>
 
-                <input
-                  type="time"
-                  value={eventTime}
-                  onChange={(e) =>
-                    setEventTime(e.target.value)
-                  }
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none focus:border-cyan-400/30"
-                />
+                    <h2 className="mt-1 text-lg font-bold">
+                      {selectedDate.toLocaleDateString(
+                        "en-US",
+                        {
+                          month: "short",
+                          day: "numeric",
+                        }
+                      )}
+                    </h2>
+                  </div>
 
-              </div>
+                  <Clock3
+                    className="text-cyan-400"
+                    size={18}
+                  />
+                </div>
 
-              {/* Description */}
+                {selectedEvents.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-7 text-center">
+                    <CalendarDays
+                      size={23}
+                      className="mx-auto mb-3 text-slate-700"
+                    />
 
-              <div>
+                    <p className="text-xs font-medium text-slate-500">
+                      Nothing scheduled
+                    </p>
 
-                <label className="mb-2 block text-sm font-medium text-slate-300">
-                  Description
-                </label>
+                    <p className="mt-1 text-[10px] text-slate-700">
+                      This day is currently clear.
+                    </p>
 
-                <textarea
-                  value={eventDescription}
-                  onChange={(e) =>
-                    setEventDescription(e.target.value)
-                  }
-                  rows={3}
-                  placeholder="Add some details..."
-                  className="w-full resize-none rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30"
-                />
+                    <button
+                      type="button"
+                      onClick={() => setShowCreate(true)}
+                      className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white/[0.05] px-3 py-2 text-[10px] font-semibold text-cyan-300 transition hover:bg-cyan-400/10"
+                    >
+                      <Plus size={13} />
+                      Add event
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {selectedEvents.map((event) => (
+                      <div
+                        key={event.id}
+                        className="group rounded-xl border border-white/10 bg-white/[0.03] p-3.5 transition hover:border-cyan-400/20"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="break-words text-xs font-semibold text-white">
+                              {event.title}
+                            </p>
 
-              </div>
+                            <p className="mt-1 flex items-center gap-1 text-[10px] text-cyan-400">
+                              <Clock3 size={11} />
+                              {event.time}
+                            </p>
 
-              {/* Date */}
+                            {event.description && (
+                              <p className="mt-2 break-words text-[10px] leading-5 text-slate-600">
+                                {event.description}
+                              </p>
+                            )}
+                          </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/[0.025] px-4 py-3">
+                          <button
+                            type="button"
+                            onClick={() => deleteEvent(event.id)}
+                            className="shrink-0 opacity-0 transition group-hover:opacity-100"
+                            aria-label={`Delete ${event.title}`}
+                          >
+                            <X
+                              size={14}
+                              className="text-slate-700 hover:text-red-400"
+                            />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
 
-                <p className="text-xs text-slate-600">
-                  Scheduled for
-                </p>
+              {/* SYSTEM STATUS */}
 
-                <p className="mt-1 text-sm font-medium text-slate-300">
-                  {selectedDateLabel}
-                </p>
+              <section className="rounded-[26px] border border-white/10 bg-[#0b1525]/90 p-5 backdrop-blur-2xl">
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-400/10">
+                    <Zap
+                      size={16}
+                      className="text-cyan-300"
+                    />
+                  </div>
 
-              </div>
+                  <div>
+                    <p className="text-xs font-semibold">
+                      Calendar system
+                    </p>
 
-              {/* Buttons */}
+                    <p className="text-[10px] text-slate-700">
+                      Local workspace
+                    </p>
+                  </div>
+                </div>
 
-              <div className="flex gap-3">
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-slate-600">
+                      Events stored
+                    </span>
 
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 rounded-xl border border-white/10 bg-white/[0.03] py-3 text-sm font-semibold text-slate-400 transition hover:bg-white/[0.06] hover:text-white"
-                >
-                  Cancel
-                </button>
+                    <span className="font-mono text-slate-400">
+                      {events.length}
+                    </span>
+                  </div>
 
-                <button
-                  onClick={addEvent}
-                  disabled={!eventTitle.trim()}
-                  className="flex-1 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-400 py-3 text-sm font-semibold text-white transition hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Create event
-                </button>
+                  <div className="h-px bg-white/5" />
 
-              </div>
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-slate-600">
+                      Storage
+                    </span>
 
-            </div>
-
+                    <span className="flex items-center gap-1 text-cyan-400">
+                      <Check size={12} />
+                      Local
+                    </span>
+                  </div>
+                </div>
+              </section>
+            </aside>
           </div>
-
         </div>
 
-      )}
+        {/* CREATE EVENT */}
 
-    </main>
+        {showCreate && (
+          <div
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 px-5 backdrop-blur-md"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowCreate(false);
+              }
+            }}
+          >
+            <div className="w-full max-w-[460px] rounded-[26px] border border-white/10 bg-[#0b1525] p-6 shadow-2xl">
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-400">
+                    New event
+                  </p>
+
+                  <h2 className="mt-1 text-xl font-bold">
+                    Add to calendar
+                  </h2>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowCreate(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/[0.04] text-slate-600 transition hover:bg-white/10 hover:text-white"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-2 block text-[10px] font-medium text-slate-500">
+                    Event name
+                  </label>
+
+                  <input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="What do you need to remember?"
+                    className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-xs text-white outline-none transition placeholder:text-slate-700 focus:border-cyan-400/40"
+                    autoFocus
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-[10px] font-medium text-slate-500">
+                    Time
+                  </label>
+
+                  <input
+                    type="time"
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
+                    className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-xs text-white outline-none focus:border-cyan-400/40"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-[10px] font-medium text-slate-500">
+                    Description
+                  </label>
+
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Optional details..."
+                    rows={3}
+                    className="w-full resize-none rounded-xl border border-white/10 bg-white/[0.03] p-4 text-xs text-white outline-none placeholder:text-slate-700 focus:border-cyan-400/40"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreate(false)}
+                    className="flex-1 rounded-xl border border-white/10 bg-white/[0.03] py-3 text-xs font-semibold text-slate-500 transition hover:bg-white/10 hover:text-white"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={createEvent}
+                    disabled={!title.trim() || !time}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 py-3 text-xs font-bold transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    <Plus size={15} />
+                    Create
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
   );
 }

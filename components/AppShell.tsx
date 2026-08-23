@@ -16,11 +16,7 @@ export default function AppShell({
     pathname === "/forgot-password";
 
   if (isAuthPage) {
-    return (
-      <main className="relative z-10 min-h-screen">
-        {children}
-      </main>
-    );
+    return <>{children}</>;
   }
 
   return (

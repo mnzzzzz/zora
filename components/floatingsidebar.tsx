@@ -21,7 +21,7 @@ import {
 const navItems = [
   {
     name: "Dashboard",
-    href: "/",
+    href: "/dashboard",
     icon: Home,
   },
   {

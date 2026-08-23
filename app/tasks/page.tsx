@@ -1,154 +1,99 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
+import FloatingSidebar from "@/components/floatingsidebar";
+
 import {
-  BarChart3,
-  CalendarDays,
   Check,
-  CheckCircle2,
-  ChevronDown,
-  Clock3,
-  Flame,
-  Filter,
-  ListTodo,
   Plus,
-  Search,
-  Sparkles,
-  Star,
-  Target,
   Trash2,
-  Trophy,
+  Clock3,
   Zap,
+  Target,
+  Activity,
+  ChevronRight,
+  Circle,
+  CheckCircle2,
+  Cpu,
+  Radio,
+  Sparkles,
+  CalendarDays,
+  AlertTriangle,
+  X,
+  Terminal,
+  Signal,
+  BrainCircuit,
 } from "lucide-react";
 
-type Priority = "High" | "Medium" | "Low";
-
-type Category =
-  | "Study"
-  | "Work"
-  | "Personal"
-  | "Startup"
-  | "Health";
+type Priority = "LOW" | "MEDIUM" | "HIGH";
 
 type Task = {
   id: number;
   title: string;
+  description: string;
   priority: Priority;
-  category: Category;
   completed: boolean;
-  favorite: boolean;
   due: string;
-  duration: number;
 };
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [showCreate, setShowCreate] = useState(false);
 
-  const [taskInput, setTaskInput] = useState("");
-  const [search, setSearch] = useState("");
+  const [newTitle, setNewTitle] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newPriority, setNewPriority] =
+    useState<Priority>("MEDIUM");
+  const [newDue, setNewDue] = useState("");
 
-  const [activeFilter, setActiveFilter] = useState<
-    "All" | "Today" | "Upcoming" | "Completed"
-  >("All");
+  const completedTasks = useMemo(
+    () => tasks.filter((task) => task.completed),
+    [tasks]
+  );
 
-  const [priority, setPriority] =
-    useState<Priority>("Medium");
+  const activeTasks = useMemo(
+    () => tasks.filter((task) => !task.completed),
+    [tasks]
+  );
 
-  const [category, setCategory] =
-    useState<Category>("Personal");
+  const highPriorityTasks = useMemo(
+    () =>
+      activeTasks.filter(
+        (task) => task.priority === "HIGH"
+      ),
+    [activeTasks]
+  );
 
-  const [showCategoryMenu, setShowCategoryMenu] =
-    useState(false);
-
-  const [showFilters, setShowFilters] =
-    useState(false);
-
-  const completed = tasks.filter(
-    (task) => task.completed
-  ).length;
-
-  const remaining = tasks.length - completed;
-
-  const productivityScore =
+  const completionPercentage =
     tasks.length === 0
       ? 0
-      : Math.round((completed / tasks.length) * 100);
-
-  const filteredTasks = useMemo(() => {
-    return tasks.filter((task) => {
-      const matchesSearch = task.title
-        .toLowerCase()
-        .includes(search.toLowerCase());
-
-      if (!matchesSearch) return false;
-
-      if (activeFilter === "Completed") {
-        return task.completed;
-      }
-
-      if (activeFilter === "Today") {
-        return task.due
-          .toLowerCase()
-          .includes("today");
-      }
-
-      if (activeFilter === "Upcoming") {
-        return (
-          !task.completed &&
-          !task.due
-            .toLowerCase()
-            .includes("today")
+      : Math.round(
+          (completedTasks.length / tasks.length) * 100
         );
-      }
 
-      return true;
-    });
-  }, [tasks, search, activeFilter]);
+  function createTask() {
+    if (!newTitle.trim()) return;
 
-  const addTask = () => {
-    if (!taskInput.trim()) return;
-
-    const newTask: Task = {
+    const task: Task = {
       id: Date.now(),
-      title: taskInput.trim(),
-      priority,
-      category,
+      title: newTitle.trim(),
+      description: newDescription.trim(),
+      priority: newPriority,
       completed: false,
-      favorite: false,
-      due: "Today · 9:00 PM",
-      duration: 30,
+      due: newDue,
     };
 
-    setTasks((current) => [
-      newTask,
-      ...current,
-    ]);
+    setTasks((current) => [task, ...current]);
 
-    setTaskInput("");
-  };
+    setNewTitle("");
+    setNewDescription("");
+    setNewPriority("MEDIUM");
+    setNewDue("");
+    setShowCreate(false);
+  }
 
-  const quickAdd = (
-    title: string,
-    selectedCategory: Category
-  ) => {
-    const newTask: Task = {
-      id: Date.now(),
-      title,
-      priority: "Medium",
-      category: selectedCategory,
-      completed: false,
-      favorite: false,
-      due: "Today · 9:00 PM",
-      duration: 30,
-    };
-
-    setTasks((current) => [
-      newTask,
-      ...current,
-    ]);
-  };
-
-  const toggleTask = (id: number) => {
+  function toggleTask(id: number) {
     setTasks((current) =>
       current.map((task) =>
         task.id === id
@@ -159,456 +104,807 @@ export default function TasksPage() {
           : task
       )
     );
-  };
+  }
 
-  const toggleFavorite = (id: number) => {
+  function deleteTask(id: number) {
     setTasks((current) =>
-      current.map((task) =>
-        task.id === id
-          ? {
-              ...task,
-              favorite: !task.favorite,
-            }
-          : task
-      )
+      current.filter((task) => task.id !== id)
     );
-  };
-
-  const deleteTask = (id: number) => {
-    setTasks((current) =>
-      current.filter(
-        (task) => task.id !== id
-      )
-    );
-  };
-
-  const clearCompleted = () => {
-    setTasks((current) =>
-      current.filter(
-        (task) => !task.completed
-      )
-    );
-  };
+  }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#050A13] px-4 py-6 text-white sm:px-6 lg:px-8">
+    <>
+      <FloatingSidebar />
 
-      {/* BACKGROUND EFFECTS */}
+      <main className="relative min-h-screen overflow-hidden bg-transparent px-5 py-6 text-white sm:px-6 sm:py-8 lg:pl-28">
 
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {/* =====================================================
+            JARVIS BACKGROUND
+        ===================================================== */}
 
-        <div className="absolute -left-40 -top-40 h-[500px] w-[500px] rounded-full bg-blue-600/10 blur-[140px]" />
+        <div className="pointer-events-none fixed inset-0 overflow-hidden">
 
-        <div className="absolute right-[-150px] top-[20%] h-[500px] w-[500px] rounded-full bg-cyan-500/10 blur-[150px]" />
+          <div className="absolute left-[5%] top-[8%] h-72 w-72 rounded-full bg-cyan-400/[0.07] blur-[130px]" />
 
-        <div className="absolute bottom-[-200px] left-[30%] h-[500px] w-[500px] rounded-full bg-indigo-500/10 blur-[150px]" />
+          <div className="absolute right-[0%] top-[25%] h-96 w-96 rounded-full bg-blue-500/[0.06] blur-[150px]" />
 
-        <div
-          className="absolute inset-0 opacity-[0.025]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px)",
-            backgroundSize: "45px 45px",
-          }}
-        />
+          <div className="absolute bottom-[0%] left-[35%] h-96 w-96 rounded-full bg-violet-500/[0.04] blur-[160px]" />
 
-      </div>
+          {/* Grid */}
 
-      <div className="relative mx-auto max-w-7xl">
-
-        {/* HEADER */}
-
-        <header className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-
-          <div>
-
-            <div className="mb-3 flex items-center gap-2 text-sm font-medium text-blue-400">
-              <Sparkles size={15} />
-              Good afternoon, Early Bird
-            </div>
-
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-              Your Tasks
-            </h1>
-
-            <p className="mt-3 max-w-xl text-sm leading-6 text-gray-500 sm:text-base">
-              Turn plans into progress. Stay focused,
-              prioritize what matters, and make today count.
-            </p>
-
-          </div>
-
-          {/* STREAK */}
-
-          <div className="flex items-center gap-4 rounded-3xl border border-orange-400/10 bg-orange-400/[0.04] px-5 py-4 backdrop-blur-xl">
-
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-400/10">
-              <Flame
-                className="text-orange-400"
-                size={24}
-              />
-            </div>
-
-            <div>
-
-              <p className="text-2xl font-bold">
-                0 days
-              </p>
-
-              <p className="text-xs text-gray-500">
-                Current productivity streak
-              </p>
-
-            </div>
-
-          </div>
-
-        </header>
-
-        {/* STATS */}
-
-        <section className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-
-          <Stat
-            icon={<ListTodo size={18} />}
-            label="Total tasks"
-            value={tasks.length}
-            iconClass="text-blue-400"
+          <div
+            className="absolute inset-0 opacity-[0.025]"
+            style={{
+              backgroundImage:
+                "linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px)",
+              backgroundSize: "60px 60px",
+            }}
           />
 
-          <Stat
-            icon={<Clock3 size={18} />}
-            label="Remaining"
-            value={remaining}
-            iconClass="text-yellow-400"
-          />
+          {/* Scanlines */}
 
-          <Stat
-            icon={<CheckCircle2 size={18} />}
-            label="Completed"
-            value={completed}
-            iconClass="text-emerald-400"
-          />
+          <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,rgba(34,211,238,0.015)_50%,transparent_100%)]" />
 
-          <Stat
-            icon={<Target size={18} />}
-            label="Productivity"
-            value={`${productivityScore}%`}
-            iconClass="text-purple-400"
-          />
+          <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent" />
 
-        </section>
+        </div>
 
-        {/* AI CARD */}
+        <div className="relative z-10 mx-auto max-w-7xl">
 
-        <section className="mb-6 overflow-hidden rounded-3xl border border-blue-400/10 bg-gradient-to-r from-blue-500/[0.10] via-cyan-400/[0.04] to-transparent p-5 backdrop-blur-xl sm:p-6">
+          {/* =====================================================
+              HEADER
+          ===================================================== */}
 
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <header className="relative mb-7 overflow-hidden rounded-[28px] border border-cyan-400/10 bg-[#030b14]/75 p-6 backdrop-blur-2xl sm:p-7">
 
-            <div className="flex gap-4">
+            {/* HUD corners */}
 
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-500/10">
-                <Sparkles
-                  className="text-blue-400"
-                  size={22}
-                />
-              </div>
+            <HudCorners />
+
+            {/* Scan beam */}
+
+            <div className="pointer-events-none absolute left-0 right-0 top-0 h-px animate-pulse bg-gradient-to-r from-transparent via-cyan-300/70 to-transparent" />
+
+            <div className="relative flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
 
               <div>
 
-                <div className="mb-1 flex items-center gap-2">
+                <div className="mb-4 flex items-center gap-3">
 
-                  <h2 className="font-semibold">
-                    Zora's suggestion
-                  </h2>
+                  <div className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06]">
 
-                  <span className="rounded-md bg-blue-400/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-blue-400">
-                    AI
-                  </span>
+                    <Cpu
+                      size={19}
+                      className="text-cyan-300"
+                    />
+
+                    <div className="absolute inset-0 rounded-xl border border-cyan-400/20 animate-ping" />
+
+                  </div>
+
+                  <div>
+
+                    <div className="flex items-center gap-2">
+
+                      <p className="font-mono text-[10px] font-bold tracking-[0.3em] text-cyan-400">
+                        ZORA
+                      </p>
+
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+
+                      <span className="font-mono text-[8px] tracking-[0.2em] text-emerald-400">
+                        ONLINE
+                      </span>
+
+                    </div>
+
+                    <p className="mt-1 font-mono text-[8px] tracking-[0.2em] text-slate-600">
+                      PERSONAL TASK SYSTEM
+                    </p>
+
+                  </div>
 
                 </div>
 
-                <p className="max-w-2xl text-sm leading-6 text-gray-400">
+                <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+                  Mission Control
+                </h1>
 
-                  {tasks.length === 0 ? (
-                    <>
-                      Your task list is empty. Add something
-                      you need to accomplish and Zora will help
-                      you stay on track.
-                    </>
-                  ) : (
-                    <>
-                      You have{" "}
-                      <span className="font-semibold text-white">
-                        {
-                          tasks.filter(
-                            (t) =>
-                              t.priority === "High" &&
-                              !t.completed
-                          ).length
-                        }{" "}
-                        high-priority tasks
-                      </span>
-                      . Consider finishing the most urgent
-                      one before starting something new.
-                    </>
-                  )}
-
+                <p className="mt-3 max-w-xl text-sm leading-6 text-slate-500">
+                  Stay on top of what matters. Zora keeps
+                  your tasks, priorities and progress organized.
                 </p>
 
               </div>
 
+              <div className="flex items-center gap-4">
+
+                <div className="hidden text-right sm:block">
+
+                  <p className="font-mono text-[8px] tracking-[0.25em] text-slate-600">
+                    SYSTEM STATUS
+                  </p>
+
+                  <div className="mt-1 flex items-center justify-end gap-2">
+
+                    <Signal
+                      size={12}
+                      className="text-emerald-400"
+                    />
+
+                    <span className="font-mono text-[10px] text-emerald-400">
+                      ALL SYSTEMS NORMAL
+                    </span>
+
+                  </div>
+
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowCreate(true)}
+                  className="group relative flex items-center gap-2 overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-400/[0.08] px-5 py-3 text-xs font-bold uppercase tracking-[0.12em] text-cyan-200 transition hover:border-cyan-300/60 hover:bg-cyan-400/[0.14]"
+                >
+
+                  <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-cyan-300/10 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+
+                  <Plus
+                    size={16}
+                    className="relative transition group-hover:rotate-90"
+                  />
+
+                  <span className="relative">
+                    New Task
+                  </span>
+
+                </button>
+
+              </div>
+
             </div>
 
-            <button className="flex shrink-0 items-center justify-center gap-2 rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-3 text-sm font-medium text-blue-300 transition hover:bg-blue-500/20">
+          </header>
 
-              <Zap size={16} />
+          {/* =====================================================
+              TELEMETRY
+          ===================================================== */}
 
-              Optimize tasks
+          <section className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
 
-            </button>
+            <TelemetryCard
+              icon={<Activity size={17} />}
+              label="ACTIVE TASKS"
+              value={String(activeTasks.length)}
+              status="LIVE"
+              bars={activeTasks.length}
+            />
 
-          </div>
+            <TelemetryCard
+              icon={<CheckCircle2 size={17} />}
+              label="COMPLETED"
+              value={String(completedTasks.length)}
+              status="DONE"
+              bars={completedTasks.length}
+            />
 
-        </section>
+            <TelemetryCard
+              icon={<AlertTriangle size={17} />}
+              label="HIGH PRIORITY"
+              value={String(highPriorityTasks.length)}
+              status={
+                highPriorityTasks.length > 0
+                  ? "ATTENTION"
+                  : "CLEAR"
+              }
+              bars={highPriorityTasks.length}
+            />
 
-        {/* ADD TASK */}
+            <TelemetryCard
+              icon={<Zap size={17} />}
+              label="COMPLETION"
+              value={`${completionPercentage}%`}
+              status="SYNCED"
+              bars={completionPercentage}
+            />
 
-        <section className="mb-6 rounded-3xl border border-white/10 bg-white/[0.035] p-4 backdrop-blur-2xl sm:p-5">
+          </section>
 
-          <div className="flex flex-col gap-3 lg:flex-row">
+          {/* =====================================================
+              PROGRESS / CORE
+          ===================================================== */}
 
-            <div className="relative flex-1">
+          <section className="relative mb-6 overflow-hidden rounded-[30px] border border-cyan-400/10 bg-[#050e18]/80 p-6 backdrop-blur-2xl sm:p-8">
 
-              <Plus
-                size={18}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600"
-              />
+            <HudCorners />
 
-              <input
-                value={taskInput}
-                onChange={(e) =>
-                  setTaskInput(e.target.value)
-                }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    addTask();
-                  }
-                }}
-                placeholder="What needs to get done?"
-                className="h-14 w-full rounded-2xl border border-white/10 bg-black/20 pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-gray-600 focus:border-blue-500/40 focus:bg-white/[0.04]"
-              />
+            <div className="absolute right-[-100px] top-[-100px] h-72 w-72 rounded-full bg-cyan-400/[0.07] blur-3xl" />
 
-            </div>
+            <div className="relative grid gap-8 lg:grid-cols-12 lg:items-center">
 
-            {/* CATEGORY */}
+              <div className="lg:col-span-8">
 
-            <div className="relative">
+                <div className="flex items-center gap-2">
 
-              <button
-                onClick={() =>
-                  setShowCategoryMenu(
-                    !showCategoryMenu
-                  )
-                }
-                className="flex h-14 w-full items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 text-sm text-gray-400 transition hover:bg-white/[0.08] hover:text-white lg:w-40"
-              >
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-400/[0.08]">
+                    <BrainCircuit
+                      size={14}
+                      className="text-cyan-400"
+                    />
+                  </div>
 
-                {category}
+                  <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.25em] text-cyan-400">
+                    YOUR PROGRESS
+                  </span>
 
-                <ChevronDown size={15} />
+                </div>
 
-              </button>
+                <h2 className="mt-4 text-2xl font-semibold">
 
-              {showCategoryMenu && (
-                <div className="absolute left-0 top-[62px] z-50 w-full rounded-2xl border border-white/10 bg-[#0B1422] p-2 shadow-2xl lg:w-40">
+                  {tasks.length === 0
+                    ? "Ready when you are."
+                    : `You're ${completionPercentage}% through your tasks.`}
 
-                  {(
-                    [
-                      "Study",
-                      "Work",
-                      "Personal",
-                      "Startup",
-                      "Health",
-                    ] as Category[]
-                  ).map((item) => (
+                </h2>
 
-                    <button
-                      key={item}
-                      onClick={() => {
-                        setCategory(item);
-                        setShowCategoryMenu(false);
+                <p className="mt-2 text-sm text-slate-500">
+
+                  {tasks.length === 0
+                    ? "Create your first task and Zora will start tracking your progress."
+                    : highPriorityTasks.length > 0
+                      ? `${highPriorityTasks.length} high-priority task${highPriorityTasks.length === 1 ? "" : "s"} need your attention.`
+                      : "Everything looks good. Keep going."}
+
+                </p>
+
+                {/* Progress bar */}
+
+                <div className="mt-7">
+
+                  <div className="mb-2 flex items-center justify-between">
+
+                    <span className="font-mono text-[8px] tracking-[0.2em] text-slate-600">
+                      COMPLETION
+                    </span>
+
+                    <span className="font-mono text-[9px] text-cyan-400">
+                      {completionPercentage}%
+                    </span>
+
+                  </div>
+
+                  <div className="relative h-1.5 overflow-hidden rounded-full bg-white/[0.04]">
+
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-blue-400 to-cyan-300 transition-all duration-700"
+                      style={{
+                        width: `${completionPercentage}%`,
                       }}
-                      className={`w-full rounded-xl px-3 py-2.5 text-left text-xs transition ${
-                        category === item
-                          ? "bg-blue-500/15 text-blue-300"
-                          : "text-gray-500 hover:bg-white/5 hover:text-white"
-                      }`}
-                    >
-                      {item}
-                    </button>
+                    />
+
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+                  </div>
+
+                </div>
+
+              </div>
+
+              {/* Reactor */}
+
+              <div className="flex justify-center lg:col-span-4">
+
+                <ProgressCore
+                  percentage={completionPercentage}
+                />
+
+              </div>
+
+            </div>
+
+          </section>
+
+          {/* =====================================================
+              MAIN GRID
+          ===================================================== */}
+
+          <div className="grid gap-5 lg:grid-cols-12">
+
+            {/* TASKS */}
+
+            <section className="relative overflow-hidden rounded-[30px] border border-white/[0.08] bg-white/[0.025] p-6 backdrop-blur-xl lg:col-span-8">
+
+              <HudCorners subtle />
+
+              <div className="relative mb-6 flex items-center justify-between">
+
+                <div>
+
+                  <div className="flex items-center gap-2">
+
+                    <Radio
+                      size={13}
+                      className="text-cyan-400"
+                    />
+
+                    <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.25em] text-cyan-400">
+                      TASKS
+                    </span>
+
+                  </div>
+
+                  <h2 className="mt-2 text-xl font-semibold">
+                    Your Tasks
+                  </h2>
+
+                </div>
+
+                <div className="flex items-center gap-2">
+
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-400" />
+
+                  <span className="font-mono text-[9px] text-slate-600">
+                    {activeTasks.length} ACTIVE
+                  </span>
+
+                </div>
+
+              </div>
+
+              {activeTasks.length === 0 ? (
+
+                <EmptyState
+                  icon={<Target size={23} />}
+                  title="No active tasks"
+                  description="Create a task and Zora will add it here."
+                  onCreate={() => setShowCreate(true)}
+                />
+
+              ) : (
+
+                <div className="space-y-2.5">
+
+                  {activeTasks.map((task) => (
+
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      onToggle={() => toggleTask(task.id)}
+                      onDelete={() => deleteTask(task.id)}
+                    />
 
                   ))}
 
                 </div>
+
               )}
 
-            </div>
+            </section>
 
-            {/* PRIORITY */}
+            {/* ZORA OVERVIEW */}
 
-            <div className="flex h-14 rounded-2xl border border-white/10 bg-white/[0.04] p-1">
+            <section className="relative overflow-hidden rounded-[30px] border border-cyan-400/10 bg-[#050e18]/70 p-6 backdrop-blur-xl lg:col-span-4">
 
-              {(
-                [
-                  "High",
-                  "Medium",
-                  "Low",
-                ] as Priority[]
-              ).map((item) => (
+              <HudCorners subtle />
 
-                <button
-                  key={item}
-                  onClick={() =>
-                    setPriority(item)
-                  }
-                  className={`rounded-xl px-3 text-[11px] font-medium transition ${
-                    priority === item
-                      ? item === "High"
-                        ? "bg-red-400/10 text-red-400"
-                        : item === "Medium"
-                        ? "bg-yellow-400/10 text-yellow-400"
-                        : "bg-emerald-400/10 text-emerald-400"
-                      : "text-gray-600 hover:text-gray-300"
-                  }`}
-                >
-                  {item}
-                </button>
+              <div className="relative">
 
-              ))}
+                <div className="flex items-center gap-3">
 
-            </div>
+                  <div className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-400/15 bg-cyan-400/[0.06]">
 
-            <button
-              onClick={addTask}
-              className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-400 px-7 font-semibold shadow-lg shadow-blue-500/20 transition hover:scale-[1.02] active:scale-[0.98]"
-            >
+                    <Sparkles
+                      size={19}
+                      className="text-cyan-400"
+                    />
 
-              <Plus size={18} />
+                    <div className="absolute -right-1 -top-1 h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
 
-              Add task
+                  </div>
 
-            </button>
+                  <div>
+
+                    <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-cyan-400">
+                      ZORA
+                    </p>
+
+                    <h2 className="mt-1 font-semibold">
+                      Overview
+                    </h2>
+
+                  </div>
+
+                </div>
+
+                <div className="mt-6 space-y-2">
+
+                  <SystemRow
+                    label="Task system"
+                    value="ONLINE"
+                  />
+
+                  <SystemRow
+                    label="Priority"
+                    value={
+                      highPriorityTasks.length > 0
+                        ? "ATTENTION"
+                        : "CLEAR"
+                    }
+                  />
+
+                  <SystemRow
+                    label="Active tasks"
+                    value={`${activeTasks.length}`}
+                  />
+
+                  <SystemRow
+                    label="Completed"
+                    value={`${completionPercentage}%`}
+                  />
+
+                </div>
+
+                {/* Zora message */}
+
+                <div className="mt-4 rounded-2xl border border-cyan-400/10 bg-cyan-400/[0.025] p-4">
+
+                  <div className="flex items-center gap-2">
+
+                    <div className="flex h-6 w-6 items-center justify-center rounded-md bg-cyan-400/[0.08]">
+
+                      <Zap
+                        size={12}
+                        className="text-cyan-400"
+                      />
+
+                    </div>
+
+                    <span className="font-mono text-[8px] tracking-[0.2em] text-cyan-400">
+                      ZORA SAYS
+                    </span>
+
+                  </div>
+
+                  <p className="mt-3 text-xs leading-6 text-slate-500">
+
+                    {tasks.length === 0
+                      ? "Your workspace is ready. What are we working on?"
+                      : highPriorityTasks.length > 0
+                        ? "You have some important tasks waiting. Let's tackle those first."
+                        : "You're doing great. Keep the momentum going."}
+
+                  </p>
+
+                </div>
+
+                {/* Activity terminal */}
+
+                <div className="mt-4 overflow-hidden rounded-2xl border border-white/[0.06] bg-black/20">
+
+                  <div className="flex items-center gap-2 border-b border-white/[0.05] px-4 py-3">
+
+                    <Terminal
+                      size={12}
+                      className="text-slate-600"
+                    />
+
+                    <span className="font-mono text-[8px] tracking-[0.2em] text-slate-600">
+                      ACTIVITY
+                    </span>
+
+                    <span className="ml-auto h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+
+                  </div>
+
+                  <div className="space-y-2 p-4 font-mono text-[8px]">
+
+                    <ActivityLine text="Zora is online" />
+
+                    <ActivityLine
+                      text={`${tasks.length} task${tasks.length === 1 ? "" : "s"} loaded`}
+                    />
+
+                    <ActivityLine
+                      text={
+                        highPriorityTasks.length > 0
+                          ? `${highPriorityTasks.length} priority task detected`
+                          : "No urgent tasks detected"
+                      }
+                    />
+
+                    <ActivityLine text="Ready for your next move" />
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </section>
+
+            {/* =================================================
+                COMPLETED
+            ================================================= */}
+
+            <section className="relative overflow-hidden rounded-[30px] border border-white/[0.07] bg-white/[0.02] p-6 backdrop-blur-xl lg:col-span-12">
+
+              <HudCorners subtle />
+
+              <div className="relative mb-5 flex items-center justify-between">
+
+                <div className="flex items-center gap-3">
+
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-400/10 bg-emerald-400/[0.05]">
+
+                    <Check
+                      size={18}
+                      className="text-emerald-400"
+                    />
+
+                  </div>
+
+                  <div>
+
+                    <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-emerald-400">
+                      COMPLETED
+                    </p>
+
+                    <h2 className="mt-1 text-xl font-semibold">
+                      Finished Tasks
+                    </h2>
+
+                  </div>
+
+                </div>
+
+                <span className="font-mono text-[9px] text-slate-600">
+                  {completedTasks.length} DONE
+                </span>
+
+              </div>
+
+              {completedTasks.length === 0 ? (
+
+                <div className="rounded-2xl border border-dashed border-white/[0.08] bg-black/[0.08] p-7 text-center">
+
+                  <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-slate-700">
+                    No completed tasks yet
+                  </p>
+
+                </div>
+
+              ) : (
+
+                <div className="grid gap-2.5 md:grid-cols-2">
+
+                  {completedTasks.map((task) => (
+
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      onToggle={() => toggleTask(task.id)}
+                      onDelete={() => deleteTask(task.id)}
+                    />
+
+                  ))}
+
+                </div>
+
+              )}
+
+            </section>
 
           </div>
 
-        </section>
+          {/* =====================================================
+              NAVIGATION
+          ===================================================== */}
 
-        {/* TOOLBAR */}
+          <div className="mt-6 flex flex-wrap gap-2 border-t border-white/[0.05] pt-5">
 
-        <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <QuickLink
+              href="/calendar"
+              icon={<CalendarDays size={14} />}
+              label="Calendar"
+            />
 
-          <div className="flex flex-wrap gap-2">
+            <QuickLink
+              href="/goals"
+              icon={<Target size={14} />}
+              label="Goals"
+            />
 
-            {(
-              [
-                "All",
-                "Today",
-                "Upcoming",
-                "Completed",
-              ] as const
-            ).map((filter) => (
-
-              <button
-                key={filter}
-                onClick={() =>
-                  setActiveFilter(filter)
-                }
-                className={`rounded-xl px-4 py-2.5 text-xs font-medium transition ${
-                  activeFilter === filter
-                    ? "bg-blue-500/15 text-blue-300 ring-1 ring-blue-400/20"
-                    : "bg-white/[0.035] text-gray-500 hover:bg-white/[0.07] hover:text-gray-300"
-                }`}
-              >
-                {filter}
-              </button>
-
-            ))}
-
-          </div>
-
-          <div className="flex gap-2">
-
-            <div className="relative flex-1 lg:w-56">
-
-              <Search
-                size={15}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600"
-              />
-
-              <input
-                value={search}
-                onChange={(e) =>
-                  setSearch(e.target.value)
-                }
-                placeholder="Search tasks..."
-                className="h-10 w-full rounded-xl border border-white/10 bg-white/[0.035] pl-9 pr-3 text-xs text-white outline-none placeholder:text-gray-600 focus:border-blue-500/30"
-              />
-
-            </div>
-
-            <button
-              onClick={() =>
-                setShowFilters(!showFilters)
-              }
-              className="flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3 text-xs text-gray-500 transition hover:text-white"
-            >
-
-              <Filter size={14} />
-
-              Filters
-
-            </button>
+            <QuickLink
+              href="/tutor"
+              icon={<Sparkles size={14} />}
+              label="Zora Tutor"
+            />
 
           </div>
 
         </div>
 
-        {/* FILTER PANEL */}
+        {/* =====================================================
+            CREATE TASK MODAL
+        ===================================================== */}
 
-        {showFilters && (
+        {showCreate && (
 
-          <div className="mb-5 rounded-2xl border border-white/10 bg-white/[0.035] p-4 backdrop-blur-xl">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-5 backdrop-blur-md">
 
-            <div className="flex flex-wrap gap-2">
+            <div className="relative w-full max-w-lg overflow-hidden rounded-[30px] border border-cyan-400/15 bg-[#050e18]/95 p-7 shadow-[0_0_80px_rgba(34,211,238,0.08)]">
 
-              <span className="mr-2 py-2 text-xs text-gray-500">
-                Priority:
-              </span>
+              <HudCorners />
 
-              {(
-                [
-                  "High",
-                  "Medium",
-                  "Low",
-                ] as Priority[]
-              ).map((item) => (
+              <div className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/60 to-transparent" />
+
+              <button
+                type="button"
+                onClick={() => setShowCreate(false)}
+                className="absolute right-5 top-5 flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.03] text-slate-600 transition hover:text-white"
+              >
+                <X size={16} />
+              </button>
+
+              <div className="relative mb-6">
+
+                <div className="flex items-center gap-3">
+
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-400/15 bg-cyan-400/[0.06]">
+
+                    <Target
+                      size={19}
+                      className="text-cyan-400"
+                    />
+
+                  </div>
+
+                  <div>
+
+                    <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-cyan-400">
+                      NEW TASK
+                    </p>
+
+                    <h2 className="mt-1 text-2xl font-semibold">
+                      What needs to be done?
+                    </h2>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+              <div className="relative space-y-4">
+
+                {/* TITLE */}
+
+                <div>
+
+                  <label className="mb-2 block font-mono text-[8px] uppercase tracking-[0.2em] text-slate-600">
+                    Task title
+                  </label>
+
+                  <input
+                    value={newTitle}
+                    onChange={(e) =>
+                      setNewTitle(e.target.value)
+                    }
+                    onKeyDown={(e) => {
+                      if (
+                        e.key === "Enter" &&
+                        newTitle.trim()
+                      ) {
+                        createTask();
+                      }
+                    }}
+                    placeholder="e.g. Finish physics assignment"
+                    className="h-12 w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 text-sm text-white outline-none placeholder:text-slate-700 focus:border-cyan-400/30 focus:bg-cyan-400/[0.02]"
+                    autoFocus
+                  />
+
+                </div>
+
+                {/* DESCRIPTION */}
+
+                <div>
+
+                  <label className="mb-2 block font-mono text-[8px] uppercase tracking-[0.2em] text-slate-600">
+                    Details
+                  </label>
+
+                  <textarea
+                    value={newDescription}
+                    onChange={(e) =>
+                      setNewDescription(e.target.value)
+                    }
+                    placeholder="Add any details you need..."
+                    rows={3}
+                    className="w-full resize-none rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-700 focus:border-cyan-400/30 focus:bg-cyan-400/[0.02]"
+                  />
+
+                </div>
+
+                {/* PRIORITY */}
+
+                <div>
+
+                  <label className="mb-2 block font-mono text-[8px] uppercase tracking-[0.2em] text-slate-600">
+                    Priority
+                  </label>
+
+                  <div className="grid grid-cols-3 gap-2">
+
+                    {(
+                      ["LOW", "MEDIUM", "HIGH"] as Priority[]
+                    ).map((priority) => (
+
+                      <button
+                        key={priority}
+                        type="button"
+                        onClick={() =>
+                          setNewPriority(priority)
+                        }
+                        className={`rounded-xl border px-3 py-3 text-[10px] font-semibold transition ${
+                          newPriority === priority
+                            ? priority === "HIGH"
+                              ? "border-red-400/30 bg-red-400/[0.08] text-red-300"
+                              : priority === "MEDIUM"
+                                ? "border-amber-400/30 bg-amber-400/[0.08] text-amber-300"
+                                : "border-cyan-400/30 bg-cyan-400/[0.08] text-cyan-300"
+                            : "border-white/[0.07] bg-white/[0.025] text-slate-600 hover:text-white"
+                        }`}
+                      >
+                        {priority}
+                      </button>
+
+                    ))}
+
+                  </div>
+
+                </div>
+
+                {/* DUE */}
+
+                <div>
+
+                  <label className="mb-2 block font-mono text-[8px] uppercase tracking-[0.2em] text-slate-600">
+                    Due date
+                  </label>
+
+                  <input
+                    type="date"
+                    value={newDue}
+                    onChange={(e) =>
+                      setNewDue(e.target.value)
+                    }
+                    className="h-12 w-full rounded-xl border border-white/[0.08] bg-white/[0.025] px-4 text-sm text-white outline-none focus:border-cyan-400/30"
+                  />
+
+                </div>
+
+                {/* CREATE */}
 
                 <button
-                  key={item}
-                  onClick={() =>
-                    setPriority(item)
-                  }
-                  className={`rounded-lg px-3 py-2 text-xs ${
-                    priority === item
-                      ? "bg-blue-500/15 text-blue-300"
-                      : "bg-white/5 text-gray-500"
-                  }`}
+                  type="button"
+                  onClick={createTask}
+                  disabled={!newTitle.trim()}
+                  className="group relative mt-2 flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-xl border border-cyan-300/30 bg-cyan-400/[0.1] font-bold text-cyan-200 transition hover:border-cyan-300/50 hover:bg-cyan-400/[0.15] disabled:cursor-not-allowed disabled:opacity-30"
                 >
-                  {item}
+
+                  <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+
+                  <Plus
+                    size={16}
+                    className="relative"
+                  />
+
+                  <span className="relative">
+                    Create Task
+                  </span>
+
                 </button>
 
-              ))}
+              </div>
 
             </div>
 
@@ -616,539 +912,110 @@ export default function TasksPage() {
 
         )}
 
-        {/* TASK HEADER */}
-
-        <div className="mb-4 flex items-center justify-between">
-
-          <div>
-
-            <h2 className="text-xl font-semibold">
-              {activeFilter === "All"
-                ? "My tasks"
-                : activeFilter}
-            </h2>
-
-            <p className="mt-1 text-xs text-gray-600">
-              {filteredTasks.length} tasks shown
-            </p>
-
-          </div>
-
-          {completed > 0 && (
-
-            <button
-              onClick={clearCompleted}
-              className="flex items-center gap-2 text-xs text-gray-600 transition hover:text-red-400"
-            >
-
-              <Trash2 size={14} />
-
-              Clear completed
-
-            </button>
-
-          )}
-
-        </div>
-
-        {/* TASK LIST */}
-
-        <section className="space-y-3">
-
-          {filteredTasks.length === 0 ? (
-
-            <div className="rounded-3xl border border-dashed border-white/10 bg-white/[0.02] px-6 py-20 text-center">
-
-              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-500/10">
-
-                <CheckCircle2
-                  size={30}
-                  className="text-blue-400"
-                />
-
-              </div>
-
-              <h3 className="text-lg font-semibold">
-                No tasks yet
-              </h3>
-
-              <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-gray-600">
-                Your workspace is clear. Add your first
-                task above and start getting things done.
-              </p>
-
-              <button
-                onClick={() =>
-                  document
-                    .querySelector("input")
-                    ?.focus()
-                }
-                className="mt-6 rounded-xl bg-blue-500/10 px-4 py-2.5 text-xs font-medium text-blue-400 transition hover:bg-blue-500/20"
-              >
-                <span className="flex items-center gap-2">
-                  <Plus size={14} />
-                  Create your first task
-                </span>
-              </button>
-
-            </div>
-
-          ) : (
-
-            filteredTasks.map((task) => (
-
-              <TaskCard
-                key={task.id}
-                task={task}
-                toggleTask={toggleTask}
-                toggleFavorite={toggleFavorite}
-                deleteTask={deleteTask}
-              />
-
-            ))
-
-          )}
-
-        </section>
-
-        {/* BOTTOM GRID */}
-
-        <div className="mt-8 grid gap-4 lg:grid-cols-2">
-
-          {/* WEEKLY PRODUCTIVITY */}
-
-          <section className="rounded-3xl border border-white/10 bg-white/[0.035] p-5 backdrop-blur-xl">
-
-            <div className="mb-6 flex items-center justify-between">
-
-              <div>
-
-                <div className="flex items-center gap-2">
-
-                  <BarChart3
-                    size={17}
-                    className="text-blue-400"
-                  />
-
-                  <h3 className="font-semibold">
-                    This week
-                  </h3>
-
-                </div>
-
-                <p className="mt-1 text-xs text-gray-600">
-                  Your productivity activity
-                </p>
-
-              </div>
-
-              <span className="rounded-lg bg-emerald-400/10 px-2 py-1 text-[10px] font-semibold text-emerald-400">
-                +18%
-              </span>
-
-            </div>
-
-            <div className="flex h-36 items-end justify-between gap-2">
-
-              {[42, 65, 48, 82, 68, 91, 76].map(
-                (value, index) => (
-
-                  <div
-                    key={index}
-                    className="flex h-full flex-1 flex-col items-center justify-end gap-2"
-                  >
-
-                    <div
-                      className="w-full max-w-[32px] rounded-t-lg bg-gradient-to-t from-blue-600/60 to-cyan-400/80 transition-all hover:from-blue-500 hover:to-cyan-300"
-                      style={{
-                        height: `${value}%`,
-                      }}
-                    />
-
-                    <span className="text-[10px] text-gray-600">
-                      {
-                        [
-                          "M",
-                          "T",
-                          "W",
-                          "T",
-                          "F",
-                          "S",
-                          "S",
-                        ][index]
-                      }
-                    </span>
-
-                  </div>
-
-                )
-              )}
-
-            </div>
-
-          </section>
-
-          {/* ACHIEVEMENT */}
-
-          <section className="relative overflow-hidden rounded-3xl border border-yellow-400/10 bg-yellow-400/[0.035] p-5 backdrop-blur-xl">
-
-            <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-yellow-400/10 blur-3xl" />
-
-            <div className="relative">
-
-              <div className="mb-5 flex items-center gap-2">
-
-                <Trophy
-                  size={18}
-                  className="text-yellow-400"
-                />
-
-                <h3 className="font-semibold">
-                  Daily achievement
-                </h3>
-
-              </div>
-
-              <div className="flex items-center gap-4">
-
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-yellow-400/10">
-
-                  <Target
-                    size={28}
-                    className="text-yellow-400"
-                  />
-
-                </div>
-
-                <div className="flex-1">
-
-                  <h4 className="font-semibold">
-                    Task Slayer
-                  </h4>
-
-                  <p className="mt-1 text-xs text-gray-600">
-                    Complete 5 tasks today
-                  </p>
-
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-
-                    <div
-                      className="h-full rounded-full bg-yellow-400 transition-all"
-                      style={{
-                        width: `${Math.min(
-                          100,
-                          (completed / 5) * 100
-                        )}%`,
-                      }}
-                    />
-
-                  </div>
-
-                </div>
-
-                <span className="text-sm font-semibold text-yellow-400">
-                  {Math.min(completed, 5)}/5
-                </span>
-
-              </div>
-
-            </div>
-
-          </section>
-
-        </div>
-
-        {/* QUICK ADD */}
-
-        <section className="mt-4 rounded-3xl border border-white/10 bg-white/[0.025] p-5">
-
-          <div className="mb-4 flex items-center gap-2">
-
-            <Zap
-              size={17}
-              className="text-cyan-400"
-            />
-
-            <h3 className="font-semibold">
-              Quick add
-            </h3>
-
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-
-            <QuickButton
-              label=" Study for 30 min"
-              onClick={() =>
-                quickAdd(
-                  "Study for 30 minutes",
-                  "Study"
-                )
-              }
-            />
-
-            <QuickButton
-              label=" Work on Zora"
-              onClick={() =>
-                quickAdd(
-                  "Work on Zora",
-                  "Startup"
-                )
-              }
-            />
-
-            <QuickButton
-              label=" Finish coding"
-              onClick={() =>
-                quickAdd(
-                  "Finish coding",
-                  "Work"
-                )
-              }
-            />
-
-            <QuickButton
-              label=" Take a break"
-              onClick={() =>
-                quickAdd(
-                  "Take a break",
-                  "Health"
-                )
-              }
-            />
-
-            <QuickButton
-              label=" Plan tomorrow"
-              onClick={() =>
-                quickAdd(
-                  "Plan tomorrow",
-                  "Personal"
-                )
-              }
-            />
-
-          </div>
-
-        </section>
-
-        {/* FOOTER */}
-
-        <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-white/[0.05] pt-6 text-xs text-gray-700 sm:flex-row">
-
-          <div className="flex items-center gap-2">
-
-            <Sparkles size={13} />
-
-            Zora is keeping you on track.
-
-          </div>
-
-          <div className="flex items-center gap-2">
-
-            <CalendarDays size={13} />
-
-            Today · Stay productive
-
-          </div>
-
-        </div>
-
-      </div>
-
-    </main>
+      </main>
+    </>
   );
 }
 
-/* ================================= */
-/* STAT CARD */
-/* ================================= */
+/* =========================================================
+   HUD CORNERS
+========================================================= */
 
-function Stat({
+function HudCorners({
+  subtle = false,
+}: {
+  subtle?: boolean;
+}) {
+  const opacity = subtle
+    ? "opacity-40"
+    : "opacity-70";
+
+  return (
+    <>
+      <div
+        className={`pointer-events-none absolute left-3 top-3 h-4 w-4 border-l border-t border-cyan-400/30 ${opacity}`}
+      />
+
+      <div
+        className={`pointer-events-none absolute right-3 top-3 h-4 w-4 border-r border-t border-cyan-400/30 ${opacity}`}
+      />
+
+      <div
+        className={`pointer-events-none absolute bottom-3 left-3 h-4 w-4 border-b border-l border-cyan-400/30 ${opacity}`}
+      />
+
+      <div
+        className={`pointer-events-none absolute bottom-3 right-3 h-4 w-4 border-b border-r border-cyan-400/30 ${opacity}`}
+      />
+    </>
+  );
+}
+
+/* =========================================================
+   TELEMETRY CARD
+========================================================= */
+
+function TelemetryCard({
   icon,
   label,
   value,
-  iconClass,
+  status,
+  bars,
 }: {
   icon: React.ReactNode;
   label: string;
-  value: string | number;
-  iconClass: string;
+  value: string;
+  status: string;
+  bars: number;
 }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 backdrop-blur-xl transition hover:bg-white/[0.055]">
+  const activeBars =
+    label === "COMPLETION"
+      ? Math.round(bars / 8.5)
+      : Math.min(bars + 2, 12);
 
-      <div className={`mb-3 ${iconClass}`}>
-        {icon}
+  return (
+    <div className="group relative overflow-hidden rounded-2xl border border-white/[0.07] bg-[#050e18]/65 p-4 backdrop-blur-xl transition hover:border-cyan-400/15">
+
+      <div className="absolute right-0 top-0 h-20 w-20 rounded-full bg-cyan-400/[0.025] blur-2xl" />
+
+      <div className="relative flex items-start justify-between">
+
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-400/10 bg-cyan-400/[0.05] text-cyan-400">
+          {icon}
+        </div>
+
+        <span className="font-mono text-[8px] tracking-[0.15em] text-slate-600">
+          {status}
+        </span>
+
       </div>
 
-      <p className="text-2xl font-bold tracking-tight">
-        {value}
-      </p>
-
-      <p className="mt-1 text-xs text-gray-600">
+      <p className="relative mt-4 font-mono text-[8px] uppercase tracking-[0.2em] text-slate-600">
         {label}
       </p>
 
-    </div>
-  );
-}
+      <div className="relative mt-1 flex items-end gap-2">
 
-/* ================================= */
-/* TASK CARD */
-/* ================================= */
+        <p className="font-mono text-2xl font-semibold text-slate-200">
+          {value}
+        </p>
 
-function TaskCard({
-  task,
-  toggleTask,
-  toggleFavorite,
-  deleteTask,
-}: {
-  task: Task;
-  toggleTask: (id: number) => void;
-  toggleFavorite: (id: number) => void;
-  deleteTask: (id: number) => void;
-}) {
-  const priorityStyles = {
-    High:
-      "bg-red-400/10 text-red-400 border-red-400/10",
+      </div>
 
-    Medium:
-      "bg-yellow-400/10 text-yellow-400 border-yellow-400/10",
+      <div className="relative mt-3 flex gap-1">
 
-    Low:
-      "bg-emerald-400/10 text-emerald-400 border-emerald-400/10",
-  };
+        {Array.from({ length: 12 }).map((_, index) => (
 
-  return (
-    <div
-      className={`group relative overflow-hidden rounded-2xl border p-4 transition-all duration-300 sm:p-5 ${
-        task.completed
-          ? "border-white/[0.05] bg-white/[0.02] opacity-65"
-          : "border-white/10 bg-white/[0.035] hover:-translate-y-[2px] hover:border-blue-400/20 hover:bg-white/[0.055]"
-      }`}
-    >
-
-      {/* PRIORITY LINE */}
-
-      <div
-        className={`absolute bottom-0 left-0 top-0 w-[2px] ${
-          task.priority === "High"
-            ? "bg-red-400"
-            : task.priority === "Medium"
-            ? "bg-yellow-400"
-            : "bg-emerald-400"
-        }`}
-      />
-
-      <div className="flex items-center gap-4">
-
-        {/* COMPLETE */}
-
-        <button
-          onClick={() =>
-            toggleTask(task.id)
-          }
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-all ${
-            task.completed
-              ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-400"
-              : "border-white/10 bg-white/5 text-gray-600 hover:border-blue-400/40 hover:bg-blue-400/5 hover:text-blue-400"
-          }`}
-        >
-
-          {task.completed ? (
-            <Check size={18} />
-          ) : (
-            <span className="h-3 w-3 rounded-full border border-current" />
-          )}
-
-        </button>
-
-        {/* CONTENT */}
-
-        <div className="min-w-0 flex-1">
-
-          <div className="flex flex-wrap items-center gap-2">
-
-            <p
-              className={`text-sm font-semibold ${
-                task.completed
-                  ? "text-gray-600 line-through"
-                  : "text-gray-200"
-              }`}
-            >
-              {task.title}
-            </p>
-
-            <span
-              className={`rounded-md border px-2 py-0.5 text-[9px] font-bold uppercase ${priorityStyles[task.priority]}`}
-            >
-              {task.priority}
-            </span>
-
-          </div>
-
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-[10px] text-gray-600">
-
-            <span>
-              {task.category}
-            </span>
-
-            <span className="h-1 w-1 rounded-full bg-gray-700" />
-
-            <span className="flex items-center gap-1">
-
-              <Clock3 size={11} />
-
-              {task.duration} min
-
-            </span>
-
-            <span className="h-1 w-1 rounded-full bg-gray-700" />
-
-            <span>
-              {task.due}
-            </span>
-
-          </div>
-
-        </div>
-
-        {/* FAVORITE */}
-
-        <button
-          onClick={() =>
-            toggleFavorite(task.id)
-          }
-          className={`hidden rounded-xl p-2 transition sm:block ${
-            task.favorite
-              ? "text-yellow-400"
-              : "text-gray-700 hover:text-gray-400"
-          }`}
-        >
-
-          <Star
-            size={17}
-            fill={
-              task.favorite
-                ? "currentColor"
-                : "none"
-            }
+          <div
+            key={index}
+            className={`h-1 flex-1 transition ${
+              index < activeBars
+                ? "bg-cyan-400/50"
+                : "bg-white/[0.04]"
+            }`}
           />
 
-        </button>
-
-        {/* DELETE */}
-
-        <button
-          onClick={() =>
-            deleteTask(task.id)
-          }
-          className="rounded-xl p-2 text-gray-700 transition hover:bg-red-500/10 hover:text-red-400 sm:opacity-0 sm:group-hover:opacity-100"
-        >
-
-          <Trash2 size={17} />
-
-        </button>
+        ))}
 
       </div>
 
@@ -1156,23 +1023,294 @@ function TaskCard({
   );
 }
 
-/* ================================= */
-/* QUICK ADD BUTTON */
-/* ================================= */
+/* =========================================================
+   PROGRESS CORE
+========================================================= */
 
-function QuickButton({
-  label,
-  onClick,
+function ProgressCore({
+  percentage,
 }: {
-  label: string;
-  onClick: () => void;
+  percentage: number;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className="rounded-xl border border-white/10 bg-white/[0.035] px-4 py-2.5 text-xs text-gray-500 transition hover:border-blue-400/20 hover:bg-blue-400/[0.06] hover:text-blue-300"
+    <div className="relative flex h-48 w-48 items-center justify-center">
+
+      <div className="absolute inset-0 animate-[spin_18s_linear_infinite] rounded-full border border-cyan-400/10 border-r-cyan-400/60 border-t-cyan-400/70" />
+
+      <div className="absolute inset-3 animate-[spin_13s_linear_infinite_reverse] rounded-full border border-blue-400/10 border-b-blue-400/50" />
+
+      <div className="absolute inset-7 rounded-full border border-dashed border-cyan-400/15" />
+
+      <div className="absolute inset-[43px] rounded-full bg-cyan-400/[0.04] shadow-[0_0_70px_rgba(34,211,238,0.15)]" />
+
+      <div className="relative flex h-16 w-16 items-center justify-center rounded-full border border-cyan-300/25 bg-cyan-400/[0.07]">
+
+        <div className="h-3 w-3 animate-pulse rounded-full bg-cyan-300 shadow-[0_0_25px_rgba(103,232,249,0.9)]" />
+
+      </div>
+
+      <div className="absolute text-center">
+
+        <p className="font-mono text-2xl font-bold text-cyan-200">
+          {percentage}%
+        </p>
+
+        <p className="mt-1 font-mono text-[7px] tracking-[0.3em] text-slate-600">
+          COMPLETE
+        </p>
+
+      </div>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   TASK ROW
+========================================================= */
+
+function TaskRow({
+  task,
+  onToggle,
+  onDelete,
+}: {
+  task: Task;
+  onToggle: () => void;
+  onDelete: () => void;
+}) {
+  const priorityClass =
+    task.priority === "HIGH"
+      ? "border-red-400/20 bg-red-400/[0.06] text-red-300"
+      : task.priority === "MEDIUM"
+        ? "border-amber-400/20 bg-amber-400/[0.06] text-amber-300"
+        : "border-cyan-400/20 bg-cyan-400/[0.06] text-cyan-300";
+
+  return (
+    <div
+      className={`group relative flex items-center gap-3 overflow-hidden rounded-xl border p-4 transition ${
+        task.completed
+          ? "border-white/[0.04] bg-white/[0.015] opacity-55"
+          : "border-white/[0.06] bg-black/[0.12] hover:border-cyan-400/15 hover:bg-cyan-400/[0.02]"
+      }`}
     >
+
+      {/* tiny HUD line */}
+
+      {!task.completed && (
+        <div className="absolute left-0 top-0 h-px w-12 bg-gradient-to-r from-cyan-400/40 to-transparent" />
+      )}
+
+      {/* CHECK */}
+
+      <button
+        type="button"
+        onClick={onToggle}
+        className="shrink-0"
+        aria-label={
+          task.completed
+            ? "Mark task incomplete"
+            : "Complete task"
+        }
+      >
+
+        {task.completed ? (
+          <CheckCircle2
+            size={22}
+            className="text-emerald-400"
+          />
+        ) : (
+          <Circle
+            size={22}
+            className="text-slate-700 transition group-hover:text-cyan-400"
+          />
+        )}
+
+      </button>
+
+      {/* CONTENT */}
+
+      <div className="min-w-0 flex-1">
+
+        <div className="flex flex-wrap items-center gap-2">
+
+          <h3
+            className={`text-sm font-medium ${
+              task.completed
+                ? "text-slate-600 line-through"
+                : "text-slate-200"
+            }`}
+          >
+            {task.title}
+          </h3>
+
+          <span
+            className={`rounded-full border px-2 py-0.5 font-mono text-[8px] font-semibold tracking-[0.1em] ${priorityClass}`}
+          >
+            {task.priority}
+          </span>
+
+        </div>
+
+        {task.description && (
+          <p className="mt-1 truncate text-xs text-slate-600">
+            {task.description}
+          </p>
+        )}
+
+        {task.due && (
+          <div className="mt-2 flex items-center gap-1.5 font-mono text-[9px] text-slate-600">
+
+            <Clock3 size={11} />
+
+            {task.due}
+
+          </div>
+        )}
+
+      </div>
+
+      {/* DELETE */}
+
+      <button
+        type="button"
+        onClick={onDelete}
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-700 opacity-0 transition hover:bg-red-400/[0.08] hover:text-red-400 group-hover:opacity-100"
+        aria-label="Delete task"
+      >
+        <Trash2 size={14} />
+      </button>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+function EmptyState({
+  icon,
+  title,
+  description,
+  onCreate,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  onCreate: () => void;
+}) {
+  return (
+    <div className="relative rounded-2xl border border-dashed border-white/[0.08] bg-black/[0.08] p-10 text-center">
+
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-400/10 bg-cyan-400/[0.05] text-cyan-400">
+        {icon}
+      </div>
+
+      <h3 className="mt-4 font-semibold">
+        {title}
+      </h3>
+
+      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-600">
+        {description}
+      </p>
+
+      <button
+        type="button"
+        onClick={onCreate}
+        className="mt-5 inline-flex items-center gap-2 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.05] px-4 py-2.5 text-xs font-semibold text-cyan-300 transition hover:bg-cyan-400/[0.1]"
+      >
+        <Plus size={14} />
+        Create Task
+      </button>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   SYSTEM ROW
+========================================================= */
+
+function SystemRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-xl border border-white/[0.05] bg-black/[0.12] px-4 py-3">
+
+      <span className="text-xs text-slate-500">
+        {label}
+      </span>
+
+      <div className="flex items-center gap-2">
+
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+
+        <span className="font-mono text-[9px] font-semibold tracking-[0.1em] text-slate-400">
+          {value}
+        </span>
+
+      </div>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   ACTIVITY LINE
+========================================================= */
+
+function ActivityLine({
+  text,
+}: {
+  text: string;
+}) {
+  return (
+    <div className="flex items-center gap-2 text-slate-600">
+
+      <span className="text-cyan-400/50">
+        ›
+      </span>
+
+      <span>
+        {text}
+      </span>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   QUICK LINK
+========================================================= */
+
+function QuickLink({
+  href,
+  icon,
+  label,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-2.5 text-xs text-slate-600 transition hover:border-cyan-400/20 hover:bg-cyan-400/[0.03] hover:text-cyan-300"
+    >
+
+      {icon}
+
       {label}
-    </button>
+
+      <ChevronRight
+        size={12}
+        className="transition group-hover:translate-x-0.5"
+      />
+
+    </Link>
   );
 }
