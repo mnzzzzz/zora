@@ -4,8 +4,6 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function AuthTestPage() {
-  const supabase = createClient();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -14,11 +12,15 @@ export default function AuthTestPage() {
 
   const [message, setMessage] = useState("");
 
+  const getSupabase = () => createClient();
+
   const signUp = async () => {
     if (!email || !password) {
       setMessage("Enter your email and password.");
       return;
     }
+
+    const supabase = getSupabase();
 
     setMessage("Creating account...");
 
@@ -42,6 +44,8 @@ export default function AuthTestPage() {
       setMessage("Enter your email and password.");
       return;
     }
+
+    const supabase = getSupabase();
 
     setMessage("Signing in...");
 
@@ -94,18 +98,14 @@ export default function AuthTestPage() {
       });
 
     if (profileError) {
-      if (
-        profileError.code === "23505"
-      ) {
+      if (profileError.code === "23505") {
         setMessage(
           "That username is already taken. Try another one."
         );
         return;
       }
 
-      if (
-        profileError.code === "23503"
-      ) {
+      if (profileError.code === "23503") {
         setMessage(
           "Your authentication session is not ready yet. Please sign in again."
         );
@@ -124,6 +124,8 @@ export default function AuthTestPage() {
   };
 
   const createProfile = async () => {
+    const supabase = getSupabase();
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -171,7 +173,9 @@ export default function AuthTestPage() {
         return;
       }
 
-      setMessage(`Profile error: ${error.message}`);
+      setMessage(
+        `Profile error: ${error.message}`
+      );
       return;
     }
 
@@ -181,6 +185,8 @@ export default function AuthTestPage() {
   };
 
   const checkUser = async () => {
+    const supabase = getSupabase();
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -194,6 +200,8 @@ export default function AuthTestPage() {
   };
 
   const checkProfile = async () => {
+    const supabase = getSupabase();
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -210,7 +218,9 @@ export default function AuthTestPage() {
       .single();
 
     if (error) {
-      setMessage(`Profile error: ${error.message}`);
+      setMessage(
+        `Profile error: ${error.message}`
+      );
       return;
     }
 
@@ -220,6 +230,8 @@ export default function AuthTestPage() {
   };
 
   const signOut = async () => {
+    const supabase = getSupabase();
+
     await supabase.auth.signOut();
 
     setMessage("Logged out.");
@@ -247,9 +259,7 @@ export default function AuthTestPage() {
             type="text"
             placeholder="Your name"
             value={name}
-            onChange={(e) =>
-              setName(e.target.value)
-            }
+            onChange={(e) => setName(e.target.value)}
             className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm outline-none placeholder:text-slate-700 focus:border-cyan-400/30"
           />
 
@@ -275,9 +285,7 @@ export default function AuthTestPage() {
             type="email"
             placeholder="Email"
             value={email}
-            onChange={(e) =>
-              setEmail(e.target.value)
-            }
+            onChange={(e) => setEmail(e.target.value)}
             className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm outline-none placeholder:text-slate-700 focus:border-cyan-400/30"
           />
 
@@ -285,9 +293,7 @@ export default function AuthTestPage() {
             type="password"
             placeholder="Password"
             value={password}
-            onChange={(e) =>
-              setPassword(e.target.value)
-            }
+            onChange={(e) => setPassword(e.target.value)}
             className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm outline-none placeholder:text-slate-700 focus:border-cyan-400/30"
           />
 

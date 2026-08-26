@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 
 import {
@@ -27,12 +28,6 @@ import {
   Upload,
 } from "lucide-react";
 
-import {
-  Document,
-  Page,
-  pdfjs,
-} from "react-pdf";
-
 import PdfAnnotationLayer, {
   Annotation,
   AnnotationType,
@@ -41,10 +36,47 @@ import PdfAnnotationLayer, {
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+/*
+ * IMPORTANT:
+ * react-pdf / pdf.js must NOT be imported normally at the top level.
+ * pdf.js uses browser APIs such as DOMMatrix which don't exist
+ * while Next.js is prerendering on Vercel.
+ *
+ * These components are therefore loaded only on the client.
+ */
+const PdfDocument = dynamic(
+  () =>
+    import("react-pdf").then(
+      (module) => module.Document
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="rounded-2xl border border-white/10 bg-white/5 px-10 py-8 text-sm text-gray-400">
+        Loading PDF viewer...
+      </div>
+    ),
+  }
+);
+
+const PdfPage = dynamic(
+  () =>
+    import("react-pdf").then(
+      (module) => module.Page
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="rounded-2xl border border-white/10 bg-white/5 px-10 py-8 text-sm text-gray-400">
+        Loading page...
+      </div>
+    ),
+  }
+);
 
 export default function DocumentsPage() {
-  const [file, setFile] = useState<File | null>(null);
+  const [file, setFile] =
+    useState<File | null>(null);
 
   const [fileUrl, setFileUrl] =
     useState<string | null>(null);
@@ -78,11 +110,59 @@ export default function DocumentsPage() {
   const fileInputRef =
     useRef<HTMLInputElement | null>(null);
 
-  const [pageSize, setPageSize] = useState({
-    width: 800,
-    height: 1100,
-  });
+  const [pageSize, setPageSize] =
+    useState({
+      width: 800,
+      height: 1100,
+    });
 
+  /*
+   * This state confirms that react-pdf has been
+   * initialized in the browser.
+   */
+  const [pdfReady, setPdfReady] =
+    useState(false);
+
+  /*
+   * Initialize pdf.js ONLY in the browser.
+   */
+  useEffect(() => {
+    let mounted = true;
+
+    const initializePdf = async () => {
+      try {
+        const { pdfjs } =
+          await import("react-pdf");
+
+        pdfjs.GlobalWorkerOptions.workerSrc =
+          `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+
+        if (mounted) {
+          setPdfReady(true);
+        }
+      } catch (error) {
+        console.error(
+          "Failed to initialize PDF.js:",
+          error
+        );
+
+        if (mounted) {
+          setPdfReady(false);
+        }
+      }
+    };
+
+    initializePdf();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  /*
+   * Clean up object URLs when the document changes
+   * or the component unmounts.
+   */
   useEffect(() => {
     return () => {
       if (fileUrl) {
@@ -157,6 +237,7 @@ export default function DocumentsPage() {
     ];
 
     setHistory(newHistory);
+
     setHistoryIndex(
       newHistory.length
     );
@@ -171,6 +252,7 @@ export default function DocumentsPage() {
       history[historyIndex];
 
     setAnnotations(previous);
+
     setHistoryIndex(
       historyIndex - 1
     );
@@ -239,7 +321,13 @@ export default function DocumentsPage() {
     };
 
     const blob = new Blob(
-      [JSON.stringify(data, null, 2)],
+      [
+        JSON.stringify(
+          data,
+          null,
+          2
+        ),
+      ],
       {
         type: "application/json",
       }
@@ -263,27 +351,39 @@ export default function DocumentsPage() {
 
   const zoomIn = () => {
     setScale((value) =>
-      Math.min(value + 0.1, 2)
+      Math.min(
+        value + 0.1,
+        2
+      )
     );
   };
 
   const zoomOut = () => {
     setScale((value) =>
-      Math.max(value - 0.1, 0.5)
+      Math.max(
+        value - 0.1,
+        0.5
+      )
     );
   };
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-transparent text-white">
+
       {/* Ambient glow */}
+
       <div className="pointer-events-none fixed inset-0">
         <div className="absolute left-[15%] top-[10%] h-72 w-72 rounded-full bg-cyan-400/10 blur-[120px]" />
+
         <div className="absolute bottom-[5%] right-[10%] h-96 w-96 rounded-full bg-blue-500/10 blur-[140px]" />
       </div>
 
       {/* Header */}
+
       <header className="relative z-20 flex h-[76px] items-center justify-between border-b border-white/10 bg-[#07111f]/80 px-6 backdrop-blur-2xl">
+
         <div className="flex items-center gap-4">
+
           <Link
             href="/"
             className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-400 transition hover:bg-white/10 hover:text-white"
@@ -292,11 +392,13 @@ export default function DocumentsPage() {
           </Link>
 
           <div className="flex items-center gap-3">
+
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400">
               <FileText size={19} />
             </div>
 
             <div>
+
               <h1 className="font-semibold">
                 PDF Workspace
               </h1>
@@ -306,11 +408,13 @@ export default function DocumentsPage() {
                   ? file.name
                   : "No document open"}
               </p>
+
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+
           <button
             onClick={saveAnnotations}
             disabled={!file}
@@ -328,12 +432,16 @@ export default function DocumentsPage() {
             <Download size={16} />
             Export
           </button>
+
         </div>
       </header>
 
       {/* Toolbar */}
+
       <div className="relative z-20 flex items-center justify-between border-b border-white/10 bg-[#0a1422]/90 px-5 py-3 backdrop-blur-xl">
+
         <div className="flex items-center gap-2">
+
           <ToolButton
             active={tool === "select"}
             onClick={() =>
@@ -439,9 +547,11 @@ export default function DocumentsPage() {
           >
             <Trash2 size={17} />
           </button>
+
         </div>
 
         <div className="flex items-center gap-2">
+
           <button
             onClick={zoomOut}
             className="rounded-xl p-2 text-gray-400 transition hover:bg-white/10 hover:text-white"
@@ -450,7 +560,10 @@ export default function DocumentsPage() {
           </button>
 
           <span className="min-w-[55px] text-center text-xs text-gray-400">
-            {Math.round(scale * 100)}%
+            {Math.round(
+              scale * 100
+            )}
+            %
           </span>
 
           <button
@@ -459,10 +572,12 @@ export default function DocumentsPage() {
           >
             <Plus size={17} />
           </button>
+
         </div>
       </div>
 
       {/* Main */}
+
       <div
         className="relative z-10 flex min-h-[calc(100vh-133px)]"
         onDrop={handleDrop}
@@ -470,8 +585,11 @@ export default function DocumentsPage() {
           event.preventDefault()
         }
       >
+
         {/* Left sidebar */}
+
         <aside className="hidden w-[220px] shrink-0 border-r border-white/10 bg-[#07111f]/70 p-4 backdrop-blur-xl lg:block">
+
           <button
             onClick={() =>
               fileInputRef.current?.click()
@@ -491,12 +609,14 @@ export default function DocumentsPage() {
           />
 
           <div className="mt-6">
+
             <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-600">
               Document
             </p>
 
             {file ? (
               <div className="rounded-2xl border border-cyan-400/10 bg-cyan-400/5 p-3">
+
                 <FileText
                   size={18}
                   className="mb-2 text-cyan-400"
@@ -509,30 +629,39 @@ export default function DocumentsPage() {
                 <p className="mt-1 text-[11px] text-gray-600">
                   {numPages} pages
                 </p>
+
               </div>
             ) : (
               <p className="text-xs leading-5 text-gray-600">
                 Open a PDF to start working.
               </p>
             )}
+
           </div>
         </aside>
 
         {/* PDF area */}
+
         <section className="flex flex-1 items-center justify-center overflow-auto p-6">
+
           {!fileUrl ? (
+
             <div className="w-full max-w-xl">
+
               <div
                 onClick={() =>
                   fileInputRef.current?.click()
                 }
                 className="cursor-pointer rounded-[32px] border border-dashed border-white/10 bg-white/[0.025] p-16 text-center transition hover:border-cyan-400/30 hover:bg-cyan-400/[0.025]"
               >
+
                 <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-cyan-400/10">
+
                   <Upload
                     size={28}
                     className="text-cyan-400"
                   />
+
                 </div>
 
                 <h2 className="text-xl font-bold">
@@ -547,14 +676,27 @@ export default function DocumentsPage() {
                   Your document is processed locally in
                   your browser.
                 </p>
+
               </div>
+
             </div>
+
+          ) : !pdfReady ? (
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-10 py-8 text-sm text-gray-400">
+              Initializing PDF viewer...
+            </div>
+
           ) : (
+
             <div className="flex flex-col items-center">
-              <Document
+
+              <PdfDocument
                 file={fileUrl}
                 onLoadSuccess={({
                   numPages: pages,
+                }: {
+                  numPages: number;
                 }) =>
                   setNumPages(pages)
                 }
@@ -569,6 +711,7 @@ export default function DocumentsPage() {
                   </div>
                 }
               >
+
                 <div
                   className="relative overflow-hidden rounded-lg shadow-2xl"
                   style={{
@@ -580,12 +723,14 @@ export default function DocumentsPage() {
                       scale,
                   }}
                 >
-                  <Page
+
+                  <PdfPage
                     pageNumber={pageNumber}
                     scale={scale}
                     onLoadSuccess={(
-                      page
+                      page: any
                     ) => {
+
                       const viewport =
                         page.getViewport({
                           scale: 1,
@@ -597,6 +742,7 @@ export default function DocumentsPage() {
                         height:
                           viewport.height,
                       });
+
                     }}
                     renderTextLayer
                     renderAnnotationLayer
@@ -621,18 +767,26 @@ export default function DocumentsPage() {
                       updateAnnotations
                     }
                   />
+
                 </div>
-              </Document>
+
+              </PdfDocument>
+
             </div>
           )}
+
         </section>
       </div>
 
       {/* Bottom navigation */}
+
       {fileUrl && (
         <div className="fixed bottom-5 left-1/2 z-30 flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-white/10 bg-[#0b1422]/90 px-3 py-2 shadow-2xl backdrop-blur-2xl">
+
           <button
-            disabled={pageNumber <= 1}
+            disabled={
+              pageNumber <= 1
+            }
             onClick={() =>
               setPageNumber(
                 (value) =>
@@ -669,8 +823,10 @@ export default function DocumentsPage() {
           >
             <ChevronRight size={18} />
           </button>
+
         </div>
       )}
+
     </main>
   );
 }
@@ -698,6 +854,7 @@ function ToolButton({
       ].join(" ")}
     >
       {children}
+
       <span className="hidden xl:inline">
         {label}
       </span>
