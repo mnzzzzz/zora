@@ -69,13 +69,17 @@ type Connection = {
   status: string;
 };
 
-const supabase = createClient();
-
 /* =========================================================
    PAGE
 ========================================================= */
 
 export default function ConnectPage() {
+  // IMPORTANT:
+  // Create the Supabase client inside the component.
+  // This prevents Vercel/Next.js from trying to initialize
+  // the browser client while statically building the page.
+  const supabase = useMemo(() => createClient(), []);
+
   const [currentUserId, setCurrentUserId] =
     useState<string | null>(null);
 
@@ -83,6 +87,7 @@ export default function ConnectPage() {
     useState<User | null>(null);
 
   const [users, setUsers] = useState<User[]>([]);
+
   const [conversations, setConversations] =
     useState<Conversation[]>([]);
 
@@ -96,21 +101,26 @@ export default function ConnectPage() {
     useState<string | null>(null);
 
   const [message, setMessage] = useState("");
+
   const [search, setSearch] = useState("");
 
   const [showNewConnection, setShowNewConnection] =
     useState(false);
 
-  const [newUsername, setNewUsername] = useState("");
+  const [newUsername, setNewUsername] =
+    useState("");
 
   const [mobileChatOpen, setMobileChatOpen] =
     useState(false);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] =
+    useState(true);
+
   const [sendingRequest, setSendingRequest] =
     useState(false);
 
-  const [error, setError] = useState("");
+  const [error, setError] =
+    useState("");
 
   /* =====================================================
      LOAD USER
@@ -140,12 +150,12 @@ export default function ConnectPage() {
       await loadPendingRequests(user.id);
     };
 
-    loadCurrentUser();
+    void loadCurrentUser();
 
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [supabase]);
 
   /* =====================================================
      LOAD PROFILE
@@ -161,7 +171,11 @@ export default function ConnectPage() {
 
     if (profileError) {
       console.error(profileError);
-      setError("Could not load your Zora profile.");
+
+      setError(
+        "Could not load your Zora profile."
+      );
+
       setLoading(false);
       return;
     }
@@ -183,15 +197,19 @@ export default function ConnectPage() {
      LOAD CONNECTIONS
   ===================================================== */
 
-  const loadConnections = async (userId: string) => {
-    const { data, error: connectionError } =
-      await supabase
-        .from("connections")
-        .select("*")
-        .or(
-          `requester_id.eq.${userId},receiver_id.eq.${userId}`
-        )
-        .eq("status", "accepted");
+  const loadConnections = async (
+    userId: string
+  ) => {
+    const {
+      data,
+      error: connectionError,
+    } = await supabase
+      .from("connections")
+      .select("*")
+      .or(
+        `requester_id.eq.${userId},receiver_id.eq.${userId}`
+      )
+      .eq("status", "accepted");
 
     if (connectionError) {
       console.error(connectionError);
@@ -204,11 +222,12 @@ export default function ConnectPage() {
 
     setConnections(connectionRows);
 
-    const otherUserIds = connectionRows.map((connection) =>
-      connection.requester_id === userId
-        ? connection.receiver_id
-        : connection.requester_id
-    );
+    const otherUserIds =
+      connectionRows.map((connection) =>
+        connection.requester_id === userId
+          ? connection.receiver_id
+          : connection.requester_id
+      );
 
     if (otherUserIds.length === 0) {
       setUsers([]);
@@ -217,11 +236,13 @@ export default function ConnectPage() {
       return;
     }
 
-    const { data: profiles, error: profilesError } =
-      await supabase
-        .from("profiles")
-        .select("*")
-        .in("id", otherUserIds);
+    const {
+      data: profiles,
+      error: profilesError,
+    } = await supabase
+      .from("profiles")
+      .select("*")
+      .in("id", otherUserIds);
 
     if (profilesError) {
       console.error(profilesError);
@@ -229,8 +250,8 @@ export default function ConnectPage() {
       return;
     }
 
-    const formattedUsers: User[] = (profiles || []).map(
-      (profile) => ({
+    const formattedUsers: User[] =
+      (profiles || []).map((profile) => ({
         id: profile.id,
         name: profile.name,
         username: profile.username,
@@ -238,16 +259,27 @@ export default function ConnectPage() {
         role: profile.role,
         status: profile.status,
         avatar_url: profile.avatar_url,
-      })
-    );
+      }));
 
     setUsers(formattedUsers);
 
-    if (formattedUsers.length > 0 && !selectedUserId) {
-      setSelectedUserId(formattedUsers[0].id);
-    }
+    setSelectedUserId((current) => {
+      if (
+        current &&
+        formattedUsers.some(
+          (user) => user.id === current
+        )
+      ) {
+        return current;
+      }
 
-    await loadConversations(userId, formattedUsers);
+      return formattedUsers[0]?.id ?? null;
+    });
+
+    await loadConversations(
+      userId,
+      formattedUsers
+    );
 
     setLoading(false);
   };
@@ -256,13 +288,17 @@ export default function ConnectPage() {
      LOAD PENDING REQUESTS
   ===================================================== */
 
-  const loadPendingRequests = async (userId: string) => {
-    const { data, error: requestError } =
-      await supabase
-        .from("connections")
-        .select("*")
-        .eq("receiver_id", userId)
-        .eq("status", "pending");
+  const loadPendingRequests = async (
+    userId: string
+  ) => {
+    const {
+      data,
+      error: requestError,
+    } = await supabase
+      .from("connections")
+      .select("*")
+      .eq("receiver_id", userId)
+      .eq("status", "pending");
 
     if (requestError) {
       console.error(requestError);
@@ -282,45 +318,66 @@ export default function ConnectPage() {
     userId: string,
     connectionUsers: User[]
   ) => {
-    const { data: memberships, error: memberError } =
-      await supabase
-        .from("conversation_members")
-        .select("conversation_id,user_id")
-        .eq("user_id", userId);
+    const {
+      data: memberships,
+      error: memberError,
+    } = await supabase
+      .from("conversation_members")
+      .select(
+        "conversation_id,user_id"
+      )
+      .eq("user_id", userId);
 
     if (memberError) {
       console.error(memberError);
       return;
     }
 
-    if (!memberships || memberships.length === 0) {
+    if (
+      !memberships ||
+      memberships.length === 0
+    ) {
       setConversations([]);
       return;
     }
 
-    const conversationIds = memberships.map(
-      (membership) => membership.conversation_id
-    );
+    const conversationIds =
+      memberships.map(
+        (membership) =>
+          membership.conversation_id
+      );
 
-    const { data: allMembers, error: allMembersError } =
-      await supabase
-        .from("conversation_members")
-        .select("conversation_id,user_id")
-        .in("conversation_id", conversationIds);
+    const {
+      data: allMembers,
+      error: allMembersError,
+    } = await supabase
+      .from("conversation_members")
+      .select(
+        "conversation_id,user_id"
+      )
+      .in(
+        "conversation_id",
+        conversationIds
+      );
 
     if (allMembersError) {
       console.error(allMembersError);
       return;
     }
 
-    const { data: messages, error: messagesError } =
-      await supabase
-        .from("messages")
-        .select("*")
-        .in("conversation_id", conversationIds)
-        .order("created_at", {
-          ascending: true,
-        });
+    const {
+      data: messages,
+      error: messagesError,
+    } = await supabase
+      .from("messages")
+      .select("*")
+      .in(
+        "conversation_id",
+        conversationIds
+      )
+      .order("created_at", {
+        ascending: true,
+      });
 
     if (messagesError) {
       console.error(messagesError);
@@ -337,17 +394,20 @@ export default function ConnectPage() {
                 conversationId
             ) || [];
 
-          const otherMember = members.find(
-            (member) =>
-              member.user_id !== userId
-          );
+          const otherMember =
+            members.find(
+              (member) =>
+                member.user_id !== userId
+            );
 
           if (!otherMember) return null;
 
-          const userExists = connectionUsers.some(
-            (user) =>
-              user.id === otherMember.user_id
-          );
+          const userExists =
+            connectionUsers.some(
+              (user) =>
+                user.id ===
+                otherMember.user_id
+            );
 
           if (!userExists) return null;
 
@@ -362,16 +422,19 @@ export default function ConnectPage() {
                 id: msg.id,
                 senderId: msg.sender_id,
                 text: msg.text,
-                timestamp: formatTimestamp(
-                  msg.created_at
-                ),
+                timestamp:
+                  formatTimestamp(
+                    msg.created_at
+                  ),
                 read: msg.read,
               }));
 
           return {
             id: conversationId,
-            userId: otherMember.user_id,
-            messages: conversationMessages,
+            userId:
+              otherMember.user_id,
+            messages:
+              conversationMessages,
           };
         })
         .filter(
@@ -381,7 +444,9 @@ export default function ConnectPage() {
             conversation !== null
         );
 
-    setConversations(formattedConversations);
+    setConversations(
+      formattedConversations
+    );
   };
 
   /* =====================================================
@@ -413,99 +478,116 @@ export default function ConnectPage() {
               created_at: string;
             };
 
-          const { data: membership } =
-            await supabase
-              .from("conversation_members")
-              .select("conversation_id,user_id")
-              .eq(
-                "conversation_id",
-                newMessage.conversation_id
-              )
-              .eq("user_id", currentUserId)
-              .maybeSingle();
+          const {
+            data: membership,
+          } = await supabase
+            .from("conversation_members")
+            .select(
+              "conversation_id,user_id"
+            )
+            .eq(
+              "conversation_id",
+              newMessage.conversation_id
+            )
+            .eq(
+              "user_id",
+              currentUserId
+            )
+            .maybeSingle();
 
           if (!membership) return;
 
-          setConversations((current) => {
-            const conversationExists =
-              current.some(
-                (conversation) =>
-                  conversation.id ===
-                  newMessage.conversation_id
-              );
+          setConversations(
+            (current) => {
+              const conversationExists =
+                current.some(
+                  (conversation) =>
+                    conversation.id ===
+                    newMessage.conversation_id
+                );
 
-            const formattedMessage: Message = {
-              id: newMessage.id,
-              senderId: newMessage.sender_id,
-              text: newMessage.text,
-              timestamp: formatTimestamp(
-                newMessage.created_at
-              ),
-              read:
-                newMessage.sender_id ===
-                currentUserId
-                  ? true
-                  : newMessage.read,
-            };
-
-            if (!conversationExists) {
-              return current;
-            }
-
-            return current.map(
-              (conversation) => {
-                if (
-                  conversation.id !==
-                  newMessage.conversation_id
-                ) {
-                  return conversation;
-                }
-
-                const alreadyExists =
-                  conversation.messages.some(
-                    (msg) =>
-                      msg.id === newMessage.id
-                  );
-
-                if (alreadyExists) {
-                  return conversation;
-                }
-
-                return {
-                  ...conversation,
-                  messages: [
-                    ...conversation.messages,
-                    formattedMessage,
-                  ],
-                };
+              if (!conversationExists) {
+                return current;
               }
-            );
-          });
+
+              const formattedMessage:
+                Message = {
+                id: newMessage.id,
+                senderId:
+                  newMessage.sender_id,
+                text: newMessage.text,
+                timestamp:
+                  formatTimestamp(
+                    newMessage.created_at
+                  ),
+                read:
+                  newMessage.sender_id ===
+                  currentUserId
+                    ? true
+                    : newMessage.read,
+              };
+
+              return current.map(
+                (conversation) => {
+                  if (
+                    conversation.id !==
+                    newMessage.conversation_id
+                  ) {
+                    return conversation;
+                  }
+
+                  const alreadyExists =
+                    conversation.messages.some(
+                      (msg) =>
+                        msg.id ===
+                        newMessage.id
+                    );
+
+                  if (alreadyExists) {
+                    return conversation;
+                  }
+
+                  return {
+                    ...conversation,
+                    messages: [
+                      ...conversation.messages,
+                      formattedMessage,
+                    ],
+                  };
+                }
+              );
+            }
+          );
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(
+        channel
+      );
     };
-  }, [currentUserId]);
+  }, [currentUserId, supabase]);
 
   /* =====================================================
      SELECTED USER
   ===================================================== */
 
   const selectedUser = users.find(
-    (user) => user.id === selectedUserId
+    (user) =>
+      user.id === selectedUserId
   );
 
   const selectedConversation =
     conversations.find(
       (conversation) =>
-        conversation.userId === selectedUserId
+        conversation.userId ===
+        selectedUserId
     );
 
   const selectedMessages =
-    selectedConversation?.messages || [];
+    selectedConversation?.messages ||
+    [];
 
   /* =====================================================
      SEARCH
@@ -536,19 +618,18 @@ export default function ConnectPage() {
      UNREAD
   ===================================================== */
 
-  const unreadCount = conversations.reduce(
-    (total, conversation) => {
-      return (
+  const unreadCount =
+    conversations.reduce(
+      (total, conversation) =>
         total +
         conversation.messages.filter(
           (msg) =>
-            msg.senderId !== currentUserId &&
+            msg.senderId !==
+              currentUserId &&
             !msg.read
-        ).length
-      );
-    },
-    0
-  );
+        ).length,
+      0
+    );
 
   /* =====================================================
      SELECT CONVERSATION
@@ -571,7 +652,8 @@ export default function ConnectPage() {
     const unreadMessages =
       conversation.messages.filter(
         (msg) =>
-          msg.senderId !== currentUserId &&
+          msg.senderId !==
+            currentUserId &&
           !msg.read
       );
 
@@ -579,30 +661,35 @@ export default function ConnectPage() {
       await supabase
         .from("messages")
         .update({ read: true })
-        .eq("id", unreadMessage.id);
+        .eq(
+          "id",
+          unreadMessage.id
+        );
     }
 
     if (unreadMessages.length > 0) {
       setConversations((current) =>
         current.map((item) => {
           if (
-            item.id !== conversation.id
+            item.id !==
+            conversation.id
           ) {
             return item;
           }
 
           return {
             ...item,
-            messages: item.messages.map(
-              (msg) =>
-                msg.senderId !==
+            messages:
+              item.messages.map(
+                (msg) =>
+                  msg.senderId !==
                   currentUserId
-                  ? {
-                      ...msg,
-                      read: true,
-                    }
-                  : msg
-            ),
+                    ? {
+                        ...msg,
+                        read: true,
+                      }
+                    : msg
+              ),
           };
         })
       );
@@ -613,37 +700,38 @@ export default function ConnectPage() {
      GET OR CREATE CONVERSATION
   ===================================================== */
 
-  const getOrCreateConversation = async (
-    otherUserId: string
-  ) => {
-    if (!currentUserId) return null;
+  const getOrCreateConversation =
+    async (
+      otherUserId: string
+    ) => {
+      if (!currentUserId) return null;
 
-    const existing =
-      conversations.find(
-        (conversation) =>
-          conversation.userId ===
-          otherUserId
-      );
+      const existing =
+        conversations.find(
+          (conversation) =>
+            conversation.userId ===
+            otherUserId
+        );
 
-    if (existing) {
-      return existing.id;
-    }
+      if (existing) {
+        return existing.id;
+      }
 
-    /*
-      Check existing conversations belonging
-      to the current user.
-    */
-
-    const { data: myMemberships } =
-      await supabase
+      const {
+        data: myMemberships,
+      } = await supabase
         .from("conversation_members")
         .select("conversation_id")
-        .eq("user_id", currentUserId);
+        .eq(
+          "user_id",
+          currentUserId
+        );
 
-    if (myMemberships) {
-      for (const membership of myMemberships) {
-        const { data: otherMembership } =
-          await supabase
+      if (myMemberships) {
+        for (const membership of myMemberships) {
+          const {
+            data: otherMembership,
+          } = await supabase
             .from("conversation_members")
             .select(
               "conversation_id,user_id"
@@ -658,82 +746,92 @@ export default function ConnectPage() {
             )
             .maybeSingle();
 
-        if (otherMembership) {
-          await loadConversations(
-            currentUserId,
-            users
-          );
+          if (otherMembership) {
+            await loadConversations(
+              currentUserId,
+              users
+            );
 
-          return membership.conversation_id;
+            return membership.conversation_id;
+          }
         }
       }
-    }
 
-    /* Create conversation */
+      const {
+        data: conversation,
+        error: conversationError,
+      } = await supabase
+        .from("conversations")
+        .insert({})
+        .select()
+        .single();
 
-    const {
-      data: conversation,
-      error: conversationError,
-    } = await supabase
-      .from("conversations")
-      .insert({})
-      .select()
-      .single();
+      if (
+        conversationError ||
+        !conversation
+      ) {
+        console.error(
+          conversationError
+        );
 
-    if (
-      conversationError ||
-      !conversation
-    ) {
-      console.error(conversationError);
-      setError(
-        conversationError?.message ||
-          "Could not create conversation."
-      );
-      return null;
-    }
+        setError(
+          conversationError?.message ||
+            "Could not create conversation."
+        );
 
-    const { error: membersError } =
-      await supabase
+        return null;
+      }
+
+      const {
+        error: membersError,
+      } = await supabase
         .from("conversation_members")
         .insert([
           {
             conversation_id:
               conversation.id,
-            user_id: currentUserId,
+            user_id:
+              currentUserId,
           },
           {
             conversation_id:
               conversation.id,
-            user_id: otherUserId,
+            user_id:
+              otherUserId,
           },
         ]);
 
-    if (membersError) {
-      console.error(membersError);
+      if (membersError) {
+        console.error(
+          membersError
+        );
 
-      await supabase
-        .from("conversations")
-        .delete()
-        .eq("id", conversation.id);
+        await supabase
+          .from("conversations")
+          .delete()
+          .eq(
+            "id",
+            conversation.id
+          );
 
-      setError(
-        membersError.message
-      );
+        setError(
+          membersError.message
+        );
 
-      return null;
-    }
+        return null;
+      }
 
-    setConversations((current) => [
-      ...current,
-      {
-        id: conversation.id,
-        userId: otherUserId,
-        messages: [],
-      },
-    ]);
+      setConversations((current) => [
+        ...current,
+        {
+          id: conversation.id,
+          userId: otherUserId,
+          messages: [],
+        },
+      ]);
 
-    return conversation.id;
-  };
+      return conversation.id;
+    };
 
   /* =====================================================
      SEND MESSAGE
@@ -763,20 +861,26 @@ export default function ConnectPage() {
       return;
     }
 
-    const { error: messageError } =
-      await supabase
-        .from("messages")
-        .insert({
-          conversation_id:
-            conversationId,
-          sender_id: currentUserId,
-          text: cleanMessage,
-          read: false,
-        });
+    const {
+      error: messageError,
+    } = await supabase
+      .from("messages")
+      .insert({
+        conversation_id:
+          conversationId,
+        sender_id:
+          currentUserId,
+        text: cleanMessage,
+        read: false,
+      });
 
     if (messageError) {
-      console.error(messageError);
+      console.error(
+        messageError
+      );
+
       setMessage(cleanMessage);
+
       setError(
         messageError.message
       );
@@ -820,14 +924,17 @@ export default function ConnectPage() {
         .toLowerCase()
         .replace(/^@/, "");
 
-    /* Find user */
-
-    const { data: targetUser, error: userError } =
-      await supabase
-        .from("profiles")
-        .select("*")
-        .eq("username", username)
-        .maybeSingle();
+    const {
+      data: targetUser,
+      error: userError,
+    } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq(
+        "username",
+        username
+      )
+      .maybeSingle();
 
     if (userError) {
       console.error(userError);
@@ -840,28 +947,32 @@ export default function ConnectPage() {
       setError(
         `No Zora user found with @${username}.`
       );
+
       setSendingRequest(false);
       return;
     }
 
-    if (targetUser.id === currentUserId) {
+    if (
+      targetUser.id ===
+      currentUserId
+    ) {
       setError(
         "You can't connect with yourself 😭"
       );
+
       setSendingRequest(false);
       return;
     }
 
-    /* Check existing connection */
-
-    const { data: existingConnection } =
-      await supabase
-        .from("connections")
-        .select("*")
-        .or(
-          `and(requester_id.eq.${currentUserId},receiver_id.eq.${targetUser.id}),and(requester_id.eq.${targetUser.id},receiver_id.eq.${currentUserId})`
-        )
-        .maybeSingle();
+    const {
+      data: existingConnection,
+    } = await supabase
+      .from("connections")
+      .select("*")
+      .or(
+        `and(requester_id.eq.${currentUserId},receiver_id.eq.${targetUser.id}),and(requester_id.eq.${targetUser.id},receiver_id.eq.${currentUserId})`
+      )
+      .maybeSingle();
 
     if (existingConnection) {
       if (
@@ -884,16 +995,17 @@ export default function ConnectPage() {
       return;
     }
 
-    /* Create request */
-
-    const { error: insertError } =
-      await supabase
-        .from("connections")
-        .insert({
-          requester_id: currentUserId,
-          receiver_id: targetUser.id,
-          status: "pending",
-        });
+    const {
+      error: insertError,
+    } = await supabase
+      .from("connections")
+      .insert({
+        requester_id:
+          currentUserId,
+        receiver_id:
+          targetUser.id,
+        status: "pending",
+      });
 
     if (insertError) {
       console.error(insertError);
@@ -914,13 +1026,17 @@ export default function ConnectPage() {
   const acceptRequest = async (
     connection: Connection
   ) => {
-    const { error: updateError } =
-      await supabase
-        .from("connections")
-        .update({
-          status: "accepted",
-        })
-        .eq("id", connection.id);
+    const {
+      error: updateError,
+    } = await supabase
+      .from("connections")
+      .update({
+        status: "accepted",
+      })
+      .eq(
+        "id",
+        connection.id
+      );
 
     if (updateError) {
       console.error(updateError);
@@ -928,11 +1044,13 @@ export default function ConnectPage() {
       return;
     }
 
-    setPendingRequests((current) =>
-      current.filter(
-        (request) =>
-          request.id !== connection.id
-      )
+    setPendingRequests(
+      (current) =>
+        current.filter(
+          (request) =>
+            request.id !==
+            connection.id
+        )
     );
 
     if (currentUserId) {
@@ -949,11 +1067,15 @@ export default function ConnectPage() {
   const rejectRequest = async (
     connection: Connection
   ) => {
-    const { error: deleteError } =
-      await supabase
-        .from("connections")
-        .delete()
-        .eq("id", connection.id);
+    const {
+      error: deleteError,
+    } = await supabase
+      .from("connections")
+      .delete()
+      .eq(
+        "id",
+        connection.id
+      );
 
     if (deleteError) {
       console.error(deleteError);
@@ -961,16 +1083,18 @@ export default function ConnectPage() {
       return;
     }
 
-    setPendingRequests((current) =>
-      current.filter(
-        (request) =>
-          request.id !== connection.id
-      )
+    setPendingRequests(
+      (current) =>
+        current.filter(
+          (request) =>
+            request.id !==
+            connection.id
+        )
     );
   };
 
   /* =====================================================
-     CONNECTION REQUEST REALTIME
+     CONNECTION REALTIME
   ===================================================== */
 
   useEffect(() => {
@@ -1000,9 +1124,11 @@ export default function ConnectPage() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      void supabase.removeChannel(
+        channel
+      );
     };
-  }, [currentUserId]);
+  }, [currentUserId, supabase]);
 
   /* =====================================================
      STATUS
@@ -1049,7 +1175,8 @@ export default function ConnectPage() {
 
     if (
       !conversation ||
-      conversation.messages.length === 0
+      conversation.messages.length ===
+        0
     ) {
       return "Start a conversation";
     }
@@ -1060,7 +1187,7 @@ export default function ConnectPage() {
   };
 
   /* =====================================================
-     FORMAT
+     STATS
   ===================================================== */
 
   const totalMessages =
@@ -1112,20 +1239,7 @@ export default function ConnectPage() {
     <div className="min-h-screen bg-[#050b16] text-white">
       <FloatingSidebar />
 
-      <main
-        className="
-          relative
-          min-h-screen
-          overflow-hidden
-          px-4
-          py-5
-          md:pl-[150px]
-          md:pr-6
-          lg:pl-[165px]
-          lg:pr-8
-          xl:pl-[175px]
-        "
-      >
+      <main className="relative min-h-screen overflow-hidden px-4 py-5 md:pl-[150px] md:pr-6 lg:pl-[165px] lg:pr-8 xl:pl-[175px]">
         {/* AMBIENCE */}
 
         <div className="pointer-events-none fixed inset-0">
@@ -1192,7 +1306,9 @@ export default function ConnectPage() {
                 <button
                   type="button"
                   onClick={() =>
-                    setShowNewConnection(true)
+                    setShowNewConnection(
+                      true
+                    )
                   }
                   className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 px-4 py-2.5 text-sm font-bold transition hover:scale-[1.02]"
                 >
@@ -1261,7 +1377,8 @@ export default function ConnectPage() {
                   connected to your workspace
                   {unreadCount > 0
                     ? ` · ${unreadCount} unread message${
-                        unreadCount === 1
+                        unreadCount ===
+                        1
                           ? ""
                           : "s"
                       }`
@@ -1307,10 +1424,14 @@ export default function ConnectPage() {
                       key={request.id}
                       request={request}
                       onAccept={() =>
-                        acceptRequest(request)
+                        acceptRequest(
+                          request
+                        )
                       }
                       onReject={() =>
-                        rejectRequest(request)
+                        rejectRequest(
+                          request
+                        )
                       }
                     />
                   )
@@ -1326,14 +1447,11 @@ export default function ConnectPage() {
               {/* PEOPLE */}
 
               <aside
-                className={`
-                  border-r border-white/10
-                  ${
-                    mobileChatOpen
-                      ? "hidden lg:block"
-                      : "block"
-                  }
-                `}
+                className={`border-r border-white/10 ${
+                  mobileChatOpen
+                    ? "hidden lg:block"
+                    : "block"
+                }`}
               >
                 <div className="border-b border-white/10 p-4">
                   <div className="relative">
@@ -1369,7 +1487,9 @@ export default function ConnectPage() {
                   <button
                     type="button"
                     onClick={() =>
-                      setShowNewConnection(true)
+                      setShowNewConnection(
+                        true
+                      )
                     }
                     className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-slate-500 transition hover:border-cyan-400/20 hover:text-cyan-300"
                   >
@@ -1445,7 +1565,8 @@ export default function ConnectPage() {
                                 {user.name}
                               </p>
 
-                              {unread > 0 && (
+                              {unread >
+                                0 && (
                                 <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-cyan-400 px-1.5 text-[9px] font-bold text-[#04111b]">
                                   {unread}
                                 </span>
@@ -1495,14 +1616,11 @@ export default function ConnectPage() {
               {/* CHAT */}
 
               <div
-                className={`
-                  flex min-w-0 flex-col
-                  ${
-                    mobileChatOpen
-                      ? "flex"
-                      : "hidden lg:flex"
-                  }
-                `}
+                className={`flex min-w-0 flex-col ${
+                  mobileChatOpen
+                    ? "flex"
+                    : "hidden lg:flex"
+                }`}
               >
                 {selectedUser ? (
                   <>
@@ -1704,17 +1822,11 @@ export default function ConnectPage() {
                                       {isMine &&
                                         (msg.read ? (
                                           <CheckCheck
-                                            size={
-                                              12
-                                            }
+                                            size={12}
                                             className="text-cyan-500"
                                           />
                                         ) : (
-                                          <Check
-                                            size={
-                                              12
-                                            }
-                                          />
+                                          <Check size={12} />
                                         ))}
                                     </div>
                                   </div>
@@ -1837,7 +1949,9 @@ export default function ConnectPage() {
                 event.target ===
                 event.currentTarget
               ) {
-                setShowNewConnection(false);
+                setShowNewConnection(
+                  false
+                );
               }
             }}
           >
@@ -1972,6 +2086,13 @@ function PendingRequest({
   onAccept: () => void;
   onReject: () => void;
 }) {
+  // IMPORTANT:
+  // This component also gets its own browser Supabase client.
+  const supabase = useMemo(
+    () => createClient(),
+    []
+  );
+
   const [user, setUser] =
     useState<User | null>(null);
 
@@ -1991,10 +2112,13 @@ function PendingRequest({
         setUser({
           id: data.id,
           name: data.name,
-          username: data.username,
-          initials: data.initials,
+          username:
+            data.username,
+          initials:
+            data.initials,
           role: data.role,
-          status: data.status,
+          status:
+            data.status,
           avatar_url:
             data.avatar_url,
         });
@@ -2002,7 +2126,10 @@ function PendingRequest({
     };
 
     void load();
-  }, [request.requester_id]);
+  }, [
+    request.requester_id,
+    supabase,
+  ]);
 
   if (!user) {
     return null;
@@ -2095,7 +2222,9 @@ function formatTimestamp(
 ) {
   const date = new Date(timestamp);
 
-  if (Number.isNaN(date.getTime())) {
+  if (
+    Number.isNaN(date.getTime())
+  ) {
     return "";
   }
 
