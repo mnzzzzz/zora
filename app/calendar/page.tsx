@@ -176,6 +176,7 @@ export default function CalendarPage() {
     <div className="min-h-screen bg-[#050b16] text-white">
       <FloatingSidebar />
 
+      {/* MAIN CONTENT */}
       <main
         className="
           relative
@@ -184,11 +185,11 @@ export default function CalendarPage() {
           px-4
           py-5
           sm:px-5
-          md:pl-[205px]
+          md:pl-[150px]
           md:pr-6
-          lg:pl-[220px]
+          lg:pl-[165px]
           lg:pr-7
-          xl:pl-[225px]
+          xl:pl-[175px]
           xl:pr-8
         "
       >
@@ -430,7 +431,6 @@ export default function CalendarPage() {
             {/* SIDE PANEL */}
 
             <aside className="min-w-0 space-y-5">
-
               <section className="rounded-[26px] border border-white/10 bg-[#0b1525]/90 p-5 backdrop-blur-2xl">
                 <div className="mb-5 flex items-center justify-between">
                   <div>

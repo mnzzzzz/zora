@@ -16,6 +16,7 @@ import {
   Sparkles,
   ChevronRight,
   ChevronLeft,
+  Users,
 } from "lucide-react";
 
 const navItems = [
@@ -43,6 +44,11 @@ const navItems = [
     name: "Goals",
     href: "/goals",
     icon: Target,
+  },
+  {
+    name: "Connect",
+    href: "/connect",
+    icon: Users,
   },
   {
     name: "Finance",
@@ -87,9 +93,7 @@ export default function FloatingSidebar() {
           backdrop-blur-2xl
         "
       >
-        {/* =====================================
-            HEADER
-        ===================================== */}
+        {/* HEADER */}
 
         <div
           className={`
@@ -140,6 +144,7 @@ export default function FloatingSidebar() {
 
           {open && (
             <button
+              type="button"
               onClick={() => setOpen(false)}
               className="
                 flex
@@ -153,18 +158,18 @@ export default function FloatingSidebar() {
                 hover:bg-white/10
                 hover:text-white
               "
+              aria-label="Collapse navigation"
             >
               <ChevronLeft size={18} />
             </button>
           )}
         </div>
 
-        {/* =====================================
-            EXPAND BUTTON
-        ===================================== */}
+        {/* EXPAND BUTTON */}
 
         {!open && (
           <button
+            type="button"
             onClick={() => setOpen(true)}
             className="
               mx-auto
@@ -190,18 +195,16 @@ export default function FloatingSidebar() {
           </button>
         )}
 
-        {/* =====================================
-            NAVIGATION
-        ===================================== */}
+        {/* NAVIGATION */}
 
-        <nav className="mt-5 flex-1 space-y-1 px-3">
+        <nav className="mt-5 flex-1 space-y-1 overflow-y-auto px-3">
           {navItems.map((item) => {
             const Icon = item.icon;
 
             const isActive =
               pathname === item.href ||
               (item.href !== "/" &&
-                pathname.startsWith(item.href));
+                pathname.startsWith(item.href + "/"));
 
             return (
               <Link
@@ -241,7 +244,11 @@ export default function FloatingSidebar() {
 
                 <Icon
                   size={20}
-                  className="shrink-0"
+                  className={`shrink-0 ${
+                    isActive
+                      ? "text-cyan-300"
+                      : ""
+                  }`}
                 />
 
                 {open && (
@@ -261,26 +268,41 @@ export default function FloatingSidebar() {
           })}
         </nav>
 
-        {/* =====================================
-            SETTINGS
-        ===================================== */}
+        {/* SETTINGS */}
 
         <div className="border-t border-white/10 p-3">
           <Link
             href="/settings"
-            className="
+            className={`
+              relative
               flex
               h-12
               items-center
               gap-3
               rounded-xl
               px-3
-              text-slate-400
               transition
-              hover:bg-white/5
-              hover:text-white
-            "
+              ${
+                pathname.startsWith("/settings")
+                  ? "bg-cyan-400/10 text-cyan-300"
+                  : "text-slate-400 hover:bg-white/5 hover:text-white"
+              }
+            `}
           >
+            {pathname.startsWith("/settings") && (
+              <span
+                className="
+                  absolute
+                  left-0
+                  h-6
+                  w-[3px]
+                  rounded-r-full
+                  bg-cyan-400
+                  shadow-[0_0_12px_rgba(34,211,238,0.9)]
+                "
+              />
+            )}
+
             <Settings
               size={20}
               className="shrink-0"
@@ -290,6 +312,13 @@ export default function FloatingSidebar() {
               <span className="whitespace-nowrap text-sm font-medium">
                 Settings
               </span>
+            )}
+
+            {open && (
+              <ChevronRight
+                size={14}
+                className="ml-auto opacity-20"
+              />
             )}
           </Link>
         </div>
