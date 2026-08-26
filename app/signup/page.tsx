@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
+
 import {
   Eye,
   EyeOff,
@@ -14,41 +15,340 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
+import { createClient } from "@/lib/supabase/client";
+
 export default function SignupPage() {
   const router = useRouter();
+  const supabase = createClient();
 
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] =
+    useState(false);
+
   const [showConfirmPassword, setShowConfirmPassword] =
     useState(false);
 
   const [agree, setAgree] = useState(false);
-  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] =
+    useState("");
+  const [confirmPassword, setConfirmPassword] =
+    useState("");
+
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const [loading, setLoading] =
+    useState(false);
+
+  // =========================================
+  // CREATE ACCOUNT
+  // =========================================
+
+  const handleSubmit = async (
+    e: React.FormEvent<HTMLFormElement>
+  ) => {
     e.preventDefault();
 
+    if (loading) return;
+
     setError("");
+    setSuccess("");
 
-    const formData = new FormData(e.currentTarget);
+    const cleanName = name.trim();
+    const cleanEmail =
+      email.trim().toLowerCase();
 
-    const password = formData.get("password") as string;
-    const confirmPassword =
-      formData.get("confirmPassword") as string;
+    // =========================================
+    // BASIC VALIDATION
+    // =========================================
+
+    if (!cleanName) {
+      setError("Please enter your name.");
+      return;
+    }
+
+    if (!cleanEmail) {
+      setError("Please enter your email.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError(
+        "Your password must be at least 8 characters."
+      );
+      return;
+    }
 
     if (password !== confirmPassword) {
-      setError("Passwords don't match.");
+      setError(
+        "Passwords don't match."
+      );
       return;
     }
 
     if (!agree) {
-      setError("Please accept the Terms of Service and Privacy Policy.");
+      setError(
+        "Please accept the Terms of Service and Privacy Policy."
+      );
       return;
     }
 
-    // Temporary signup flow.
-    // Once real authentication is connected,
-    // replace this with your actual signup request.
-    router.push("/");
+    setLoading(true);
+
+    try {
+      // =========================================
+      // CREATE SUPABASE ACCOUNT
+      // =========================================
+
+      const {
+        data,
+        error: signupError,
+      } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password,
+        options: {
+          data: {
+            name: cleanName,
+          },
+        },
+      });
+
+      // =========================================
+      // SIGNUP ERROR
+      // =========================================
+
+      if (signupError) {
+        console.error(
+          "Signup error:",
+          signupError
+        );
+
+        const message =
+          signupError.message.toLowerCase();
+
+        if (
+          message.includes(
+            "already registered"
+          ) ||
+          message.includes(
+            "already exists"
+          )
+        ) {
+          setError(
+            "An account with this email already exists. Try signing in instead."
+          );
+        } else if (
+          message.includes("password")
+        ) {
+          setError(
+            signupError.message
+          );
+        } else {
+          setError(
+            signupError.message
+          );
+        }
+
+        setLoading(false);
+        return;
+      }
+
+      // =========================================
+      // MAKE SURE USER WAS CREATED
+      // =========================================
+
+      if (!data.user) {
+        setError(
+          "Account creation failed. Please try again."
+        );
+
+        setLoading(false);
+        return;
+      }
+
+      // =========================================
+      // GENERATE USERNAME
+      //
+      // We don't have a username field in the
+      // signup UI, so generate one from email.
+      // =========================================
+
+      const emailUsername =
+        cleanEmail
+          .split("@")[0]
+          .toLowerCase()
+          .replace(/[^a-z0-9_]/g, "")
+          .slice(0, 20);
+
+      const fallbackUsername =
+        emailUsername ||
+        `zorauser${Date.now()
+          .toString()
+          .slice(-6)}`;
+
+      const initials = cleanName
+        .split(/\s+/)
+        .filter(Boolean)
+        .map(
+          (part) => part.charAt(0)
+        )
+        .join("")
+        .slice(0, 2)
+        .toUpperCase();
+
+      // =========================================
+      // CREATE ZORA PROFILE
+      // =========================================
+
+      const {
+        error: profileError,
+      } = await supabase
+        .from("profiles")
+        .insert({
+          id: data.user.id,
+          name: cleanName,
+          username: fallbackUsername,
+          initials:
+            initials ||
+            cleanName
+              .charAt(0)
+              .toUpperCase(),
+          role: "Connection",
+          status: "online",
+        });
+
+      // =========================================
+      // PROFILE ERROR
+      // =========================================
+
+      if (profileError) {
+        console.error(
+          "Profile creation error:",
+          profileError
+        );
+
+        // Account itself was created, so don't
+        // tell the user that account creation
+        // completely failed.
+
+        if (
+          profileError.code === "23505"
+        ) {
+          setError(
+            "Your account was created, but that username already exists. You can continue and fix your profile later."
+          );
+        } else {
+          setError(
+            `Account created, but your Zora profile could not be created: ${profileError.message}`
+          );
+        }
+
+        setLoading(false);
+        return;
+      }
+
+      // =========================================
+      // EMAIL CONFIRMATION REQUIRED
+      // =========================================
+
+      if (
+        data.user &&
+        !data.session
+      ) {
+        setSuccess(
+          "Account created! Check your email to confirm your Zora account."
+        );
+
+        setLoading(false);
+
+        return;
+      }
+
+      // =========================================
+      // FULL SUCCESS
+      // =========================================
+
+      if (
+        data.user &&
+        data.session
+      ) {
+        setSuccess(
+          "Account created successfully! Welcome to Zora."
+        );
+
+        setTimeout(() => {
+          router.replace("/");
+          router.refresh();
+        }, 500);
+
+        return;
+      }
+
+      setLoading(false);
+    } catch (err) {
+      console.error(
+        "Unexpected signup error:",
+        err
+      );
+
+      setError(
+        "Something went wrong while creating your account. Please try again."
+      );
+
+      setLoading(false);
+    }
+  };
+
+  // =========================================
+  // GOOGLE SIGNUP / LOGIN
+  // =========================================
+
+  const handleGoogleSignup = async () => {
+    if (loading) return;
+
+    setError("");
+    setSuccess("");
+    setLoading(true);
+
+    try {
+      const {
+        error: googleError,
+      } = await supabase.auth.signInWithOAuth(
+        {
+          provider: "google",
+          options: {
+            redirectTo:
+              `${window.location.origin}/auth/callback`,
+          },
+        }
+      );
+
+      if (googleError) {
+        console.error(
+          "Google signup error:",
+          googleError
+        );
+
+        setError(
+          googleError.message
+        );
+
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error(
+        "Unexpected Google error:",
+        err
+      );
+
+      setError(
+        "Unable to continue with Google."
+      );
+
+      setLoading(false);
+    }
   };
 
   return (
@@ -86,7 +386,10 @@ export default function SignupPage() {
             blur-[140px]
             animate-pulse
           "
-          style={{ animationDelay: "2s" }}
+          style={{
+            animationDelay:
+              "2s",
+          }}
         />
 
         <div
@@ -178,10 +481,56 @@ export default function SignupPage() {
 
           </div>
 
+          {/* ERROR */}
+
+          {error && (
+            <div
+              className="
+                mb-5
+                rounded-xl
+                border
+                border-red-400/20
+                bg-red-400/10
+                px-4
+                py-3
+                text-sm
+                leading-5
+                text-red-300
+              "
+            >
+              {error}
+            </div>
+          )}
+
+          {/* SUCCESS */}
+
+          {success && (
+            <div
+              className="
+                mb-5
+                rounded-xl
+                border
+                border-cyan-400/20
+                bg-cyan-400/[0.06]
+                px-4
+                py-3
+                text-sm
+                leading-5
+                text-cyan-300
+              "
+            >
+              {success}
+            </div>
+          )}
+
           {/* GOOGLE */}
 
           <button
             type="button"
+            onClick={
+              handleGoogleSignup
+            }
+            disabled={loading}
             className="
               flex
               h-12
@@ -199,26 +548,50 @@ export default function SignupPage() {
               transition
               hover:border-white/20
               hover:bg-white/[0.07]
+              disabled:cursor-not-allowed
+              disabled:opacity-50
             "
           >
-            <span
-              className="
-                flex
-                h-6
-                w-6
-                items-center
-                justify-center
-                rounded-full
-                bg-white
-                text-xs
-                font-bold
-                text-slate-900
-              "
-            >
-              G
-            </span>
 
-            Continue with Google
+            {loading ? (
+              <>
+                <span
+                  className="
+                    h-4
+                    w-4
+                    animate-spin
+                    rounded-full
+                    border-2
+                    border-white/30
+                    border-t-white
+                  "
+                />
+
+                Connecting...
+              </>
+            ) : (
+              <>
+                <span
+                  className="
+                    flex
+                    h-6
+                    w-6
+                    items-center
+                    justify-center
+                    rounded-full
+                    bg-white
+                    text-xs
+                    font-bold
+                    text-slate-900
+                  "
+                >
+                  G
+                </span>
+
+                Continue with Google
+              </>
+            )}
+
           </button>
 
           {/* DIVIDER */}
@@ -248,7 +621,13 @@ export default function SignupPage() {
 
               <label
                 htmlFor="name"
-                className="mb-2 block text-sm font-medium text-slate-300"
+                className="
+                  mb-2
+                  block
+                  text-sm
+                  font-medium
+                  text-slate-300
+                "
               >
                 Your name
               </label>
@@ -281,6 +660,12 @@ export default function SignupPage() {
                   required
                   autoComplete="name"
                   placeholder="What should we call you?"
+                  value={name}
+                  onChange={(e) =>
+                    setName(
+                      e.target.value
+                    )
+                  }
                   className="
                     w-full
                     bg-transparent
@@ -301,7 +686,13 @@ export default function SignupPage() {
 
               <label
                 htmlFor="email"
-                className="mb-2 block text-sm font-medium text-slate-300"
+                className="
+                  mb-2
+                  block
+                  text-sm
+                  font-medium
+                  text-slate-300
+                "
               >
                 Email
               </label>
@@ -334,6 +725,12 @@ export default function SignupPage() {
                   required
                   autoComplete="email"
                   placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) =>
+                    setEmail(
+                      e.target.value
+                    )
+                  }
                   className="
                     w-full
                     bg-transparent
@@ -354,7 +751,13 @@ export default function SignupPage() {
 
               <label
                 htmlFor="password"
-                className="mb-2 block text-sm font-medium text-slate-300"
+                className="
+                  mb-2
+                  block
+                  text-sm
+                  font-medium
+                  text-slate-300
+                "
               >
                 Password
               </label>
@@ -383,11 +786,21 @@ export default function SignupPage() {
                 <input
                   id="password"
                   name="password"
-                  type={showPassword ? "text" : "password"}
+                  type={
+                    showPassword
+                      ? "text"
+                      : "password"
+                  }
                   required
                   minLength={8}
                   autoComplete="new-password"
                   placeholder="Create a password"
+                  value={password}
+                  onChange={(e) =>
+                    setPassword(
+                      e.target.value
+                    )
+                  }
                   className="
                     w-full
                     bg-transparent
@@ -401,7 +814,9 @@ export default function SignupPage() {
                 <button
                   type="button"
                   onClick={() =>
-                    setShowPassword((value) => !value)
+                    setShowPassword(
+                      (value) => !value
+                    )
                   }
                   className="
                     ml-2
@@ -437,7 +852,13 @@ export default function SignupPage() {
 
               <label
                 htmlFor="confirmPassword"
-                className="mb-2 block text-sm font-medium text-slate-300"
+                className="
+                  mb-2
+                  block
+                  text-sm
+                  font-medium
+                  text-slate-300
+                "
               >
                 Confirm password
               </label>
@@ -475,6 +896,14 @@ export default function SignupPage() {
                   minLength={8}
                   autoComplete="new-password"
                   placeholder="Enter it again"
+                  value={
+                    confirmPassword
+                  }
+                  onChange={(e) =>
+                    setConfirmPassword(
+                      e.target.value
+                    )
+                  }
                   className="
                     w-full
                     bg-transparent
@@ -489,7 +918,8 @@ export default function SignupPage() {
                   type="button"
                   onClick={() =>
                     setShowConfirmPassword(
-                      (value) => !value
+                      (value) =>
+                        !value
                     )
                   }
                   className="
@@ -525,7 +955,9 @@ export default function SignupPage() {
                 required
                 checked={agree}
                 onChange={(e) =>
-                  setAgree(e.target.checked)
+                  setAgree(
+                    e.target.checked
+                  )
                 }
                 className="
                   mt-0.5
@@ -559,18 +991,11 @@ export default function SignupPage() {
 
             </label>
 
-            {/* ERROR */}
-
-            {error && (
-              <div className="rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-300">
-                {error}
-              </div>
-            )}
-
             {/* CREATE ACCOUNT */}
 
             <button
               type="submit"
+              disabled={loading}
               className="
                 group
                 flex
@@ -594,18 +1019,42 @@ export default function SignupPage() {
                 duration-300
                 hover:bg-right
                 hover:shadow-[0_0_40px_rgba(34,211,238,0.25)]
+                disabled:cursor-not-allowed
+                disabled:opacity-60
               "
             >
-              Create account
 
-              <ArrowRight
-                size={17}
-                className="
-                  transition-transform
-                  duration-300
-                  group-hover:translate-x-1
-                "
-              />
+              {loading ? (
+                <>
+                  <span
+                    className="
+                      h-4
+                      w-4
+                      animate-spin
+                      rounded-full
+                      border-2
+                      border-white/30
+                      border-t-white
+                    "
+                  />
+
+                  Creating account...
+                </>
+              ) : (
+                <>
+                  Create account
+
+                  <ArrowRight
+                    size={17}
+                    className="
+                      transition-transform
+                      duration-300
+                      group-hover:translate-x-1
+                    "
+                  />
+                </>
+              )}
+
             </button>
 
           </form>
@@ -620,9 +1069,8 @@ export default function SignupPage() {
               justify-center
               gap-2
               text-xs
-              text-slate-60
+              text-slate-600
             "
-
           >
             <ShieldCheck size={14} />
 
@@ -634,7 +1082,9 @@ export default function SignupPage() {
         {/* LOGIN LINK */}
 
         <p className="mt-6 text-center text-sm text-slate-500">
+
           Already have a Zora account?{" "}
+
           <Link
             href="/login"
             className="
@@ -646,13 +1096,24 @@ export default function SignupPage() {
           >
             Sign in
           </Link>
+
         </p>
 
-        <p className="mt-7 text-center text-[11px] uppercase tracking-[0.25em] text-slate-700">
+        <p
+          className="
+            mt-7
+            text-center
+            text-[11px]
+            uppercase
+            tracking-[0.25em]
+            text-slate-700
+          "
+        >
           Zora · Built for what comes next
         </p>
 
       </div>
+
     </main>
   );
 }

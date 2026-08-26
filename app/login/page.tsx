@@ -13,41 +13,103 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
+const ALLOWED_EMAILS = [
+  "monicca.yuvaraj@gmail.com",
+  "un4188099@gmail.com",
+];
+
+const CORRECT_PASSWORD = "nmdt@2026";
+
 export default function LoginPage() {
   const router = useRouter();
 
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(false);
-  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = (
+    e: React.FormEvent<HTMLFormElement>
+  ) => {
     e.preventDefault();
 
-    setLoading(true);
+    // Always reset previous error
+    setError("");
+
+    const cleanEmail = email.trim().toLowerCase();
 
     /*
-      Temporary authentication.
+     * IMPORTANT:
+     * Do not redirect before BOTH credentials
+     * have been verified.
+     */
 
-      Once real authentication is added,
-      this is where the login request will go.
-    */
+    // Check email
+    const emailIsAllowed =
+      ALLOWED_EMAILS.includes(cleanEmail);
 
-    setTimeout(() => {
-      router.push("/");
-    }, 300);
-  };
+    if (!emailIsAllowed) {
+      setLoading(false);
+      setError(
+        "This email is not authorized to access Zora."
+      );
+      return;
+    }
 
-  const handleGoogleLogin = () => {
+    // Check password
+    if (password !== CORRECT_PASSWORD) {
+      setLoading(false);
+      setError("Incorrect password.");
+      return;
+    }
+
     /*
-      Temporary Google login behavior.
-      Replace this with real Google authentication later.
-    */
+     * At this point:
+     *
+     * email = one of the two allowed emails
+     * password = nmdt@2026
+     *
+     * ONLY NOW are we allowed to log the user in.
+     */
 
     setLoading(true);
 
-    setTimeout(() => {
-      router.push("/");
-    }, 300);
+    // Remove any old authentication state first
+    localStorage.removeItem("zora-authenticated");
+    localStorage.removeItem("zora-user-email");
+
+    sessionStorage.removeItem("zora-authenticated");
+    sessionStorage.removeItem("zora-user-email");
+
+    // Store successful login
+    if (remember) {
+      localStorage.setItem(
+        "zora-authenticated",
+        "true"
+      );
+
+      localStorage.setItem(
+        "zora-user-email",
+        cleanEmail
+      );
+    } else {
+      sessionStorage.setItem(
+        "zora-authenticated",
+        "true"
+      );
+
+      sessionStorage.setItem(
+        "zora-user-email",
+        cleanEmail
+      );
+    }
+
+    // Successful login ONLY
+    router.push("/");
   };
 
   return (
@@ -182,74 +244,7 @@ export default function LoginPage() {
           </div>
 
           {/* =========================================
-              GOOGLE
-          ========================================= */}
-
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            disabled={loading}
-            className="
-              flex
-              h-12
-              w-full
-              items-center
-              justify-center
-              gap-3
-              rounded-xl
-              border
-              border-white/10
-              bg-white/[0.04]
-              text-sm
-              font-medium
-              text-white
-              transition
-              hover:border-white/20
-              hover:bg-white/[0.07]
-              disabled:cursor-not-allowed
-              disabled:opacity-50
-            "
-          >
-
-            <span
-              className="
-                flex
-                h-6
-                w-6
-                items-center
-                justify-center
-                rounded-full
-                bg-white
-                text-xs
-                font-bold
-                text-slate-900
-              "
-            >
-              G
-            </span>
-
-            Continue with Google
-
-          </button>
-
-          {/* =========================================
-              DIVIDER
-          ========================================= */}
-
-          <div className="my-6 flex items-center gap-4">
-
-            <div className="h-px flex-1 bg-white/10" />
-
-            <span className="text-xs text-slate-600">
-              OR
-            </span>
-
-            <div className="h-px flex-1 bg-white/10" />
-
-          </div>
-
-          {/* =========================================
-              LOGIN FORM
+              FORM
           ========================================= */}
 
           <form
@@ -296,6 +291,11 @@ export default function LoginPage() {
                   required
                   autoComplete="email"
                   placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setError("");
+                  }}
                   className="
                     w-full
                     bg-transparent
@@ -361,10 +361,19 @@ export default function LoginPage() {
                 <input
                   id="password"
                   name="password"
-                  type={showPassword ? "text" : "password"}
+                  type={
+                    showPassword
+                      ? "text"
+                      : "password"
+                  }
                   required
                   autoComplete="current-password"
                   placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setError("");
+                  }}
                   className="
                     w-full
                     bg-transparent
@@ -378,7 +387,9 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() =>
-                    setShowPassword((current) => !current)
+                    setShowPassword(
+                      (current) => !current
+                    )
                   }
                   className="
                     ml-2
@@ -433,7 +444,29 @@ export default function LoginPage() {
             </label>
 
             {/* =========================================
-                SIGN IN
+                ERROR
+            ========================================= */}
+
+            {error && (
+              <div
+                className="
+                  rounded-xl
+                  border
+                  border-red-400/20
+                  bg-red-400/10
+                  px-4
+                  py-3
+                  text-sm
+                  leading-5
+                  text-red-300
+                "
+              >
+                {error}
+              </div>
+            )}
+
+            {/* =========================================
+                SIGN IN BUTTON
             ========================================= */}
 
             <button
