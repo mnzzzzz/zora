@@ -43,7 +43,7 @@ export default function GoalsCard() {
         </h3>
 
         <p className="mt-2 max-w-xs text-sm text-gray-400">
-          Create your first goal and let Zora help you stay on track.
+          Create your first goal and let Monobloc help you stay on track.
         </p>
 
         <button className="mt-6 flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-400 px-5 py-3 font-medium text-white transition hover:scale-105">

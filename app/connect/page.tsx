@@ -3,12 +3,14 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type KeyboardEvent,
   type ReactNode,
 } from "react";
 
 import {
+  Activity,
   ArrowLeft,
   ArrowRight,
   Bell,
@@ -16,16 +18,22 @@ import {
   CheckCheck,
   ChevronRight,
   Circle,
+  Clock3,
+  Command,
+  Cpu,
   MessageCircle,
   MoreHorizontal,
+  Phone,
   Plus,
+  Radio,
   Search,
   Send,
+  Signal,
   Sparkles,
   UserPlus,
   Users,
   Video,
-  Phone,
+  Wifi,
   X,
   Zap,
 } from "lucide-react";
@@ -37,12 +45,14 @@ import { createClient } from "@/lib/supabase/client";
    TYPES
 ========================================================= */
 
+type UserStatus = "online" | "away" | "offline";
+
 type User = {
   id: string;
   name: string;
   username: string;
   initials: string;
-  status: "online" | "away" | "offline";
+  status: UserStatus;
   role: string;
   lastSeen?: string;
   avatar_url?: string | null;
@@ -53,6 +63,7 @@ type Message = {
   senderId: string;
   text: string;
   timestamp: string;
+  createdAt?: string;
   read: boolean;
 };
 
@@ -67,6 +78,14 @@ type Connection = {
   requester_id: string;
   receiver_id: string;
   status: string;
+  created_at?: string;
+};
+
+type Toast = {
+  id: number;
+  title: string;
+  description: string;
+  type: "success" | "info" | "error";
 };
 
 /* =========================================================
@@ -74,11 +93,10 @@ type Connection = {
 ========================================================= */
 
 export default function ConnectPage() {
-  // IMPORTANT:
-  // Create the Supabase client inside the component.
-  // This prevents Vercel/Next.js from trying to initialize
-  // the browser client while statically building the page.
   const supabase = useMemo(() => createClient(), []);
+
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const messageContainerRef = useRef<HTMLDivElement | null>(null);
 
   const [currentUserId, setCurrentUserId] =
     useState<string | null>(null);
@@ -119,8 +137,79 @@ export default function ConnectPage() {
   const [sendingRequest, setSendingRequest] =
     useState(false);
 
+  const [sendingMessage, setSendingMessage] =
+    useState(false);
+
   const [error, setError] =
     useState("");
+
+  const [toasts, setToasts] =
+    useState<Toast[]>([]);
+
+  const [systemTime, setSystemTime] =
+    useState(new Date());
+
+  /* =====================================================
+     TOAST SYSTEM
+  ===================================================== */
+
+  const showToast = (
+    title: string,
+    description: string,
+    type: Toast["type"] = "info"
+  ) => {
+    const id = Date.now() + Math.random();
+
+    setToasts((current) => [
+      ...current,
+      {
+        id,
+        title,
+        description,
+        type,
+      },
+    ]);
+
+    window.setTimeout(() => {
+      setToasts((current) =>
+        current.filter(
+          (toast) => toast.id !== id
+        )
+      );
+    }, 3500);
+  };
+
+  /* =====================================================
+     LIVE CLOCK
+  ===================================================== */
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setSystemTime(new Date());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  /* =====================================================
+     AUTO SCROLL
+  ===================================================== */
+
+  useEffect(() => {
+    if (!selectedUserId) return;
+
+    window.setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+      });
+    }, 80);
+  }, [
+    selectedUserId,
+    conversations,
+  ]);
 
   /* =====================================================
      LOAD USER
@@ -145,9 +234,11 @@ export default function ConnectPage() {
 
       setCurrentUserId(user.id);
 
-      await loadProfile(user.id);
-      await loadConnections(user.id);
-      await loadPendingRequests(user.id);
+      await Promise.all([
+        loadProfile(user.id),
+        loadConnections(user.id),
+        loadPendingRequests(user.id),
+      ]);
     };
 
     void loadCurrentUser();
@@ -161,32 +252,37 @@ export default function ConnectPage() {
      LOAD PROFILE
   ===================================================== */
 
-  const loadProfile = async (userId: string) => {
-    const { data, error: profileError } =
-      await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
+  const loadProfile = async (
+    userId: string
+  ) => {
+    const {
+      data,
+      error: profileError,
+    } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
 
-    if (profileError) {
+    if (profileError || !data) {
       console.error(profileError);
 
       setError(
-        "Could not load your Zora profile."
+        "Could not load your Monobloc
       );
 
-      setLoading(false);
       return;
     }
 
     const profile: User = {
       id: data.id,
-      name: data.name,
-      username: data.username,
-      initials: data.initials,
-      role: data.role,
-      status: data.status,
+      name: data.name || "Monobloc
+      username: data.username || "user",
+      initials:
+        data.initials ||
+        getInitials(data.name || "Monobloc User"),
+      role: data.role || "Monobloc Member",
+      status: data.status || "online",
       avatar_url: data.avatar_url,
     };
 
@@ -232,6 +328,7 @@ export default function ConnectPage() {
     if (otherUserIds.length === 0) {
       setUsers([]);
       setConversations([]);
+      setSelectedUserId(null);
       setLoading(false);
       return;
     }
@@ -253,11 +350,17 @@ export default function ConnectPage() {
     const formattedUsers: User[] =
       (profiles || []).map((profile) => ({
         id: profile.id,
-        name: profile.name,
-        username: profile.username,
-        initials: profile.initials,
-        role: profile.role,
-        status: profile.status,
+        name: profile.name || "Monobloc User",
+        username: profile.username || "user",
+        initials:
+          profile.initials ||
+          getInitials(
+            profile.name || "Monobloc User"
+          ),
+        role:
+          profile.role || "Monobloc Member",
+        status:
+          profile.status || "offline",
         avatar_url: profile.avatar_url,
       }));
 
@@ -422,11 +525,12 @@ export default function ConnectPage() {
                 id: msg.id,
                 senderId: msg.sender_id,
                 text: msg.text,
-                timestamp:
-                  formatTimestamp(
-                    msg.created_at
-                  ),
-                read: msg.read,
+                timestamp: formatTimestamp(
+                  msg.created_at
+                ),
+                createdAt:
+                  msg.created_at,
+                read: Boolean(msg.read),
               }));
 
           return {
@@ -458,7 +562,7 @@ export default function ConnectPage() {
 
     const channel = supabase
       .channel(
-        `zora-messages-${currentUserId}`
+        `Monobloc-messages-${currentUserId}`
       )
       .on(
         "postgres_changes",
@@ -510,22 +614,44 @@ export default function ConnectPage() {
                 return current;
               }
 
-              const formattedMessage:
-                Message = {
-                id: newMessage.id,
-                senderId:
-                  newMessage.sender_id,
-                text: newMessage.text,
-                timestamp:
-                  formatTimestamp(
-                    newMessage.created_at
-                  ),
-                read:
-                  newMessage.sender_id ===
-                  currentUserId
-                    ? true
-                    : newMessage.read,
-              };
+              const formattedMessage: Message =
+                {
+                  id: newMessage.id,
+                  senderId:
+                    newMessage.sender_id,
+                  text: newMessage.text,
+                  timestamp:
+                    formatTimestamp(
+                      newMessage.created_at
+                    ),
+                  createdAt:
+                    newMessage.created_at,
+                  read:
+                    newMessage.sender_id ===
+                    currentUserId
+                      ? true
+                      : newMessage.read,
+                };
+
+              const isIncoming =
+                newMessage.sender_id !==
+                currentUserId;
+
+              if (
+                isIncoming &&
+                newMessage.conversation_id !==
+                  conversations.find(
+                    (item) =>
+                      item.userId ===
+                      selectedUserId
+                  )?.id
+              ) {
+                showToast(
+                  "New transmission",
+                  "You received a new message.",
+                  "info"
+                );
+              }
 
               return current.map(
                 (conversation) => {
@@ -567,6 +693,63 @@ export default function ConnectPage() {
         channel
       );
     };
+  }, [
+    currentUserId,
+    supabase,
+    selectedUserId,
+    conversations,
+  ]);
+
+  /* =====================================================
+     REALTIME MESSAGE READ STATUS
+  ===================================================== */
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const channel = supabase
+      .channel(
+        `Monobloc-message-read-${currentUserId}`
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+        },
+        (payload) => {
+          const updated =
+            payload.new as {
+              id: string;
+              read: boolean;
+            };
+
+          setConversations((current) =>
+            current.map((conversation) => ({
+              ...conversation,
+              messages:
+                conversation.messages.map(
+                  (msg) =>
+                    msg.id === updated.id
+                      ? {
+                          ...msg,
+                          read:
+                            updated.read,
+                        }
+                      : msg
+                ),
+            }))
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(
+        channel
+      );
+    };
   }, [currentUserId, supabase]);
 
   /* =====================================================
@@ -598,7 +781,19 @@ export default function ConnectPage() {
       .trim()
       .toLowerCase();
 
-    if (!query) return users;
+    if (!query) {
+      return [...users].sort(
+        (a, b) => {
+          const aOnline =
+            a.status === "online" ? 1 : 0;
+
+          const bOnline =
+            b.status === "online" ? 1 : 0;
+
+          return bOnline - aOnline;
+        }
+      );
+    }
 
     return users.filter(
       (user) =>
@@ -657,43 +852,46 @@ export default function ConnectPage() {
           !msg.read
       );
 
-    for (const unreadMessage of unreadMessages) {
-      await supabase
-        .from("messages")
-        .update({ read: true })
-        .eq(
-          "id",
-          unreadMessage.id
-        );
+    if (unreadMessages.length === 0) {
+      return;
     }
 
-    if (unreadMessages.length > 0) {
-      setConversations((current) =>
-        current.map((item) => {
-          if (
-            item.id !==
-            conversation.id
-          ) {
-            return item;
-          }
-
-          return {
-            ...item,
-            messages:
-              item.messages.map(
-                (msg) =>
-                  msg.senderId !==
-                  currentUserId
-                    ? {
-                        ...msg,
-                        read: true,
-                      }
-                    : msg
-              ),
-          };
-        })
+    await supabase
+      .from("messages")
+      .update({
+        read: true,
+      })
+      .in(
+        "id",
+        unreadMessages.map(
+          (msg) => msg.id
+        )
       );
-    }
+
+    setConversations((current) =>
+      current.map((item) => {
+        if (
+          item.id !==
+          conversation.id
+        ) {
+          return item;
+        }
+
+        return {
+          ...item,
+          messages:
+            item.messages.map((msg) =>
+              msg.senderId !==
+              currentUserId
+                ? {
+                    ...msg,
+                    read: true,
+                  }
+                : msg
+            ),
+        };
+      })
+    );
   };
 
   /* =====================================================
@@ -703,7 +901,7 @@ export default function ConnectPage() {
   const getOrCreateConversation =
     async (
       otherUserId: string
-    ) => {
+    ): Promise<string | null> => {
       if (!currentUserId) return null;
 
       const existing =
@@ -747,11 +945,6 @@ export default function ConnectPage() {
             .maybeSingle();
 
           if (otherMembership) {
-            await loadConversations(
-              currentUserId,
-              users
-            );
-
             return membership.conversation_id;
           }
         }
@@ -776,7 +969,7 @@ export default function ConnectPage() {
 
         setError(
           conversationError?.message ||
-            "Could not create conversation."
+            "Could not create communication channel."
         );
 
         return null;
@@ -802,10 +995,6 @@ export default function ConnectPage() {
         ]);
 
       if (membersError) {
-        console.error(
-          membersError
-        );
-
         await supabase
           .from("conversations")
           .delete()
@@ -844,11 +1033,13 @@ export default function ConnectPage() {
     if (
       !cleanMessage ||
       !selectedUserId ||
-      !currentUserId
+      !currentUserId ||
+      sendingMessage
     ) {
       return;
     }
 
+    setSendingMessage(true);
     setMessage("");
 
     const conversationId =
@@ -858,6 +1049,7 @@ export default function ConnectPage() {
 
     if (!conversationId) {
       setMessage(cleanMessage);
+      setSendingMessage(false);
       return;
     }
 
@@ -884,7 +1076,15 @@ export default function ConnectPage() {
       setError(
         messageError.message
       );
+
+      showToast(
+        "Transmission failed",
+        "Your message could not be delivered.",
+        "error"
+      );
     }
+
+    setSendingMessage(false);
   };
 
   /* =====================================================
@@ -910,7 +1110,8 @@ export default function ConnectPage() {
   const addConnection = async () => {
     if (
       !newUsername.trim() ||
-      !currentUserId
+      !currentUserId ||
+      sendingRequest
     ) {
       return;
     }
@@ -937,7 +1138,6 @@ export default function ConnectPage() {
       .maybeSingle();
 
     if (userError) {
-      console.error(userError);
       setError(userError.message);
       setSendingRequest(false);
       return;
@@ -945,7 +1145,7 @@ export default function ConnectPage() {
 
     if (!targetUser) {
       setError(
-        `No Zora user found with @${username}.`
+        `No Monobloc user found with @${username}.`
       );
 
       setSendingRequest(false);
@@ -982,10 +1182,7 @@ export default function ConnectPage() {
         setError(
           "You're already connected with this person."
         );
-      } else if (
-        existingConnection.status ===
-        "pending"
-      ) {
+      } else {
         setError(
           "A connection request already exists."
         );
@@ -1008,7 +1205,6 @@ export default function ConnectPage() {
       });
 
     if (insertError) {
-      console.error(insertError);
       setError(insertError.message);
       setSendingRequest(false);
       return;
@@ -1017,6 +1213,12 @@ export default function ConnectPage() {
     setNewUsername("");
     setShowNewConnection(false);
     setSendingRequest(false);
+
+    showToast(
+      "Connection request sent",
+      `@${username} will receive your request.`,
+      "success"
+    );
   };
 
   /* =====================================================
@@ -1039,7 +1241,6 @@ export default function ConnectPage() {
       );
 
     if (updateError) {
-      console.error(updateError);
       setError(updateError.message);
       return;
     }
@@ -1058,6 +1259,12 @@ export default function ConnectPage() {
         currentUserId
       );
     }
+
+    showToast(
+      "Connection established",
+      "This user is now part of your Monobloc network.",
+      "success"
+    );
   };
 
   /* =====================================================
@@ -1078,7 +1285,6 @@ export default function ConnectPage() {
       );
 
     if (deleteError) {
-      console.error(deleteError);
       setError(deleteError.message);
       return;
     }
@@ -1102,7 +1308,7 @@ export default function ConnectPage() {
 
     const channel = supabase
       .channel(
-        `zora-connections-${currentUserId}`
+        `Monobloc-connections-${currentUserId}`
       )
       .on(
         "postgres_changes",
@@ -1112,13 +1318,14 @@ export default function ConnectPage() {
           table: "connections",
         },
         async () => {
-          await loadConnections(
-            currentUserId
-          );
-
-          await loadPendingRequests(
-            currentUserId
-          );
+          await Promise.all([
+            loadConnections(
+              currentUserId
+            ),
+            loadPendingRequests(
+              currentUserId
+            ),
+          ]);
         }
       )
       .subscribe();
@@ -1131,11 +1338,11 @@ export default function ConnectPage() {
   }, [currentUserId, supabase]);
 
   /* =====================================================
-     STATUS
+     HELPERS
   ===================================================== */
 
   const statusText = (
-    status: User["status"]
+    status: UserStatus
   ) => {
     if (status === "online")
       return "Online";
@@ -1147,38 +1354,38 @@ export default function ConnectPage() {
   };
 
   const statusClass = (
-    status: User["status"]
+    status: UserStatus
   ) => {
     if (status === "online") {
-      return "bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,.8)]";
+      return "bg-cyan-400 shadow-[0_0_14px_rgba(34,211,238,.9)]";
     }
 
     if (status === "away") {
-      return "bg-yellow-400";
+      return "bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,.45)]";
     }
 
     return "bg-slate-600";
   };
 
-  /* =====================================================
-     LAST MESSAGE
-  ===================================================== */
+  const getConversation = (
+    userId: string
+  ) =>
+    conversations.find(
+      (item) =>
+        item.userId === userId
+    );
 
   const getLastMessage = (
     userId: string
   ) => {
     const conversation =
-      conversations.find(
-        (item) =>
-          item.userId === userId
-      );
+      getConversation(userId);
 
     if (
       !conversation ||
-      conversation.messages.length ===
-        0
+      conversation.messages.length === 0
     ) {
-      return "Start a conversation";
+      return "Start a transmission";
     }
 
     return conversation.messages[
@@ -1186,9 +1393,38 @@ export default function ConnectPage() {
     ].text;
   };
 
-  /* =====================================================
-     STATS
-  ===================================================== */
+  const getLastMessageTime = (
+    userId: string
+  ) => {
+    const conversation =
+      getConversation(userId);
+
+    if (
+      !conversation ||
+      conversation.messages.length === 0
+    ) {
+      return "";
+    }
+
+    return conversation.messages[
+      conversation.messages.length - 1
+    ].timestamp;
+  };
+
+  const getUnreadForUser = (
+    userId: string
+  ) => {
+    const conversation =
+      getConversation(userId);
+
+    if (!conversation) return 0;
+
+    return conversation.messages.filter(
+      (msg) =>
+        msg.senderId !== currentUserId &&
+        !msg.read
+    ).length;
+  };
 
   const totalMessages =
     conversations.reduce(
@@ -1198,31 +1434,49 @@ export default function ConnectPage() {
       0
     );
 
+  const onlineCount =
+    users.filter(
+      (user) =>
+        user.status === "online"
+    ).length;
+
+  const conversationStartedAt =
+    selectedConversation?.messages[0]
+      ?.createdAt;
+
   /* =====================================================
      LOADING
   ===================================================== */
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#050b16] text-white">
+      <div className="min-h-screen bg-[#030814] text-white">
         <FloatingSidebar />
 
         <main className="min-h-screen px-4 py-5 md:pl-[150px] lg:pl-[165px] xl:pl-[175px]">
           <div className="flex min-h-[80vh] items-center justify-center">
             <div className="text-center">
-              <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-400/10">
-                <Sparkles
-                  size={22}
-                  className="animate-pulse text-cyan-400"
+              <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center">
+                <div className="absolute inset-0 animate-ping rounded-3xl border border-cyan-400/20" />
+
+                <div className="absolute inset-2 animate-pulse rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.06]" />
+
+                <Cpu
+                  size={28}
+                  className="relative z-10 text-cyan-400"
                 />
               </div>
 
-              <p className="text-sm font-semibold">
-                Connecting to Zora...
+              <p className="text-sm font-bold tracking-wide">
+                INITIALIZING Monobloc NETWORK
               </p>
 
-              <p className="mt-2 text-xs text-slate-600">
-                Loading your workspace
+              <div className="mx-auto mt-4 h-1 w-48 overflow-hidden rounded-full bg-white/[0.05]">
+                <div className="h-full w-1/2 animate-pulse rounded-full bg-gradient-to-r from-cyan-400 to-blue-500" />
+              </div>
+
+              <p className="mt-4 text-[10px] uppercase tracking-[0.25em] text-slate-600">
+                Synchronizing communication layer
               </p>
             </div>
           </div>
@@ -1236,109 +1490,217 @@ export default function ConnectPage() {
   ===================================================== */
 
   return (
-    <div className="min-h-screen bg-[#050b16] text-white">
+    <div className="min-h-screen bg-[#030814] text-white">
       <FloatingSidebar />
 
+      {/* TOASTS */}
+
+      <div className="pointer-events-none fixed right-4 top-4 z-[500] flex w-[min(390px,calc(100vw-2rem))] flex-col gap-3">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`pointer-events-auto animate-in slide-in-from-right-8 fade-in duration-300 rounded-2xl border p-4 shadow-2xl backdrop-blur-2xl ${
+              toast.type === "success"
+                ? "border-cyan-400/20 bg-[#071b25]/95"
+                : toast.type === "error"
+                  ? "border-red-400/20 bg-[#200b12]/95"
+                  : "border-blue-400/20 bg-[#071222]/95"
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <div
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+                  toast.type === "error"
+                    ? "bg-red-400/10 text-red-300"
+                    : "bg-cyan-400/10 text-cyan-400"
+                }`}
+              >
+                {toast.type === "success" ? (
+                  <CheckCheck size={16} />
+                ) : toast.type === "error" ? (
+                  <X size={16} />
+                ) : (
+                  <Radio size={16} />
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold">
+                  {toast.title}
+                </p>
+
+                <p className="mt-1 text-[11px] leading-5 text-slate-500">
+                  {toast.description}
+                </p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <main className="relative min-h-screen overflow-hidden px-4 py-5 md:pl-[150px] md:pr-6 lg:pl-[165px] lg:pr-8 xl:pl-[175px]">
-        {/* AMBIENCE */}
+        {/* =================================================
+           AMBIENCE
+        ================================================= */}
 
-        <div className="pointer-events-none fixed inset-0">
-          <div className="absolute left-[20%] top-[10%] h-80 w-80 rounded-full bg-cyan-500/[0.04] blur-[120px]" />
+        <div className="pointer-events-none fixed inset-0 overflow-hidden">
+          <div className="absolute left-[8%] top-[5%] h-[500px] w-[500px] rounded-full bg-cyan-500/[0.035] blur-[140px]" />
 
-          <div className="absolute bottom-[10%] right-[10%] h-96 w-96 rounded-full bg-blue-600/[0.04] blur-[140px]" />
+          <div className="absolute bottom-[5%] right-[5%] h-[600px] w-[600px] rounded-full bg-blue-600/[0.04] blur-[160px]" />
+
+          <div className="absolute left-[55%] top-[40%] h-72 w-72 rounded-full bg-cyan-400/[0.02] blur-[120px]" />
 
           <div
             className="absolute inset-0 opacity-[0.025]"
             style={{
               backgroundImage:
-                "linear-gradient(rgba(255,255,255,.35) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.35) 1px, transparent 1px)",
+                "linear-gradient(rgba(255,255,255,.4) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.4) 1px, transparent 1px)",
               backgroundSize:
-                "70px 70px",
+                "64px 64px",
             }}
           />
+
+          <div className="absolute left-0 top-0 h-px w-full bg-gradient-to-r from-transparent via-cyan-400/20 to-transparent animate-pulse" />
         </div>
 
-        <div className="relative z-10 mx-auto w-full max-w-[1500px]">
-          {/* HEADER */}
+        <div className="relative z-10 mx-auto w-full max-w-[1650px]">
+          {/* =================================================
+             HEADER
+          ================================================= */}
 
-          <header className="mb-5 rounded-[28px] border border-white/10 bg-[#0b1525]/85 backdrop-blur-2xl">
-            <div className="flex flex-col gap-5 p-5 md:flex-row md:items-center md:justify-between">
+          <header className="relative mb-5 overflow-hidden rounded-[30px] border border-white/10 bg-[#081322]/85 backdrop-blur-2xl">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/70 to-transparent" />
+
+            <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-cyan-400/[0.05] blur-[90px]" />
+
+            <div className="relative flex flex-col gap-5 p-5 md:p-6 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-4">
-                <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-400/10">
+                <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-cyan-400/20 bg-gradient-to-br from-cyan-400/[0.14] to-blue-500/[0.06]">
                   <Users
-                    size={22}
+                    size={24}
                     className="text-cyan-300"
                   />
 
-                  <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-[#0b1525] bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,.8)]" />
+                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center">
+                    <span className="absolute h-full w-full animate-ping rounded-full bg-cyan-400/50" />
+
+                    <span className="relative h-2.5 w-2.5 rounded-full bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,1)]" />
+                  </span>
                 </div>
 
                 <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs font-bold uppercase tracking-[0.3em] text-cyan-400">
-                      ZORA / CONNECT
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-cyan-400">
+                      Monobloc OS / CONNECT
                     </p>
 
-                    <span className="rounded-full border border-cyan-400/20 bg-cyan-400/5 px-2 py-0.5 text-[9px] font-semibold text-cyan-400">
-                      LIVE
+                    <span className="flex items-center gap-1.5 rounded-full border border-cyan-400/15 bg-cyan-400/[0.06] px-2 py-1 text-[8px] font-bold uppercase tracking-wider text-cyan-300">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-400" />
+                      System Live
                     </span>
                   </div>
 
-                  <h1 className="mt-1 text-2xl font-bold tracking-tight md:text-3xl">
-                    Connect
+                  <h1 className="mt-2 text-3xl font-black tracking-tight md:text-4xl">
+                    Communication
+                    <span className="ml-2 text-cyan-400">
+                      Center
+                    </span>
                   </h1>
 
-                  <p className="mt-1 text-xs text-slate-500 md:text-sm">
-                    Talk to people inside your Zora workspace.
+                  <p className="mt-2 text-xs text-slate-500 md:text-sm">
+                    Your private Monobloc network is online and synchronized.
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="hidden items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 md:flex">
-                  <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,.8)]" />
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="hidden rounded-2xl border border-white/10 bg-white/[0.025] px-4 py-2.5 md:block">
+                  <div className="flex items-center gap-2">
+                    <Clock3
+                      size={13}
+                      className="text-cyan-400"
+                    />
 
-                  <span className="text-xs text-slate-400">
-                    Communication online
-                  </span>
+                    <span className="font-mono text-xs text-slate-400">
+                      {systemTime.toLocaleTimeString(
+                        "en-US",
+                        {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        }
+                      )}
+                    </span>
+                  </div>
+
+                  <p className="mt-1 text-[8px] uppercase tracking-[0.18em] text-slate-700">
+                    System Time
+                  </p>
+                </div>
+
+                <div className="hidden rounded-2xl border border-white/10 bg-white/[0.025] px-4 py-2.5 lg:block">
+                  <div className="flex items-center gap-2">
+                    <Signal
+                      size={13}
+                      className="text-cyan-400"
+                    />
+
+                    <span className="text-xs font-semibold text-slate-300">
+                      Network Stable
+                    </span>
+                  </div>
+
+                  <p className="mt-1 text-[8px] uppercase tracking-[0.18em] text-slate-700">
+                    Realtime Layer
+                  </p>
                 </div>
 
                 <button
                   type="button"
                   onClick={() =>
-                    setShowNewConnection(
-                      true
-                    )
+                    setShowNewConnection(true)
                   }
-                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 px-4 py-2.5 text-sm font-bold transition hover:scale-[1.02]"
+                  className="group relative flex items-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-3 text-sm font-bold text-white shadow-[0_10px_35px_rgba(34,211,238,.12)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_15px_40px_rgba(34,211,238,.2)]"
                 >
-                  <UserPlus size={16} />
+                  <span className="absolute inset-0 translate-y-full bg-white/10 transition-transform duration-300 group-hover:translate-y-0" />
 
-                  <span className="hidden sm:inline">
-                    Add person
+                  <UserPlus
+                    size={16}
+                    className="relative"
+                  />
+
+                  <span className="relative">
+                    Connect
                   </span>
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 border-t border-white/10 px-5 py-3 text-[11px] text-slate-600">
+            <div className="relative flex items-center gap-2 border-t border-white/[0.07] px-5 py-3 text-[9px] uppercase tracking-[0.18em] text-slate-600">
               <Zap
-                size={13}
+                size={12}
                 className="text-cyan-400"
               />
 
-              Zora communication layer active
+              Monobloc neural communication layer active
 
-              <span className="ml-auto hidden font-mono md:block">
-                ENCRYPTED WORKSPACE
-              </span>
+              <div className="ml-auto hidden items-center gap-2 md:flex">
+                <Wifi
+                  size={11}
+                  className="text-cyan-400"
+                />
+
+                <span>
+                  Secure realtime channel
+                </span>
+              </div>
             </div>
           </header>
 
           {/* ERROR */}
 
           {error && (
-            <div className="mb-5 flex items-center justify-between rounded-2xl border border-red-400/10 bg-red-400/[0.04] px-4 py-3 text-xs text-red-300">
+            <div className="mb-5 flex items-center justify-between rounded-2xl border border-red-400/15 bg-red-400/[0.04] px-4 py-3 text-xs text-red-300 backdrop-blur-xl">
               <span>{error}</span>
 
               <button
@@ -1346,90 +1708,111 @@ export default function ConnectPage() {
                 onClick={() =>
                   setError("")
                 }
-                className="text-red-300/60 hover:text-red-300"
+                className="ml-4 text-red-300/60 transition hover:text-red-300"
               >
-                <X size={14} />
+                <X size={15} />
               </button>
             </div>
           )}
 
-          {/* COMMAND STRIP */}
+          {/* =================================================
+             NETWORK STRIP
+          ================================================= */}
 
-          <section className="mb-5 rounded-[24px] border border-cyan-400/10 bg-gradient-to-r from-cyan-400/[0.06] via-blue-500/[0.03] to-transparent p-4 backdrop-blur-xl">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-400/10">
-                <Sparkles
+          <section className="mb-5 overflow-hidden rounded-[25px] border border-cyan-400/10 bg-gradient-to-r from-cyan-400/[0.07] via-blue-500/[0.035] to-transparent backdrop-blur-xl">
+            <div className="flex flex-col gap-4 p-4 md:flex-row md:items-center">
+              <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cyan-400/15 bg-cyan-400/[0.08]">
+                <div className="absolute inset-0 animate-pulse rounded-xl bg-cyan-400/[0.04]" />
+
+                <Radio
                   size={18}
-                  className="text-cyan-300"
+                  className="relative text-cyan-300"
                 />
               </div>
 
               <div className="flex-1">
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-400">
-                  Zora Network
+                <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-cyan-400">
+                  Monobloc Network Intelligence
                 </p>
 
                 <p className="mt-1 text-xs text-slate-500">
-                  {users.length}{" "}
-                  {users.length === 1
-                    ? "person"
-                    : "people"}{" "}
-                  connected to your workspace
+                  {onlineCount} active ·{" "}
+                  {users.length} total connections ·{" "}
+                  {totalMessages} transmissions ·{" "}
                   {unreadCount > 0
-                    ? ` · ${unreadCount} unread message${
-                        unreadCount ===
-                        1
-                          ? ""
-                          : "s"
-                      }`
-                    : " · All caught up"}
+                    ? `${unreadCount} unread`
+                    : "inbox clear"}
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 text-xs text-slate-600">
-                <Circle
-                  size={8}
-                  className="fill-cyan-400 text-cyan-400"
+              <div className="flex items-center gap-4">
+                <NetworkMetric
+                  label="UPTIME"
+                  value="99.9%"
                 />
 
-                Network stable
+                <NetworkMetric
+                  label="STATUS"
+                  value="OPTIMAL"
+                  cyan
+                />
+
+                <div className="hidden h-9 w-px bg-white/10 sm:block" />
+
+                <div className="flex items-center gap-2 text-[10px] text-slate-600">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-60" />
+
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-400" />
+                  </span>
+
+                  LIVE SYNC
+                </div>
               </div>
             </div>
           </section>
 
-          {/* PENDING REQUESTS */}
+          {/* =================================================
+             PENDING REQUESTS
+          ================================================= */}
 
           {pendingRequests.length > 0 && (
-            <section className="mb-5 rounded-[24px] border border-cyan-400/10 bg-[#0b1525]/80 p-4 backdrop-blur-xl">
-              <div className="mb-3 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-cyan-400">
-                    Connection Requests
-                  </p>
+            <section className="mb-5 overflow-hidden rounded-[26px] border border-cyan-400/10 bg-[#081322]/80 backdrop-blur-xl">
+              <div className="flex items-center justify-between border-b border-white/[0.07] p-4 md:p-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-400">
+                    <Bell size={17} />
+                  </div>
 
-                  <p className="mt-1 text-sm font-semibold text-slate-300">
-                    Someone wants to connect
-                  </p>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-cyan-400">
+                      Incoming Signals
+                    </p>
+
+                    <p className="mt-1 text-sm font-bold text-slate-300">
+                      Connection requests awaiting response
+                    </p>
+                  </div>
                 </div>
 
-                <span className="rounded-full bg-cyan-400 px-2 py-1 text-[9px] font-bold text-[#04111b]">
-                  {pendingRequests.length}
+                <span className="rounded-full border border-cyan-400/15 bg-cyan-400/[0.08] px-3 py-1.5 text-[10px] font-bold text-cyan-300">
+                  {pendingRequests.length} NEW
                 </span>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 p-3 md:p-4">
                 {pendingRequests.map(
                   (request) => (
                     <PendingRequest
                       key={request.id}
                       request={request}
                       onAccept={() =>
-                        acceptRequest(
+                        void acceptRequest(
                           request
                         )
                       }
                       onReject={() =>
-                        rejectRequest(
+                        void rejectRequest(
                           request
                         )
                       }
@@ -1440,23 +1823,47 @@ export default function ConnectPage() {
             </section>
           )}
 
-          {/* COMMUNICATION CENTER */}
+          {/* =================================================
+             COMMUNICATION CENTER
+          ================================================= */}
 
-          <section className="overflow-hidden rounded-[30px] border border-white/10 bg-[#0a1322]/90 shadow-2xl backdrop-blur-2xl">
-            <div className="grid min-h-[650px] lg:grid-cols-[320px_minmax(0,1fr)]">
-              {/* PEOPLE */}
+          <section className="overflow-hidden rounded-[32px] border border-white/10 bg-[#07101d]/90 shadow-[0_30px_100px_rgba(0,0,0,.28)] backdrop-blur-2xl">
+            <div className="grid min-h-[720px] xl:grid-cols-[310px_minmax(0,1fr)_260px]">
+              {/* =============================================
+                 CONNECTIONS
+              ============================================= */}
 
               <aside
-                className={`border-r border-white/10 ${
+                className={`border-r border-white/[0.08] bg-[#07101d]/70 ${
                   mobileChatOpen
-                    ? "hidden lg:block"
+                    ? "hidden xl:block"
                     : "block"
                 }`}
               >
-                <div className="border-b border-white/10 p-4">
+                <div className="border-b border-white/[0.08] p-4">
+                  <div className="mb-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Command
+                        size={14}
+                        className="text-cyan-400"
+                      />
+
+                      <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">
+                        Directory
+                      </span>
+                    </div>
+
+                    <span className="text-[9px] font-mono text-slate-700">
+                      {users.length.toString().padStart(
+                        2,
+                        "0"
+                      )} USERS
+                    </span>
+                  </div>
+
                   <div className="relative">
                     <Search
-                      size={16}
+                      size={15}
                       className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-600"
                     />
 
@@ -1467,37 +1874,36 @@ export default function ConnectPage() {
                           event.target.value
                         )
                       }
-                      placeholder="Search people..."
-                      className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.035] pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-700 focus:border-cyan-400/30"
+                      placeholder="Search your network..."
+                      className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.025] pl-10 pr-4 text-xs text-white outline-none transition placeholder:text-slate-700 focus:border-cyan-400/25 focus:bg-cyan-400/[0.025]"
                     />
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between px-4 py-4">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-slate-600">
-                      Connections
+                    <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-700">
+                      Active Connections
                     </p>
 
-                    <p className="mt-1 text-sm font-semibold text-slate-300">
-                      {filteredUsers.length} people
+                    <p className="mt-1 text-sm font-bold text-slate-300">
+                      {filteredUsers.length}{" "}
+                      people
                     </p>
                   </div>
 
                   <button
                     type="button"
                     onClick={() =>
-                      setShowNewConnection(
-                        true
-                      )
+                      setShowNewConnection(true)
                     }
-                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-slate-500 transition hover:border-cyan-400/20 hover:text-cyan-300"
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.025] text-slate-500 transition hover:border-cyan-400/20 hover:bg-cyan-400/[0.06] hover:text-cyan-300"
                   >
-                    <Plus size={15} />
+                    <Plus size={16} />
                   </button>
                 </div>
 
-                <div className="space-y-1 px-2 pb-4">
+                <div className="max-h-[570px] space-y-1 overflow-y-auto px-2 pb-4">
                   {filteredUsers.map(
                     (user) => {
                       const active =
@@ -1505,20 +1911,9 @@ export default function ConnectPage() {
                         user.id;
 
                       const unread =
-                        conversations
-                          .find(
-                            (
-                              conversation
-                            ) =>
-                              conversation.userId ===
-                              user.id
-                          )
-                          ?.messages.filter(
-                            (msg) =>
-                              msg.senderId !==
-                                currentUserId &&
-                              !msg.read
-                          ).length || 0;
+                        getUnreadForUser(
+                          user.id
+                        );
 
                       return (
                         <button
@@ -1529,34 +1924,26 @@ export default function ConnectPage() {
                               user.id
                             )
                           }
-                          className={`group flex w-full items-center gap-3 rounded-2xl p-3 text-left transition ${
+                          className={`group relative flex w-full items-center gap-3 overflow-hidden rounded-2xl p-3 text-left transition-all duration-300 ${
                             active
-                              ? "border border-cyan-400/10 bg-cyan-400/[0.07]"
+                              ? "border border-cyan-400/15 bg-gradient-to-r from-cyan-400/[0.09] to-transparent shadow-[0_8px_30px_rgba(34,211,238,.04)]"
                               : "border border-transparent hover:bg-white/[0.035]"
                           }`}
                         >
-                          <div className="relative shrink-0">
-                            <div
-                              className={`flex h-11 w-11 items-center justify-center rounded-xl border text-xs font-bold ${
-                                active
-                                  ? "border-cyan-400/20 bg-cyan-400/10 text-cyan-300"
-                                  : "border-white/10 bg-white/[0.04] text-slate-400"
-                              }`}
-                            >
-                              {user.initials}
-                            </div>
+                          {active && (
+                            <span className="absolute bottom-3 left-0 top-3 w-0.5 rounded-r-full bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,.8)]" />
+                          )}
 
-                            <span
-                              className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#0a1322] ${statusClass(
-                                user.status
-                              )}`}
-                            />
-                          </div>
+                          <Avatar
+                            user={user}
+                            active={active}
+                            size="md"
+                          />
 
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
                               <p
-                                className={`truncate text-sm font-semibold ${
+                                className={`flex-1 truncate text-sm font-bold ${
                                   active
                                     ? "text-white"
                                     : "text-slate-300"
@@ -1565,27 +1952,36 @@ export default function ConnectPage() {
                                 {user.name}
                               </p>
 
-                              {unread >
-                                0 && (
-                                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-cyan-400 px-1.5 text-[9px] font-bold text-[#04111b]">
-                                  {unread}
+                              <span className="shrink-0 text-[8px] text-slate-700">
+                                {getLastMessageTime(
+                                  user.id
+                                )}
+                              </span>
+                            </div>
+
+                            <div className="mt-1 flex items-center gap-2">
+                              <p className="min-w-0 flex-1 truncate text-[10px] text-slate-600">
+                                {getLastMessage(
+                                  user.id
+                                )}
+                              </p>
+
+                              {unread > 0 && (
+                                <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-cyan-400 px-1.5 text-[8px] font-black text-[#03101a] shadow-[0_0_15px_rgba(34,211,238,.35)]">
+                                  {unread > 99
+                                    ? "99+"
+                                    : unread}
                                 </span>
                               )}
                             </div>
-
-                            <p className="mt-0.5 truncate text-[11px] text-slate-600">
-                              {getLastMessage(
-                                user.id
-                              )}
-                            </p>
                           </div>
 
                           <ChevronRight
-                            size={14}
-                            className={`shrink-0 transition ${
+                            size={13}
+                            className={`shrink-0 transition-all ${
                               active
-                                ? "text-cyan-400"
-                                : "text-slate-800 group-hover:text-slate-500"
+                                ? "translate-x-0 text-cyan-400"
+                                : "-translate-x-1 text-slate-800 opacity-0 group-hover:translate-x-0 group-hover:opacity-100"
                             }`}
                           />
                         </button>
@@ -1595,254 +1991,368 @@ export default function ConnectPage() {
 
                   {filteredUsers.length ===
                     0 && (
-                    <div className="px-4 py-12 text-center">
-                      <Users
-                        size={24}
-                        className="mx-auto mb-3 text-slate-700"
-                      />
+                    <div className="px-5 py-16 text-center">
+                      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.025]">
+                        <Users
+                          size={22}
+                          className="text-slate-700"
+                        />
+                      </div>
 
-                      <p className="text-sm text-slate-500">
-                        No connections found.
+                      <p className="text-sm font-semibold text-slate-500">
+                        Network empty
                       </p>
 
-                      <p className="mt-1 text-xs text-slate-700">
-                        Add someone to start connecting.
+                      <p className="mt-2 text-[11px] leading-5 text-slate-700">
+                        Connect with someone to establish your first Monobloc channel.
                       </p>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowNewConnection(
+                            true
+                          )
+                        }
+                        className="mt-5 text-[10px] font-bold uppercase tracking-wider text-cyan-400"
+                      >
+                        + Add connection
+                      </button>
                     </div>
                   )}
                 </div>
+
+                <div className="border-t border-white/[0.07] p-4">
+                  <div className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-400/10">
+                      <Activity
+                        size={14}
+                        className="text-cyan-400"
+                      />
+                    </div>
+
+                    <div>
+                      <p className="text-[9px] font-bold text-slate-500">
+                        NETWORK ACTIVITY
+                      </p>
+
+                      <p className="mt-0.5 text-[9px] text-slate-700">
+                        {onlineCount} nodes currently active
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </aside>
 
-              {/* CHAT */}
+              {/* =============================================
+                 CHAT
+              ============================================= */}
 
               <div
-                className={`flex min-w-0 flex-col ${
+                className={`min-w-0 flex-col ${
                   mobileChatOpen
                     ? "flex"
-                    : "hidden lg:flex"
+                    : "hidden xl:flex"
                 }`}
               >
                 {selectedUser ? (
                   <>
-                    <header className="flex items-center justify-between border-b border-white/10 px-4 py-4 md:px-6">
+                    {/* CHAT HEADER */}
+
+                    <header className="flex items-center justify-between border-b border-white/[0.08] bg-[#091421]/60 px-4 py-4 backdrop-blur-xl md:px-6">
                       <div className="flex min-w-0 items-center gap-3">
                         <button
                           type="button"
                           onClick={() =>
-                            setMobileChatOpen(
-                              false
-                            )
+                            setMobileChatOpen(false)
                           }
-                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-500 lg:hidden"
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-500 transition hover:text-cyan-400 xl:hidden"
                         >
-                          <ArrowLeft size={16} />
+                          <ArrowLeft size={17} />
                         </button>
 
-                        <div className="relative shrink-0">
-                          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-400/15 bg-cyan-400/[0.07] text-xs font-bold text-cyan-300">
-                            {selectedUser.initials}
-                          </div>
-
-                          <span
-                            className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#0a1322] ${statusClass(
-                              selectedUser.status
-                            )}`}
-                          />
-                        </div>
+                        <Avatar
+                          user={selectedUser}
+                          active
+                          size="lg"
+                        />
 
                         <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h2 className="truncate text-sm font-bold text-white md:text-base">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="truncate text-sm font-black text-white md:text-base">
                               {selectedUser.name}
                             </h2>
 
-                            {selectedUser.status ===
-                              "online" && (
-                              <span className="hidden rounded-full bg-cyan-400/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-400 sm:inline">
-                                Online
-                              </span>
-                            )}
+                            <span
+                              className={`rounded-full border px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider ${
+                                selectedUser.status ===
+                                "online"
+                                  ? "border-cyan-400/15 bg-cyan-400/[0.07] text-cyan-400"
+                                  : "border-white/10 bg-white/[0.03] text-slate-600"
+                              }`}
+                            >
+                              {statusText(
+                                selectedUser.status
+                              )}
+                            </span>
                           </div>
 
-                          <p className="mt-0.5 truncate text-xs text-slate-600">
+                          <p className="mt-1 truncate text-[10px] text-slate-600">
                             @{selectedUser.username}{" "}
-                            ·{" "}
+                            <span className="mx-1">
+                              ·
+                            </span>
                             {selectedUser.role}
                           </p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          className="hidden h-9 w-9 items-center justify-center rounded-xl text-slate-600 transition hover:bg-white/[0.05] hover:text-cyan-400 sm:flex"
-                          aria-label="Voice call"
-                        >
-                          <Phone size={16} />
-                        </button>
+                        <ChatActionButton
+                          icon={
+                            <Phone size={15} />
+                          }
+                          label="Voice call"
+                          className="hidden sm:flex"
+                        />
 
-                        <button
-                          type="button"
-                          className="hidden h-9 w-9 items-center justify-center rounded-xl text-slate-600 transition hover:bg-white/[0.05] hover:text-cyan-400 sm:flex"
-                          aria-label="Video call"
-                        >
-                          <Video size={17} />
-                        </button>
+                        <ChatActionButton
+                          icon={
+                            <Video size={16} />
+                          }
+                          label="Video call"
+                          className="hidden sm:flex"
+                        />
 
-                        <button
-                          type="button"
-                          className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 transition hover:bg-white/[0.05] hover:text-white"
-                          aria-label="More options"
-                        >
-                          <MoreHorizontal size={18} />
-                        </button>
+                        <ChatActionButton
+                          icon={
+                            <MoreHorizontal
+                              size={17}
+                            />
+                          }
+                          label="More options"
+                        />
                       </div>
                     </header>
 
-                    <div className="flex items-center gap-2 border-b border-white/5 px-5 py-2.5 text-[10px] text-slate-700">
-                      <Sparkles
-                        size={12}
-                        className="text-cyan-500"
-                      />
+                    {/* CHANNEL BAR */}
 
-                      Zora communication channel established
+                    <div className="flex items-center gap-2 border-b border-white/[0.05] bg-cyan-400/[0.015] px-5 py-2.5 text-[9px] uppercase tracking-[0.14em] text-slate-700">
+                      <span className="relative flex h-2 w-2">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-50" />
 
-                      <span className="ml-auto hidden font-mono md:block">
-                        REALTIME
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-400" />
+                      </span>
+
+                      Secure realtime channel
+
+                      <span className="ml-auto hidden font-mono text-[9px] md:block">
+                        CHANNEL ACTIVE
                       </span>
                     </div>
 
                     {/* MESSAGES */}
 
-                    <div className="flex-1 space-y-5 overflow-y-auto p-4 md:p-6">
+                    <div
+                      ref={messageContainerRef}
+                      className="relative flex-1 overflow-y-auto bg-gradient-to-b from-transparent to-[#040a12]/30 p-4 md:p-6"
+                    >
                       {selectedMessages.length ===
                       0 ? (
-                        <div className="flex h-full min-h-[400px] items-center justify-center">
+                        <div className="flex min-h-[500px] items-center justify-center">
                           <div className="max-w-sm text-center">
-                            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.06]">
+                            <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center">
+                              <div className="absolute inset-0 animate-pulse rounded-3xl border border-cyan-400/15 bg-cyan-400/[0.04]" />
+
+                              <div className="absolute inset-3 rounded-2xl bg-cyan-400/[0.06]" />
+
                               <MessageCircle
-                                size={27}
-                                className="text-cyan-400"
+                                size={29}
+                                className="relative text-cyan-400"
                               />
                             </div>
 
-                            <p className="text-lg font-bold">
-                              Start the conversation
+                            <p className="text-xl font-black">
+                              Channel ready
                             </p>
 
-                            <p className="mt-2 text-sm leading-6 text-slate-600">
-                              Send a message to{" "}
-                              {
-                                selectedUser.name
-                              }{" "}
-                              and get things moving.
+                            <p className="mt-3 text-sm leading-6 text-slate-600">
+                              Establish the first transmission with{" "}
+                              <span className="font-semibold text-slate-400">
+                                {selectedUser.name}
+                              </span>
+                              .
                             </p>
+
+                            <div className="mt-6 flex items-center justify-center gap-2 text-[9px] uppercase tracking-[0.2em] text-slate-700">
+                              <Zap
+                                size={11}
+                                className="text-cyan-500"
+                              />
+
+                              Awaiting transmission
+                            </div>
                           </div>
                         </div>
                       ) : (
-                        selectedMessages.map(
-                          (
-                            msg,
-                            index
-                          ) => {
-                            const isMine =
-                              msg.senderId ===
-                              currentUserId;
+                        <div className="space-y-5">
+                          {selectedMessages.map(
+                            (
+                              msg,
+                              index
+                            ) => {
+                              const isMine =
+                                msg.senderId ===
+                                currentUserId;
 
-                            const previous =
-                              selectedMessages[
-                                index - 1
-                              ];
+                              const previous =
+                                selectedMessages[
+                                  index - 1
+                                ];
 
-                            const showAvatar =
-                              !previous ||
-                              previous.senderId !==
-                                msg.senderId;
+                              const showAvatar =
+                                !previous ||
+                                previous.senderId !==
+                                  msg.senderId;
 
-                            return (
-                              <div
-                                key={msg.id}
-                                className={`flex ${
-                                  isMine
-                                    ? "justify-end"
-                                    : "justify-start"
-                                }`}
-                              >
+                              const showDate =
+                                !previous ||
+                                !isSameDay(
+                                  previous.createdAt,
+                                  msg.createdAt
+                                );
+
+                              return (
                                 <div
-                                  className={`flex max-w-[85%] gap-2.5 md:max-w-[70%] ${
-                                    isMine
-                                      ? "flex-row-reverse"
-                                      : "flex-row"
-                                  }`}
+                                  key={msg.id}
+                                  className="animate-in fade-in slide-in-from-bottom-2 duration-300"
                                 >
-                                  {!isMine &&
-                                    showAvatar && (
-                                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-[9px] font-bold text-slate-500">
-                                        {
-                                          selectedUser.initials
-                                        }
-                                      </div>
-                                    )}
+                                  {showDate && (
+                                    <div className="my-6 flex items-center gap-3">
+                                      <div className="h-px flex-1 bg-white/[0.06]" />
 
-                                  {!isMine &&
-                                    !showAvatar && (
-                                      <div className="w-8 shrink-0" />
-                                    )}
+                                      <span className="rounded-full border border-white/[0.07] bg-white/[0.02] px-3 py-1 text-[8px] font-bold uppercase tracking-[0.15em] text-slate-700">
+                                        {formatMessageDate(
+                                          msg.createdAt
+                                        )}
+                                      </span>
+
+                                      <div className="h-px flex-1 bg-white/[0.06]" />
+                                    </div>
+                                  )}
 
                                   <div
-                                    className={`flex min-w-0 flex-col ${
+                                    className={`flex ${
                                       isMine
-                                        ? "items-end"
-                                        : "items-start"
+                                        ? "justify-end"
+                                        : "justify-start"
                                     }`}
                                   >
                                     <div
-                                      className={`rounded-2xl px-4 py-3 text-sm leading-6 ${
-                                        isMine
-                                          ? "rounded-br-md bg-gradient-to-br from-cyan-400 to-blue-500 text-white shadow-[0_8px_30px_rgba(34,211,238,.08)]"
-                                          : "rounded-bl-md border border-white/10 bg-white/[0.045] text-slate-300"
-                                      }`}
-                                    >
-                                      {msg.text}
-                                    </div>
-
-                                    <div
-                                      className={`mt-1.5 flex items-center gap-1.5 px-1 text-[9px] text-slate-700 ${
+                                      className={`flex max-w-[90%] gap-2.5 md:max-w-[76%] ${
                                         isMine
                                           ? "flex-row-reverse"
                                           : ""
                                       }`}
                                     >
-                                      <span>
-                                        {
-                                          msg.timestamp
-                                        }
-                                      </span>
+                                      {!isMine &&
+                                        showAvatar && (
+                                          <div className="mt-auto">
+                                            <Avatar
+                                              user={
+                                                selectedUser
+                                              }
+                                              size="sm"
+                                            />
+                                          </div>
+                                        )}
 
-                                      {isMine &&
-                                        (msg.read ? (
-                                          <CheckCheck
-                                            size={12}
-                                            className="text-cyan-500"
-                                          />
-                                        ) : (
-                                          <Check size={12} />
-                                        ))}
+                                      {!isMine &&
+                                        !showAvatar && (
+                                          <div className="w-8 shrink-0" />
+                                        )}
+
+                                      <div
+                                        className={`flex min-w-0 flex-col ${
+                                          isMine
+                                            ? "items-end"
+                                            : "items-start"
+                                        }`}
+                                      >
+                                        <div
+                                          className={`relative rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm ${
+                                            isMine
+                                              ? "rounded-br-md bg-gradient-to-br from-cyan-400 to-blue-500 font-medium text-white shadow-[0_10px_30px_rgba(34,211,238,.08)]"
+                                              : "rounded-bl-md border border-white/[0.09] bg-white/[0.045] text-slate-300"
+                                          }`}
+                                        >
+                                          {msg.text}
+                                        </div>
+
+                                        <div
+                                          className={`mt-1.5 flex items-center gap-1.5 px-1 text-[8px] uppercase tracking-wide text-slate-700 ${
+                                            isMine
+                                              ? "flex-row-reverse"
+                                              : ""
+                                          }`}
+                                        >
+                                          <span>
+                                            {
+                                              msg.timestamp
+                                            }
+                                          </span>
+
+                                          {isMine &&
+                                            (msg.read ? (
+                                              <CheckCheck
+                                                size={12}
+                                                className="text-cyan-400"
+                                              />
+                                            ) : (
+                                              <Check
+                                                size={11}
+                                              />
+                                            ))}
+                                        </div>
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
-                              </div>
-                            );
-                          }
-                        )
+                              );
+                            }
+                          )}
+
+                          <div
+                            ref={
+                              messagesEndRef
+                            }
+                          />
+                        </div>
                       )}
                     </div>
 
                     {/* COMPOSER */}
 
-                    <div className="border-t border-white/10 p-4 md:p-5">
-                      <div className="rounded-2xl border border-white/10 bg-white/[0.025] p-2 transition focus-within:border-cyan-400/20 focus-within:bg-white/[0.035]">
+                    <div className="border-t border-white/[0.08] bg-[#07101d]/70 p-4 backdrop-blur-xl md:p-5">
+                      <div
+                        className={`rounded-2xl border p-2 transition-all duration-300 ${
+                          message.trim()
+                            ? "border-cyan-400/25 bg-cyan-400/[0.025] shadow-[0_0_35px_rgba(34,211,238,.04)]"
+                            : "border-white/10 bg-white/[0.02]"
+                        }`}
+                      >
                         <div className="flex items-center gap-2">
+                          <div className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-700 sm:flex">
+                            <Sparkles
+                              size={15}
+                              className={
+                                message.trim()
+                                  ? "text-cyan-400"
+                                  : ""
+                              }
+                            />
+                          </div>
+
                           <input
                             value={message}
                             onChange={(event) =>
@@ -1853,8 +2363,11 @@ export default function ConnectPage() {
                             onKeyDown={
                               handleMessageKeyDown
                             }
-                            placeholder={`Message ${selectedUser.name}...`}
-                            className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-700"
+                            disabled={
+                              sendingMessage
+                            }
+                            placeholder={`Transmit to ${selectedUser.name}...`}
+                            className="min-w-0 flex-1 bg-transparent px-2 py-2.5 text-sm text-white outline-none placeholder:text-slate-700 disabled:opacity-50"
                           />
 
                           <button
@@ -1863,30 +2376,32 @@ export default function ConnectPage() {
                               void sendMessage()
                             }
                             disabled={
-                              !message.trim()
+                              !message.trim() ||
+                              sendingMessage
                             }
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-white transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:scale-100"
+                            className="group relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 text-white shadow-[0_8px_25px_rgba(34,211,238,.12)] transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-25 disabled:hover:scale-100"
                             aria-label="Send message"
                           >
-                            <Send
-                              size={16}
-                              className="ml-0.5"
-                            />
+                            {sendingMessage ? (
+                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                            ) : (
+                              <Send
+                                size={16}
+                                className="ml-0.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                              />
+                            )}
                           </button>
                         </div>
 
                         <div className="flex items-center justify-between px-3 pb-1 pt-1">
-                          <p className="text-[9px] uppercase tracking-[0.18em] text-slate-700">
-                            ENTER TO SEND
+                          <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-700">
+                            Enter to transmit
                           </p>
 
-                          <div className="flex items-center gap-1.5 text-[9px] text-slate-700">
-                            <Circle
-                              size={7}
-                              className="fill-cyan-400 text-cyan-400"
-                            />
+                          <div className="flex items-center gap-1.5 text-[8px] uppercase tracking-[0.15em] text-slate-700">
+                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-400" />
 
-                            Realtime
+                            Realtime encrypted
                           </div>
                         </div>
                       </div>
@@ -1894,84 +2409,280 @@ export default function ConnectPage() {
                   </>
                 ) : (
                   <div className="flex flex-1 items-center justify-center p-10">
-                    <div className="text-center">
-                      <Users
-                        size={32}
-                        className="mx-auto mb-4 text-slate-700"
-                      />
+                    <div className="max-w-sm text-center">
+                      <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center">
+                        <div className="absolute inset-0 rounded-3xl border border-white/10 bg-white/[0.02]" />
 
-                      <p className="font-semibold text-slate-400">
-                        Select a connection
+                        <Users
+                          size={30}
+                          className="relative text-slate-700"
+                        />
+                      </div>
+
+                      <p className="text-lg font-bold text-slate-400">
+                        No channel selected
                       </p>
 
-                      <p className="mt-1 text-xs text-slate-700">
-                        Choose someone to start communicating.
+                      <p className="mt-2 text-sm leading-6 text-slate-700">
+                        Select someone from your Monobloc network to begin communicating.
                       </p>
                     </div>
                   </div>
                 )}
               </div>
+
+              {/* =============================================
+                 INTELLIGENCE PANEL
+              ============================================= */}
+
+              <aside className="hidden border-l border-white/[0.08] bg-[#07101d]/60 xl:block">
+                <div className="border-b border-white/[0.08] p-5">
+                  <div className="flex items-center gap-2">
+                    <Cpu
+                      size={15}
+                      className="text-cyan-400"
+                    />
+
+                    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-cyan-400">
+                      Intelligence
+                    </p>
+                  </div>
+
+                  <p className="mt-2 text-xs text-slate-600">
+                    Monobloc communication analysis
+                  </p>
+                </div>
+
+                {selectedUser ? (
+                  <div className="space-y-4 p-4">
+                    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar
+                          user={selectedUser}
+                          active
+                          size="lg"
+                        />
+
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold">
+                            {selectedUser.name}
+                          </p>
+
+                          <p className="mt-1 truncate text-[10px] text-slate-600">
+                            @{selectedUser.username}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex items-center gap-2 border-t border-white/[0.06] pt-3">
+                        <span
+                          className={`h-2 w-2 rounded-full ${statusClass(
+                            selectedUser.status
+                          )}`}
+                        />
+
+                        <span className="text-[10px] text-slate-500">
+                          {statusText(
+                            selectedUser.status
+                          )}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <IntelligenceCard
+                        label="EXCHANGED"
+                        value={selectedMessages.length.toString()}
+                        icon={
+                          <MessageCircle
+                            size={13}
+                          />
+                        }
+                      />
+
+                      <IntelligenceCard
+                        label="UNREAD"
+                        value={getUnreadForUser(
+                          selectedUser.id
+                        ).toString()}
+                        icon={
+                          <Bell size={13} />
+                        }
+                      />
+                    </div>
+
+                    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-600">
+                          Channel Activity
+                        </p>
+
+                        <Activity
+                          size={14}
+                          className="text-cyan-400"
+                        />
+                      </div>
+
+                      <div className="mt-5 flex h-20 items-end gap-1">
+                        {[30, 55, 38, 72, 46, 88, 64, 92, 52, 78, 45, 68].map(
+                          (height, index) => (
+                            <div
+                              key={index}
+                              className="flex-1 rounded-t-sm bg-gradient-to-t from-cyan-400/10 to-cyan-400/40 transition-all hover:from-cyan-400/30 hover:to-cyan-300"
+                              style={{
+                                height: `${height}%`,
+                              }}
+                            />
+                          )
+                        )}
+                      </div>
+
+                      <div className="mt-3 flex justify-between text-[8px] uppercase tracking-wider text-slate-700">
+                        <span>Low</span>
+                        <span>Realtime</span>
+                        <span>High</span>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-cyan-400/[0.08] bg-gradient-to-br from-cyan-400/[0.05] to-transparent p-4">
+                      <div className="flex items-center gap-2">
+                        <Sparkles
+                          size={14}
+                          className="text-cyan-400"
+                        />
+
+                        <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-400">
+                          Monobloc Insight
+                        </p>
+                      </div>
+
+                      <p className="mt-3 text-[11px] leading-5 text-slate-600">
+                        {selectedMessages.length ===
+                        0
+                          ? "This channel is ready. Send the first message to begin building communication history."
+                          : `This communication channel contains ${selectedMessages.length} recorded transmission${
+                              selectedMessages.length ===
+                              1
+                                ? ""
+                                : "s"
+                            }.`}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-white/[0.07] bg-white/[0.015] p-4">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-700">
+                        Channel Established
+                      </p>
+
+                      <p className="mt-2 text-xs font-semibold text-slate-400">
+                        {conversationStartedAt
+                          ? new Date(
+                              conversationStartedAt
+                            ).toLocaleDateString(
+                              "en-US",
+                              {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              }
+                            )
+                          : "Awaiting first transmission"}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-6 text-center">
+                    <Cpu
+                      size={24}
+                      className="mx-auto mb-4 text-slate-800"
+                    />
+
+                    <p className="text-xs text-slate-600">
+                      Intelligence module waiting for an active channel.
+                    </p>
+                  </div>
+                )}
+              </aside>
             </div>
           </section>
 
-          {/* STATUS */}
+          {/* =================================================
+             NETWORK STATS
+          ================================================= */}
 
-          <section className="mt-5 grid gap-4 md:grid-cols-3">
+          <section className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatusCard
               icon={<Users size={17} />}
               label="Connections"
               value={users.length.toString()}
+              detail={`${onlineCount} currently online`}
             />
 
             <StatusCard
               icon={
                 <MessageCircle size={17} />
               }
-              label="Messages"
+              label="Transmissions"
               value={totalMessages.toString()}
+              detail="Across all channels"
             />
 
             <StatusCard
               icon={<Bell size={17} />}
               label="Unread"
               value={unreadCount.toString()}
+              detail={
+                unreadCount > 0
+                  ? "Awaiting attention"
+                  : "Inbox clear"
+              }
+            />
+
+            <StatusCard
+              icon={<Signal size={17} />}
+              label="Network"
+              value="LIVE"
+              detail="Realtime systems operational"
+              cyan
             />
           </section>
         </div>
 
-        {/* ADD CONNECTION MODAL */}
+        {/* =================================================
+           ADD CONNECTION MODAL
+        ================================================= */}
 
         {showNewConnection && (
           <div
-            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 px-5 backdrop-blur-md"
+            className="fixed inset-0 z-[300] flex items-center justify-center bg-[#020611]/75 px-4 backdrop-blur-xl"
             onMouseDown={(event) => {
               if (
                 event.target ===
                 event.currentTarget
               ) {
-                setShowNewConnection(
-                  false
-                );
+                setShowNewConnection(false);
               }
             }}
           >
-            <div className="w-full max-w-[460px] overflow-hidden rounded-[30px] border border-white/10 bg-[#0a1423] shadow-2xl">
-              <div className="relative border-b border-white/10 p-6">
-                <div className="pointer-events-none absolute -right-20 -top-20 h-48 w-48 rounded-full bg-cyan-400/10 blur-[80px]" />
+            <div className="relative w-full max-w-[500px] animate-in fade-in zoom-in-95 duration-200 overflow-hidden rounded-[32px] border border-white/10 bg-[#081321] shadow-[0_30px_100px_rgba(0,0,0,.6)]">
+              <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full bg-cyan-400/[0.07] blur-[100px]" />
 
-                <div className="relative flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-400">
-                      <UserPlus size={19} />
+              <div className="relative border-b border-white/[0.08] p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="relative flex h-13 w-13 items-center justify-center rounded-2xl border border-cyan-400/15 bg-cyan-400/[0.08] text-cyan-400">
+                      <UserPlus size={21} />
+
+                      <span className="absolute -right-1 -top-1 h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-400" />
                     </div>
 
                     <div>
-                      <p className="text-xs font-bold uppercase tracking-[0.2em] text-cyan-400">
-                        New connection
+                      <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-cyan-400">
+                        Expand Network
                       </p>
 
-                      <h2 className="mt-1 text-xl font-bold">
-                        Add someone
+                      <h2 className="mt-1 text-2xl font-black">
+                        Add connection
                       </h2>
                     </div>
                   </div>
@@ -1979,24 +2690,22 @@ export default function ConnectPage() {
                   <button
                     type="button"
                     onClick={() =>
-                      setShowNewConnection(
-                        false
-                      )
+                      setShowNewConnection(false)
                     }
-                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.04] text-slate-600 transition hover:bg-white/10 hover:text-white"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.03] text-slate-600 transition hover:bg-white/[0.07] hover:text-white"
                   >
                     <X size={17} />
                   </button>
                 </div>
               </div>
 
-              <div className="p-6">
-                <p className="mb-3 text-xs text-slate-500">
-                  Enter their Zora username.
+              <div className="relative p-6">
+                <p className="mb-4 text-xs leading-6 text-slate-500">
+                  Enter the Monobloc username of the person you want to add to your communication network.
                 </p>
 
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-cyan-400">
                     @
                   </span>
 
@@ -2013,35 +2722,42 @@ export default function ConnectPage() {
                     }
                     onKeyDown={(event) => {
                       if (
-                        event.key ===
-                        "Enter"
+                        event.key === "Enter"
                       ) {
                         void addConnection();
                       }
                     }}
                     placeholder="username"
-                    className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.035] pl-9 pr-4 text-sm text-white outline-none placeholder:text-slate-700 focus:border-cyan-400/30"
+                    className="h-14 w-full rounded-2xl border border-white/10 bg-white/[0.025] pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-700 focus:border-cyan-400/30 focus:bg-cyan-400/[0.02]"
                   />
                 </div>
 
-                <div className="mt-4 flex items-center gap-2 rounded-xl border border-cyan-400/10 bg-cyan-400/[0.04] p-3 text-xs text-slate-500">
-                  <Sparkles
-                    size={14}
-                    className="shrink-0 text-cyan-400"
-                  />
+                <div className="mt-4 flex items-start gap-3 rounded-2xl border border-cyan-400/10 bg-cyan-400/[0.035] p-4">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cyan-400/10">
+                    <Sparkles
+                      size={14}
+                      className="text-cyan-400"
+                    />
+                  </div>
 
-                  They'll receive a connection request inside Zora.
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-cyan-400">
+                      Connection Protocol
+                    </p>
+
+                    <p className="mt-1 text-[11px] leading-5 text-slate-600">
+                      They will receive an incoming request and must approve it before a communication channel is opened.
+                    </p>
+                  </div>
                 </div>
 
-                <div className="mt-5 flex gap-3">
+                <div className="mt-6 flex gap-3">
                   <button
                     type="button"
                     onClick={() =>
-                      setShowNewConnection(
-                        false
-                      )
+                      setShowNewConnection(false)
                     }
-                    className="flex-1 rounded-xl border border-white/10 bg-white/[0.03] py-3 text-sm font-semibold text-slate-500 transition hover:bg-white/[0.06] hover:text-white"
+                    className="flex-1 rounded-2xl border border-white/10 bg-white/[0.025] py-3.5 text-sm font-semibold text-slate-500 transition hover:bg-white/[0.05] hover:text-white"
                   >
                     Cancel
                   </button>
@@ -2055,13 +2771,19 @@ export default function ConnectPage() {
                       !newUsername.trim() ||
                       sendingRequest
                     }
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 py-3.5 text-sm font-black text-white shadow-[0_10px_30px_rgba(34,211,238,.12)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:translate-y-0"
                   >
-                    <UserPlus size={16} />
-
-                    {sendingRequest
-                      ? "Sending..."
-                      : "Connect"}
+                    {sendingRequest ? (
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                        Sending
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus size={16} />
+                        Send request
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -2069,6 +2791,59 @@ export default function ConnectPage() {
           </div>
         )}
       </main>
+    </div>
+  );
+}
+
+/* =========================================================
+   AVATAR
+========================================================= */
+
+function Avatar({
+  user,
+  active = false,
+  size = "md",
+}: {
+  user: User;
+  active?: boolean;
+  size?: "sm" | "md" | "lg";
+}) {
+  const sizeClass =
+    size === "sm"
+      ? "h-8 w-8 rounded-lg text-[8px]"
+      : size === "lg"
+        ? "h-12 w-12 rounded-xl text-xs"
+        : "h-11 w-11 rounded-xl text-[10px]";
+
+  return (
+    <div className="relative shrink-0">
+      <div
+        className={`flex ${sizeClass} items-center justify-center overflow-hidden border font-black ${
+          active
+            ? "border-cyan-400/25 bg-cyan-400/[0.1] text-cyan-300"
+            : "border-white/10 bg-white/[0.04] text-slate-400"
+        }`}
+      >
+        {user.avatar_url ? (
+          <img
+            src={user.avatar_url}
+            alt={user.name}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          user.initials
+        )}
+      </div>
+
+      <span
+        className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#07101d] ${
+          user.status === "online"
+            ? "bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,.9)]"
+            : user.status === "away"
+              ? "bg-yellow-400"
+              : "bg-slate-600"
+        }`}
+      />
     </div>
   );
 }
@@ -2086,8 +2861,6 @@ function PendingRequest({
   onAccept: () => void;
   onReject: () => void;
 }) {
-  // IMPORTANT:
-  // This component also gets its own browser Supabase client.
   const supabase = useMemo(
     () => createClient(),
     []
@@ -2095,6 +2868,9 @@ function PendingRequest({
 
   const [user, setUser] =
     useState<User | null>(null);
+
+  const [processing, setProcessing] =
+    useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -2111,14 +2887,19 @@ function PendingRequest({
       if (data) {
         setUser({
           id: data.id,
-          name: data.name,
+          name:
+            data.name || "Monobloc User",
           username:
-            data.username,
+            data.username || "user",
           initials:
-            data.initials,
-          role: data.role,
+            data.initials ||
+            getInitials(
+              data.name || "Monobloc User"
+            ),
+          role:
+            data.role || "Monobloc Member",
           status:
-            data.status,
+            data.status || "offline",
           avatar_url:
             data.avatar_url,
         });
@@ -2132,23 +2913,45 @@ function PendingRequest({
   ]);
 
   if (!user) {
-    return null;
+    return (
+      <div className="h-20 animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.015]" />
+    );
   }
 
+  const handleAccept = async () => {
+    setProcessing(true);
+    await onAccept();
+    setProcessing(false);
+  };
+
+  const handleReject = async () => {
+    setProcessing(true);
+    await onReject();
+    setProcessing(false);
+  };
+
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-3 sm:flex-row sm:items-center">
-      <div className="flex flex-1 items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/15 bg-cyan-400/[0.07] text-xs font-bold text-cyan-300">
-          {user.initials}
-        </div>
+    <div className="group flex flex-col gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 transition hover:border-cyan-400/15 hover:bg-cyan-400/[0.015] sm:flex-row sm:items-center">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <Avatar
+          user={user}
+          size="md"
+        />
 
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-white">
-            {user.name}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="truncate text-sm font-bold text-white">
+              {user.name}
+            </p>
 
-          <p className="text-xs text-slate-600">
-            @{user.username}
+            <span className="text-[8px] text-slate-700">
+              @{user.username}
+            </span>
+          </div>
+
+          <p className="mt-1 text-[10px] text-slate-600">
+            Incoming connection request ·{" "}
+            {user.role}
           </p>
         </div>
       </div>
@@ -2156,20 +2959,118 @@ function PendingRequest({
       <div className="flex gap-2">
         <button
           type="button"
-          onClick={onReject}
-          className="flex-1 rounded-xl border border-white/10 px-4 py-2 text-xs font-semibold text-slate-500 transition hover:bg-white/[0.05] hover:text-white sm:flex-none"
+          disabled={processing}
+          onClick={() =>
+            void handleReject()
+          }
+          className="flex-1 rounded-xl border border-white/10 px-4 py-2.5 text-xs font-semibold text-slate-500 transition hover:bg-white/[0.05] hover:text-white disabled:opacity-40 sm:flex-none"
         >
           Decline
         </button>
 
         <button
           type="button"
-          onClick={onAccept}
-          className="flex-1 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 px-4 py-2 text-xs font-bold text-white sm:flex-none"
+          disabled={processing}
+          onClick={() =>
+            void handleAccept()
+          }
+          className="flex min-w-[95px] flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 px-4 py-2.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-40 sm:flex-none"
         >
+          {processing ? (
+            <div className="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+          ) : (
+            <Check size={14} />
+          )}
+
           Accept
         </button>
       </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   CHAT ACTION BUTTON
+========================================================= */
+
+function ChatActionButton({
+  icon,
+  label,
+  className = "",
+}: {
+  icon: ReactNode;
+  label: string;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      className={`h-9 w-9 items-center justify-center rounded-xl text-slate-600 transition hover:bg-cyan-400/[0.06] hover:text-cyan-400 ${className}`}
+    >
+      {icon}
+    </button>
+  );
+}
+
+/* =========================================================
+   NETWORK METRIC
+========================================================= */
+
+function NetworkMetric({
+  label,
+  value,
+  cyan = false,
+}: {
+  label: string;
+  value: string;
+  cyan?: boolean;
+}) {
+  return (
+    <div className="hidden text-right sm:block">
+      <p className="text-[8px] font-bold uppercase tracking-[0.15em] text-slate-700">
+        {label}
+      </p>
+
+      <p
+        className={`mt-1 text-[10px] font-bold ${
+          cyan
+            ? "text-cyan-400"
+            : "text-slate-400"
+        }`}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+/* =========================================================
+   INTELLIGENCE CARD
+========================================================= */
+
+function IntelligenceCard({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: string;
+  icon: ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+      <div className="flex items-center justify-between text-cyan-400">
+        {icon}
+
+        <span className="text-sm font-black">
+          {value}
+        </span>
+      </div>
+
+      <p className="mt-3 text-[8px] font-bold uppercase tracking-[0.16em] text-slate-700">
+        {label}
+      </p>
     </div>
   );
 }
@@ -2182,31 +3083,49 @@ function StatusCard({
   icon,
   label,
   value,
+  detail,
+  cyan = false,
 }: {
   icon: ReactNode;
   label: string;
   value: string;
+  detail: string;
+  cyan?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#0b1525]/70 p-4 backdrop-blur-xl">
-      <div className="flex items-center justify-between">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-400">
+    <div className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[#081321]/75 p-4 backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-cyan-400/15">
+      <div className="absolute -right-10 -top-10 h-24 w-24 rounded-full bg-cyan-400/[0.025] blur-2xl transition group-hover:bg-cyan-400/[0.06]" />
+
+      <div className="relative flex items-center justify-between">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-400/[0.08] text-cyan-400">
           {icon}
         </div>
 
         <ArrowRight
           size={14}
-          className="text-slate-800"
+          className="text-slate-800 transition group-hover:translate-x-1 group-hover:text-cyan-400"
         />
       </div>
 
-      <div className="mt-4 flex items-end justify-between">
-        <p className="text-xs uppercase tracking-[0.15em] text-slate-600">
-          {label}
-        </p>
+      <div className="relative mt-5">
+        <div className="flex items-end justify-between gap-3">
+          <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-600">
+            {label}
+          </p>
 
-        <p className="text-xl font-bold text-slate-300">
-          {value}
+          <p
+            className={`text-xl font-black ${
+              cyan
+                ? "text-cyan-400"
+                : "text-slate-200"
+            }`}
+          >
+            {value}
+          </p>
+        </div>
+
+        <p className="mt-2 text-[9px] text-slate-700">
+          {detail}
         </p>
       </div>
     </div>
@@ -2214,8 +3133,19 @@ function StatusCard({
 }
 
 /* =========================================================
-   TIME FORMATTER
+   HELPERS
 ========================================================= */
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) =>
+      part.charAt(0).toUpperCase()
+    )
+    .join("");
+}
 
 function formatTimestamp(
   timestamp: string
@@ -2233,6 +3163,72 @@ function formatTimestamp(
     {
       hour: "2-digit",
       minute: "2-digit",
+    }
+  );
+}
+
+function isSameDay(
+  first?: string,
+  second?: string
+) {
+  if (!first || !second) {
+    return true;
+  }
+
+  const firstDate = new Date(first);
+  const secondDate = new Date(second);
+
+  return (
+    firstDate.getFullYear() ===
+      secondDate.getFullYear() &&
+    firstDate.getMonth() ===
+      secondDate.getMonth() &&
+    firstDate.getDate() ===
+      secondDate.getDate()
+  );
+}
+
+function formatMessageDate(
+  timestamp?: string
+) {
+  if (!timestamp) {
+    return "Conversation";
+  }
+
+  const date = new Date(timestamp);
+  const today = new Date();
+
+  if (isSameDay(
+    timestamp,
+    today.toISOString()
+  )) {
+    return "Today";
+  }
+
+  const yesterday = new Date();
+  yesterday.setDate(
+    yesterday.getDate() - 1
+  );
+
+  if (
+    isSameDay(
+      timestamp,
+      yesterday.toISOString()
+    )
+  ) {
+    return "Yesterday";
+  }
+
+  return date.toLocaleDateString(
+    "en-US",
+    {
+      month: "short",
+      day: "numeric",
+      year:
+        date.getFullYear() !==
+        today.getFullYear()
+          ? "numeric"
+          : undefined,
     }
   );
 }

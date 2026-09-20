@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Zora</string>
-    <string name="title_activity_main">Zora</string>
-    <string name="package_name">com.zora.app</string>
-    <string name="custom_url_scheme">com.zora.app</string>
+    <string name="app_name">Monobloc</string>
+    <string name="title_activity_main">Monobloc</string>
+    <string name="package_name">com.Monobloc.app</string>
+    <string name="custom_url_scheme">com.Monobloc.app</string>
 </resources>

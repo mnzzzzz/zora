@@ -55,7 +55,7 @@ export default function LoginPage() {
     if (!emailIsAllowed) {
       setLoading(false);
       setError(
-        "This email is not authorized to access Zora."
+        "This email is not authorized to access Monobloc."
       );
       return;
     }
@@ -79,31 +79,31 @@ export default function LoginPage() {
     setLoading(true);
 
     // Remove any old authentication state first
-    localStorage.removeItem("zora-authenticated");
-    localStorage.removeItem("zora-user-email");
+    localStorage.removeItem("Monoblochenticated");
+    localStorage.removeItem("Monobloc-user-email");
 
-    sessionStorage.removeItem("zora-authenticated");
-    sessionStorage.removeItem("zora-user-email");
+    sessionStorage.removeItem("Monobloc-authenticated");
+    sessionStorage.removeItem("Monobloc-user-email");
 
     // Store successful login
     if (remember) {
       localStorage.setItem(
-        "zora-authenticated",
+        "Monobloc-authenticated",
         "true"
       );
 
       localStorage.setItem(
-        "zora-user-email",
+        "Monobloc-user-email",
         cleanEmail
       );
     } else {
       sessionStorage.setItem(
-        "zora-authenticated",
+        "Monobloc-authenticated",
         "true"
       );
 
       sessionStorage.setItem(
-        "zora-user-email",
+        "Monobloc-user-email",
         cleanEmail
       );
     }
@@ -203,7 +203,7 @@ export default function LoginPage() {
           </div>
 
           <h1 className="mt-4 text-2xl font-bold tracking-tight">
-            Zora
+            Monobloc
           </h1>
 
           <p className="mt-1 text-sm text-slate-500">
@@ -563,7 +563,7 @@ export default function LoginPage() {
 
         <p className="mt-6 text-center text-sm text-slate-500">
 
-          Don't have a Zora account?{" "}
+          Don't have a Monobloc account?{" "}
 
           <Link
             href="/signup"
@@ -580,7 +580,7 @@ export default function LoginPage() {
         </p>
 
         <p className="mt-7 text-center text-[11px] uppercase tracking-[0.25em] text-slate-700">
-          Zora · Built for what comes next
+          Monobloc · Built for what comes next
         </p>
 
       </div>

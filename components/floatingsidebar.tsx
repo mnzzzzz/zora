@@ -1,328 +1,316 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 
 import {
-  Home,
-  CheckSquare,
-  CalendarDays,
-  FileText,
-  Target,
-  Wallet,
   Brain,
+  Building2,
+  CalendarDays,
+  CheckSquare,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Home,
+  MessageSquare,
   Settings,
   Sparkles,
-  ChevronRight,
-  ChevronLeft,
-  Users,
+  Target,
+  Wallet,
+  GraduationCap,
 } from "lucide-react";
 
-const navItems = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+};
+
+const mainItems: NavItem[] = [
   {
-    name: "Dashboard",
     href: "/dashboard",
+    label: "Dashboard",
     icon: Home,
   },
   {
-    name: "Tasks",
     href: "/tasks",
+    label: "Tasks",
     icon: CheckSquare,
   },
   {
-    name: "Calendar",
     href: "/calendar",
+    label: "Calendar",
     icon: CalendarDays,
   },
   {
-    name: "Notes",
     href: "/notes",
+    label: "Notes",
     icon: FileText,
   },
   {
-    name: "Goals",
     href: "/goals",
+    label: "Goals",
     icon: Target,
   },
   {
-    name: "Connect",
-    href: "/connect",
-    icon: Users,
-  },
-  {
-    name: "Finance",
     href: "/finance",
+    label: "Finance",
     icon: Wallet,
   },
+];
+
+const Monoblocs: NavItem[] = [
   {
-    name: "Zora Tutor",
-    href: "/tutor",
+    href: "/ai",
+    label: "Monobloc AI",
     icon: Brain,
+  },
+  {
+    href: "/tutor",
+    label: "Monobloc Tutor",
+    icon: GraduationCap,
+  },
+  {
+    href: "/business-helper",
+    label: "Business",
+    icon: Building2,
+  },
+  {
+    href: "/inbox",
+    label: "Inbox",
+    icon: MessageSquare,
   },
 ];
 
 export default function FloatingSidebar() {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  const isActive = (href: string) => {
+    if (href === "/dashboard") {
+      return pathname === "/dashboard";
+    }
+
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   return (
     <aside
-      className={`
-        fixed
-        left-0
-        top-0
-        z-[100]
-        h-screen
-        transition-all
-        duration-300
-        ease-out
-        ${open ? "w-[260px]" : "w-[90px]"}
-      `}
+      className={`fixed left-4 top-4 bottom-4 z-[100] flex flex-col overflow-hidden rounded-[28px] border border-white/[0.08] bg-[#090909]/95 shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-[width] duration-300 ease-out ${
+        expanded ? "w-[230px]" : "w-[68px]"
+      }`}
     >
-      <div
-        className="
-          flex
-          h-full
-          w-full
-          flex-col
-          border-r
-          border-white/10
-          bg-[#07111f]/95
-          shadow-[10px_0_40px_rgba(0,0,0,0.25)]
-          backdrop-blur-2xl
-        "
-      >
-        {/* HEADER */}
-
-        <div
-          className={`
-            flex
-            h-[90px]
-            shrink-0
-            items-center
-            border-b
-            border-white/10
-            px-4
-            ${open ? "justify-between" : "justify-center"}
-          `}
+      {/* =========================================
+          LOGO
+      ========================================= */}
+      <div className="flex h-[72px] shrink-0 items-center border-b border-white/[0.07] px-3">
+        <Link
+          href="/dashboard"
+          className="group flex min-w-0 flex-1 items-center gap-3"
         >
-          <div className="flex items-center gap-3">
-            <div
-              className="
-                flex
-                h-12
-                w-12
-                shrink-0
-                items-center
-                justify-center
-                rounded-xl
-                bg-gradient-to-br
-                from-blue-500
-                to-cyan-400
-                shadow-[0_0_25px_rgba(34,211,238,0.3)]
-              "
-            >
-              <Sparkles
-                size={22}
-                className="text-white"
-              />
-            </div>
-
-            {open && (
-              <div className="whitespace-nowrap">
-                <p className="text-lg font-bold text-white">
-                  Zora
-                </p>
-
-                <p className="text-[11px] text-slate-500">
-                  AI Operating System
-                </p>
-              </div>
-            )}
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/[0.1] bg-white/[0.05] transition group-hover:bg-white/[0.1]">
+            <Sparkles
+              size={18}
+              className="text-white transition group-hover:scale-110"
+            />
           </div>
 
-          {open && (
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="
-                flex
-                h-8
-                w-8
-                items-center
-                justify-center
-                rounded-lg
-                text-slate-500
-                transition
-                hover:bg-white/10
-                hover:text-white
-              "
-              aria-label="Collapse navigation"
-            >
-              <ChevronLeft size={18} />
-            </button>
+          <div
+            className={`min-w-0 overflow-hidden transition-all duration-300 ${
+              expanded
+                ? "max-w-[130px] opacity-100"
+                : "max-w-0 opacity-0"
+            }`}
+          >
+            <p className="whitespace-nowrap text-sm font-semibold tracking-[0.18em] text-white">
+              Monobloc
+            </p>
+
+            <p className="mt-0.5 whitespace-nowrap text-[8px] uppercase tracking-[0.22em] text-slate-600">
+              Personal OS
+            </p>
+          </div>
+        </Link>
+      </div>
+
+      {/* =========================================
+          NAVIGATION
+      ========================================= */}
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-4">
+        {/* MAIN */}
+        <SidebarSection
+          title="Workspace"
+          expanded={expanded}
+          items={mainItems}
+          pathname={pathname}
+          isActive={isActive}
+        />
+
+        {/* DIVIDER */}
+        <div className="my-4 border-t border-white/[0.06]" />
+
+        {/* Monobloc */}
+        <SidebarSection
+          title="Intelligence"
+          expanded={expanded}
+          items={MonoblocItems}
+          pathname={pathname}
+          isActive={isActive}
+        />
+      </nav>
+
+      {/* =========================================
+          BOTTOM
+      ========================================= */}
+      <div className="shrink-0 border-t border-white/[0.07] p-2">
+        <Link
+          href="/settings"
+          className={`group relative flex h-11 items-center rounded-xl transition-all duration-200 ${
+            isActive("/settings")
+              ? "bg-white/[0.1] text-white"
+              : "text-slate-500 hover:bg-white/[0.06] hover:text-white"
+          } ${expanded ? "gap-3 px-3" : "justify-center"}`}
+        >
+          <Settings
+            size={18}
+            className="shrink-0 transition-transform duration-300 group-hover:rotate-45"
+          />
+
+          <span
+            className={`whitespace-nowrap text-xs font-medium transition-all duration-300 ${
+              expanded
+                ? "max-w-[120px] opacity-100"
+                : "max-w-0 overflow-hidden opacity-0"
+            }`}
+          >
+            Settings
+          </span>
+
+          {!expanded && (
+            <SidebarTooltip text="Settings" />
           )}
-        </div>
+        </Link>
 
         {/* EXPAND BUTTON */}
-
-        {!open && (
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="
-              mx-auto
-              mt-5
-              flex
-              h-10
-              w-10
-              items-center
-              justify-center
-              rounded-xl
-              border
-              border-white/10
-              bg-white/5
-              text-slate-400
-              transition
-              hover:border-cyan-400/30
-              hover:bg-cyan-400/10
-              hover:text-cyan-300
-            "
-            aria-label="Open navigation"
-          >
-            <ChevronRight size={18} />
-          </button>
-        )}
-
-        {/* NAVIGATION */}
-
-        <nav className="mt-5 flex-1 space-y-1 overflow-y-auto px-3">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/" &&
-                pathname.startsWith(item.href + "/"));
-
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`
-                  relative
-                  flex
-                  h-12
-                  items-center
-                  gap-3
-                  rounded-xl
-                  px-3
-                  transition-all
-                  duration-200
-
-                  ${
-                    isActive
-                      ? "bg-cyan-400/10 text-cyan-300"
-                      : "text-slate-400 hover:bg-white/5 hover:text-white"
-                  }
-                `}
-              >
-                {isActive && (
-                  <span
-                    className="
-                      absolute
-                      left-0
-                      h-6
-                      w-[3px]
-                      rounded-r-full
-                      bg-cyan-400
-                      shadow-[0_0_12px_rgba(34,211,238,0.9)]
-                    "
-                  />
-                )}
-
-                <Icon
-                  size={20}
-                  className={`shrink-0 ${
-                    isActive
-                      ? "text-cyan-300"
-                      : ""
-                  }`}
-                />
-
-                {open && (
-                  <span className="whitespace-nowrap text-sm font-medium">
-                    {item.name}
-                  </span>
-                )}
-
-                {open && (
-                  <ChevronRight
-                    size={14}
-                    className="ml-auto opacity-20"
-                  />
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* SETTINGS */}
-
-        <div className="border-t border-white/10 p-3">
-          <Link
-            href="/settings"
-            className={`
-              relative
-              flex
-              h-12
-              items-center
-              gap-3
-              rounded-xl
-              px-3
-              transition
-              ${
-                pathname.startsWith("/settings")
-                  ? "bg-cyan-400/10 text-cyan-300"
-                  : "text-slate-400 hover:bg-white/5 hover:text-white"
-              }
-            `}
-          >
-            {pathname.startsWith("/settings") && (
-              <span
-                className="
-                  absolute
-                  left-0
-                  h-6
-                  w-[3px]
-                  rounded-r-full
-                  bg-cyan-400
-                  shadow-[0_0_12px_rgba(34,211,238,0.9)]
-                "
-              />
-            )}
-
-            <Settings
-              size={20}
-              className="shrink-0"
+        <button
+          type="button"
+          onClick={() => setExpanded((current) => !current)}
+          className="group relative mt-2 flex h-11 w-full items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.025] text-slate-500 transition hover:border-white/[0.13] hover:bg-white/[0.06] hover:text-white"
+          aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
+        >
+          {expanded ? (
+            <ChevronLeft
+              size={18}
+              className="transition-transform group-hover:-translate-x-0.5"
             />
+          ) : (
+            <ChevronRight
+              size={18}
+              className="transition-transform group-hover:translate-x-0.5"
+            />
+          )}
 
-            {open && (
-              <span className="whitespace-nowrap text-sm font-medium">
-                Settings
-              </span>
-            )}
-
-            {open && (
-              <ChevronRight
-                size={14}
-                className="ml-auto opacity-20"
-              />
-            )}
-          </Link>
-        </div>
+          {!expanded && (
+            <SidebarTooltip text="Expand sidebar" />
+          )}
+        </button>
       </div>
     </aside>
+  );
+}
+
+/* =========================================================
+   SIDEBAR SECTION
+========================================================= */
+
+function SidebarSection({
+  title,
+  expanded,
+  items,
+  isActive,
+}: {
+  title: string;
+  expanded: boolean;
+  items: NavItem[];
+  pathname: string;
+  isActive: (href: string) => boolean;
+}) {
+  return (
+    <div>
+      {/* SECTION LABEL */}
+      <div
+        className={`mb-2 px-3 transition-all duration-300 ${
+          expanded
+            ? "h-4 opacity-100"
+            : "h-0 overflow-hidden opacity-0"
+        }`}
+      >
+        <p className="whitespace-nowrap text-[8px] font-semibold uppercase tracking-[0.22em] text-slate-700">
+          {title}
+        </p>
+      </div>
+
+      <div className="space-y-1">
+        {items.map((item) => {
+          const Icon = item.icon;
+          const active = isActive(item.href);
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`group relative flex h-11 items-center rounded-xl transition-all duration-200 ${
+                active
+                  ? "bg-white/[0.1] text-white"
+                  : "text-slate-500 hover:bg-white/[0.06] hover:text-white"
+              } ${expanded ? "gap-3 px-3" : "justify-center"}`}
+            >
+              {/* ACTIVE INDICATOR */}
+              {active && (
+                <span className="absolute left-0 h-5 w-[2px] rounded-r-full bg-white" />
+              )}
+
+              <Icon
+                size={18}
+                className={`shrink-0 transition-transform duration-200 ${
+                  active ? "scale-105" : "group-hover:scale-105"
+                }`}
+              />
+
+              <span
+                className={`whitespace-nowrap text-xs font-medium transition-all duration-300 ${
+                  expanded
+                    ? "max-w-[140px] opacity-100"
+                    : "max-w-0 overflow-hidden opacity-0"
+                }`}
+              >
+                {item.label}
+              </span>
+
+              {!expanded && (
+                <SidebarTooltip text={item.label} />
+              )}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   TOOLTIP
+========================================================= */
+
+function SidebarTooltip({
+  text,
+}: {
+  text: string;
+}) {
+  return (
+    <span className="pointer-events-none absolute left-[58px] z-[200] whitespace-nowrap rounded-lg border border-white/[0.08] bg-[#111111] px-3 py-1.5 text-[10px] font-medium text-white opacity-0 shadow-xl transition-all duration-200 group-hover:translate-x-1 group-hover:opacity-100">
+      {text}
+    </span>
   );
 }

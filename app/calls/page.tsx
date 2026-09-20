@@ -1,6 +1,6 @@
 "use client";
 
-import ZoraCalls from "@/components/zonacalls";
+import MonoblocCalls from "@/components/zonacalls";
 import DashboardButton from "@/components/dashboardbutton";
 
 export default function CallsPage() {
@@ -9,7 +9,7 @@ export default function CallsPage() {
       <div className="mx-auto max-w-7xl">
         <DashboardButton />
 
-        <ZoraCalls />
+        <MonoblocCalls />
       </div>
     </main>
   );

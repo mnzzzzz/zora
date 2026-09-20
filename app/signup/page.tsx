@@ -21,9 +21,7 @@ export default function SignupPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [showPassword, setShowPassword] =
-    useState(false);
-
+  const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] =
     useState(false);
 
@@ -31,16 +29,12 @@ export default function SignupPage() {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] =
-    useState("");
-  const [confirmPassword, setConfirmPassword] =
-    useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
-  const [loading, setLoading] =
-    useState(false);
+  const [loading, setLoading] = useState(false);
 
   // =========================================
   // CREATE ACCOUNT
@@ -57,8 +51,7 @@ export default function SignupPage() {
     setSuccess("");
 
     const cleanName = name.trim();
-    const cleanEmail =
-      email.trim().toLowerCase();
+    const cleanEmail = email.trim().toLowerCase();
 
     // =========================================
     // BASIC VALIDATION
@@ -82,9 +75,7 @@ export default function SignupPage() {
     }
 
     if (password !== confirmPassword) {
-      setError(
-        "Passwords don't match."
-      );
+      setError("Passwords don't match.");
       return;
     }
 
@@ -120,35 +111,21 @@ export default function SignupPage() {
       // =========================================
 
       if (signupError) {
-        console.error(
-          "Signup error:",
-          signupError
-        );
+        console.error("Signup error:", signupError);
 
-        const message =
-          signupError.message.toLowerCase();
+        const message = signupError.message.toLowerCase();
 
         if (
-          message.includes(
-            "already registered"
-          ) ||
-          message.includes(
-            "already exists"
-          )
+          message.includes("already registered") ||
+          message.includes("already exists")
         ) {
           setError(
             "An account with this email already exists. Try signing in instead."
           );
-        } else if (
-          message.includes("password")
-        ) {
-          setError(
-            signupError.message
-          );
+        } else if (message.includes("password")) {
+          setError(signupError.message);
         } else {
-          setError(
-            signupError.message
-          );
+          setError(signupError.message);
         }
 
         setLoading(false);
@@ -170,41 +147,31 @@ export default function SignupPage() {
 
       // =========================================
       // GENERATE USERNAME
-      //
-      // We don't have a username field in the
-      // signup UI, so generate one from email.
       // =========================================
 
-      const emailUsername =
-        cleanEmail
-          .split("@")[0]
-          .toLowerCase()
-          .replace(/[^a-z0-9_]/g, "")
-          .slice(0, 20);
+      const emailUsername = cleanEmail
+        .split("@")[0]
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, "")
+        .slice(0, 20);
 
       const fallbackUsername =
         emailUsername ||
-        `zorauser${Date.now()
-          .toString()
-          .slice(-6)}`;
+        `Monoblocuser${Date.now().toString().slice(-6)}`;
 
       const initials = cleanName
         .split(/\s+/)
         .filter(Boolean)
-        .map(
-          (part) => part.charAt(0)
-        )
+        .map((part) => part.charAt(0))
         .join("")
         .slice(0, 2)
         .toUpperCase();
 
       // =========================================
-      // CREATE ZORA PROFILE
+      // CREATE Monobloc PROFILE
       // =========================================
 
-      const {
-        error: profileError,
-      } = await supabase
+      const { error: profileError } = await supabase
         .from("profiles")
         .insert({
           id: data.user.id,
@@ -212,9 +179,7 @@ export default function SignupPage() {
           username: fallbackUsername,
           initials:
             initials ||
-            cleanName
-              .charAt(0)
-              .toUpperCase(),
+            cleanName.charAt(0).toUpperCase(),
           role: "Connection",
           status: "online",
         });
@@ -229,19 +194,13 @@ export default function SignupPage() {
           profileError
         );
 
-        // Account itself was created, so don't
-        // tell the user that account creation
-        // completely failed.
-
-        if (
-          profileError.code === "23505"
-        ) {
+        if (profileError.code === "23505") {
           setError(
             "Your account was created, but that username already exists. You can continue and fix your profile later."
           );
         } else {
           setError(
-            `Account created, but your Zora profile could not be created: ${profileError.message}`
+            `Account created, but your Monobloc profile could not be created: ${profileError.message}`
           );
         }
 
@@ -253,16 +212,12 @@ export default function SignupPage() {
       // EMAIL CONFIRMATION REQUIRED
       // =========================================
 
-      if (
-        data.user &&
-        !data.session
-      ) {
+      if (data.user && !data.session) {
         setSuccess(
-          "Account created! Check your email to confirm your Zora account."
+          "Account created! Check your email to confirm your Monobloc account."
         );
 
         setLoading(false);
-
         return;
       }
 
@@ -270,12 +225,9 @@ export default function SignupPage() {
       // FULL SUCCESS
       // =========================================
 
-      if (
-        data.user &&
-        data.session
-      ) {
+      if (data.user && data.session) {
         setSuccess(
-          "Account created successfully! Welcome to Zora."
+          "Account created successfully! Welcome to Monobloc."
         );
 
         setTimeout(() => {
@@ -288,10 +240,7 @@ export default function SignupPage() {
 
       setLoading(false);
     } catch (err) {
-      console.error(
-        "Unexpected signup error:",
-        err
-      );
+      console.error("Unexpected signup error:", err);
 
       setError(
         "Something went wrong while creating your account. Please try again."
@@ -313,17 +262,14 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const {
-        error: googleError,
-      } = await supabase.auth.signInWithOAuth(
-        {
+      const { error: googleError } =
+        await supabase.auth.signInWithOAuth({
           provider: "google",
           options: {
             redirectTo:
               `${window.location.origin}/auth/callback`,
           },
-        }
-      );
+        });
 
       if (googleError) {
         console.error(
@@ -331,10 +277,7 @@ export default function SignupPage() {
           googleError
         );
 
-        setError(
-          googleError.message
-        );
-
+        setError(googleError.message);
         setLoading(false);
       }
     } catch (err) {
@@ -352,7 +295,7 @@ export default function SignupPage() {
   };
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-transparent px-6 py-10 text-white">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#070707] px-5 py-10 font-sans text-white antialiased sm:px-6">
 
       {/* =========================================
           AMBIENT BACKGROUND
@@ -363,14 +306,13 @@ export default function SignupPage() {
         <div
           className="
             absolute
-            left-[8%]
-            top-[15%]
+            left-[5%]
+            top-[10%]
             h-72
             w-72
             rounded-full
-            bg-cyan-400/10
-            blur-[120px]
-            animate-pulse
+            bg-purple-500/[0.07]
+            blur-[130px]
           "
         />
 
@@ -378,18 +320,13 @@ export default function SignupPage() {
           className="
             absolute
             bottom-[5%]
-            right-[8%]
+            right-[5%]
             h-96
             w-96
             rounded-full
-            bg-blue-500/10
-            blur-[140px]
-            animate-pulse
+            bg-violet-500/[0.06]
+            blur-[150px]
           "
-          style={{
-            animationDelay:
-              "2s",
-          }}
         />
 
         <div
@@ -397,13 +334,13 @@ export default function SignupPage() {
             absolute
             left-1/2
             top-1/2
-            h-64
-            w-64
+            h-72
+            w-72
             -translate-x-1/2
             -translate-y-1/2
             rounded-full
-            bg-violet-500/10
-            blur-[120px]
+            bg-purple-500/[0.035]
+            blur-[140px]
           "
         />
 
@@ -427,21 +364,20 @@ export default function SignupPage() {
               items-center
               justify-center
               rounded-2xl
-              bg-gradient-to-br
-              from-blue-500
-              via-cyan-400
-              to-blue-500
-              shadow-[0_0_45px_rgba(34,211,238,0.25)]
+              border
+              border-purple-400/20
+              bg-purple-500/[0.12]
+              shadow-[0_0_40px_rgba(168,85,247,0.12)]
             "
           >
             <Sparkles
-              size={28}
-              className="text-white"
+              size={27}
+              className="text-purple-300"
             />
           </div>
 
           <h1 className="mt-4 text-2xl font-bold tracking-tight">
-            Zora
+            Monobloc
           </h1>
 
           <p className="mt-1 text-sm text-slate-500">
@@ -456,12 +392,12 @@ export default function SignupPage() {
 
         <div
           className="
-            rounded-[32px]
+            rounded-[28px]
             border
             border-white/10
-            bg-[#0b1422]/75
+            bg-[#101010]/95
             p-7
-            shadow-[0_25px_80px_rgba(0,0,0,0.35)]
+            shadow-[0_25px_80px_rgba(0,0,0,0.45)]
             backdrop-blur-2xl
             sm:p-9
           "
@@ -471,11 +407,21 @@ export default function SignupPage() {
 
           <div className="mb-7">
 
+            <div className="mb-3 flex items-center gap-2">
+
+              <span className="h-1.5 w-1.5 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
+
+              <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-purple-400">
+                Monobloc / ACCOUNT
+              </span>
+
+            </div>
+
             <h2 className="text-3xl font-bold tracking-tight">
               Create your account.
             </h2>
 
-            <p className="mt-2 text-sm leading-6 text-slate-400">
+            <p className="mt-2 text-sm leading-6 text-slate-500">
               Your workspace is waiting. Let's build something.
             </p>
 
@@ -490,7 +436,7 @@ export default function SignupPage() {
                 rounded-xl
                 border
                 border-red-400/20
-                bg-red-400/10
+                bg-red-400/[0.07]
                 px-4
                 py-3
                 text-sm
@@ -510,13 +456,13 @@ export default function SignupPage() {
                 mb-5
                 rounded-xl
                 border
-                border-cyan-400/20
-                bg-cyan-400/[0.06]
+                border-purple-400/20
+                bg-purple-400/[0.06]
                 px-4
                 py-3
                 text-sm
                 leading-5
-                text-cyan-300
+                text-purple-300
               "
             >
               {success}
@@ -527,9 +473,7 @@ export default function SignupPage() {
 
           <button
             type="button"
-            onClick={
-              handleGoogleSignup
-            }
+            onClick={handleGoogleSignup}
             disabled={loading}
             className="
               flex
@@ -541,13 +485,13 @@ export default function SignupPage() {
               rounded-xl
               border
               border-white/10
-              bg-white/[0.04]
+              bg-white/[0.035]
               text-sm
-              font-medium
+              font-semibold
               text-white
               transition
               hover:border-white/20
-              hover:bg-white/[0.07]
+              hover:bg-white/[0.06]
               disabled:cursor-not-allowed
               disabled:opacity-50
             "
@@ -598,13 +542,13 @@ export default function SignupPage() {
 
           <div className="my-6 flex items-center gap-4">
 
-            <div className="h-px flex-1 bg-white/10" />
+            <div className="h-px flex-1 bg-white/[0.08]" />
 
-            <span className="text-xs text-slate-600">
+            <span className="text-[10px] font-medium tracking-widest text-slate-700">
               OR
             </span>
 
-            <div className="h-px flex-1 bg-white/10" />
+            <div className="h-px flex-1 bg-white/[0.08]" />
 
           </div>
 
@@ -624,9 +568,11 @@ export default function SignupPage() {
                 className="
                   mb-2
                   block
-                  text-sm
-                  font-medium
-                  text-slate-300
+                  text-[11px]
+                  font-semibold
+                  uppercase
+                  tracking-[0.08em]
+                  text-slate-400
                 "
               >
                 Your name
@@ -640,17 +586,17 @@ export default function SignupPage() {
                   rounded-xl
                   border
                   border-white/10
-                  bg-white/[0.035]
+                  bg-white/[0.025]
                   px-4
                   transition
-                  focus-within:border-cyan-400/40
-                  focus-within:bg-cyan-400/[0.025]
+                  focus-within:border-purple-400/40
+                  focus-within:bg-purple-400/[0.025]
                 "
               >
 
                 <User
-                  size={18}
-                  className="mr-3 shrink-0 text-slate-500"
+                  size={17}
+                  className="mr-3 shrink-0 text-slate-600"
                 />
 
                 <input
@@ -662,17 +608,16 @@ export default function SignupPage() {
                   placeholder="What should we call you?"
                   value={name}
                   onChange={(e) =>
-                    setName(
-                      e.target.value
-                    )
+                    setName(e.target.value)
                   }
                   className="
                     w-full
                     bg-transparent
                     text-sm
+                    font-medium
                     text-white
                     outline-none
-                    placeholder:text-slate-600
+                    placeholder:text-slate-700
                   "
                 />
 
@@ -689,9 +634,11 @@ export default function SignupPage() {
                 className="
                   mb-2
                   block
-                  text-sm
-                  font-medium
-                  text-slate-300
+                  text-[11px]
+                  font-semibold
+                  uppercase
+                  tracking-[0.08em]
+                  text-slate-400
                 "
               >
                 Email
@@ -705,17 +652,17 @@ export default function SignupPage() {
                   rounded-xl
                   border
                   border-white/10
-                  bg-white/[0.035]
+                  bg-white/[0.025]
                   px-4
                   transition
-                  focus-within:border-cyan-400/40
-                  focus-within:bg-cyan-400/[0.025]
+                  focus-within:border-purple-400/40
+                  focus-within:bg-purple-400/[0.025]
                 "
               >
 
                 <Mail
-                  size={18}
-                  className="mr-3 shrink-0 text-slate-500"
+                  size={17}
+                  className="mr-3 shrink-0 text-slate-600"
                 />
 
                 <input
@@ -727,17 +674,16 @@ export default function SignupPage() {
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) =>
-                    setEmail(
-                      e.target.value
-                    )
+                    setEmail(e.target.value)
                   }
                   className="
                     w-full
                     bg-transparent
                     text-sm
+                    font-medium
                     text-white
                     outline-none
-                    placeholder:text-slate-600
+                    placeholder:text-slate-700
                   "
                 />
 
@@ -754,9 +700,11 @@ export default function SignupPage() {
                 className="
                   mb-2
                   block
-                  text-sm
-                  font-medium
-                  text-slate-300
+                  text-[11px]
+                  font-semibold
+                  uppercase
+                  tracking-[0.08em]
+                  text-slate-400
                 "
               >
                 Password
@@ -770,17 +718,17 @@ export default function SignupPage() {
                   rounded-xl
                   border
                   border-white/10
-                  bg-white/[0.035]
+                  bg-white/[0.025]
                   px-4
                   transition
-                  focus-within:border-cyan-400/40
-                  focus-within:bg-cyan-400/[0.025]
+                  focus-within:border-purple-400/40
+                  focus-within:bg-purple-400/[0.025]
                 "
               >
 
                 <Lock
-                  size={18}
-                  className="mr-3 shrink-0 text-slate-500"
+                  size={17}
+                  className="mr-3 shrink-0 text-slate-600"
                 />
 
                 <input
@@ -797,17 +745,16 @@ export default function SignupPage() {
                   placeholder="Create a password"
                   value={password}
                   onChange={(e) =>
-                    setPassword(
-                      e.target.value
-                    )
+                    setPassword(e.target.value)
                   }
                   className="
                     w-full
                     bg-transparent
                     text-sm
+                    font-medium
                     text-white
                     outline-none
-                    placeholder:text-slate-600
+                    placeholder:text-slate-700
                   "
                 />
 
@@ -821,9 +768,9 @@ export default function SignupPage() {
                   className="
                     ml-2
                     shrink-0
-                    text-slate-500
+                    text-slate-600
                     transition
-                    hover:text-white
+                    hover:text-purple-300
                   "
                   aria-label={
                     showPassword
@@ -832,15 +779,15 @@ export default function SignupPage() {
                   }
                 >
                   {showPassword ? (
-                    <EyeOff size={18} />
+                    <EyeOff size={17} />
                   ) : (
-                    <Eye size={18} />
+                    <Eye size={17} />
                   )}
                 </button>
 
               </div>
 
-              <p className="mt-1.5 text-[11px] text-slate-600">
+              <p className="mt-1.5 text-[10px] text-slate-700">
                 Use at least 8 characters.
               </p>
 
@@ -855,9 +802,11 @@ export default function SignupPage() {
                 className="
                   mb-2
                   block
-                  text-sm
-                  font-medium
-                  text-slate-300
+                  text-[11px]
+                  font-semibold
+                  uppercase
+                  tracking-[0.08em]
+                  text-slate-400
                 "
               >
                 Confirm password
@@ -871,17 +820,17 @@ export default function SignupPage() {
                   rounded-xl
                   border
                   border-white/10
-                  bg-white/[0.035]
+                  bg-white/[0.025]
                   px-4
                   transition
-                  focus-within:border-cyan-400/40
-                  focus-within:bg-cyan-400/[0.025]
+                  focus-within:border-purple-400/40
+                  focus-within:bg-purple-400/[0.025]
                 "
               >
 
                 <Lock
-                  size={18}
-                  className="mr-3 shrink-0 text-slate-500"
+                  size={17}
+                  className="mr-3 shrink-0 text-slate-600"
                 />
 
                 <input
@@ -896,9 +845,7 @@ export default function SignupPage() {
                   minLength={8}
                   autoComplete="new-password"
                   placeholder="Enter it again"
-                  value={
-                    confirmPassword
-                  }
+                  value={confirmPassword}
                   onChange={(e) =>
                     setConfirmPassword(
                       e.target.value
@@ -908,9 +855,10 @@ export default function SignupPage() {
                     w-full
                     bg-transparent
                     text-sm
+                    font-medium
                     text-white
                     outline-none
-                    placeholder:text-slate-600
+                    placeholder:text-slate-700
                   "
                 />
 
@@ -918,16 +866,15 @@ export default function SignupPage() {
                   type="button"
                   onClick={() =>
                     setShowConfirmPassword(
-                      (value) =>
-                        !value
+                      (value) => !value
                     )
                   }
                   className="
                     ml-2
                     shrink-0
-                    text-slate-500
+                    text-slate-600
                     transition
-                    hover:text-white
+                    hover:text-purple-300
                   "
                   aria-label={
                     showConfirmPassword
@@ -936,9 +883,9 @@ export default function SignupPage() {
                   }
                 >
                   {showConfirmPassword ? (
-                    <EyeOff size={18} />
+                    <EyeOff size={17} />
                   ) : (
-                    <Eye size={18} />
+                    <Eye size={17} />
                   )}
                 </button>
 
@@ -955,9 +902,7 @@ export default function SignupPage() {
                 required
                 checked={agree}
                 onChange={(e) =>
-                  setAgree(
-                    e.target.checked
-                  )
+                  setAgree(e.target.checked)
                 }
                 className="
                   mt-0.5
@@ -967,26 +912,41 @@ export default function SignupPage() {
                   rounded
                   border-white/20
                   bg-white/5
-                  accent-cyan-400
+                  accent-purple-500
                 "
               />
 
-              <span className="text-xs leading-5 text-slate-500">
-                I agree to Zora's{" "}
+              <span className="text-xs leading-5 text-slate-600">
+
+                I agree to Monobloc's{" "}
+
                 <Link
                   href="/terms"
-                  className="text-cyan-400 hover:text-cyan-300"
+                  className="
+                    font-medium
+                    text-purple-400
+                    transition
+                    hover:text-purple-300
+                  "
                 >
                   Terms of Service
                 </Link>{" "}
+
                 and{" "}
+
                 <Link
                   href="/privacy"
-                  className="text-cyan-400 hover:text-cyan-300"
+                  className="
+                    font-medium
+                    text-purple-400
+                    transition
+                    hover:text-purple-300
+                  "
                 >
                   Privacy Policy
                 </Link>
                 .
+
               </span>
 
             </label>
@@ -1005,20 +965,16 @@ export default function SignupPage() {
                 justify-center
                 gap-2
                 rounded-xl
-                bg-gradient-to-r
-                from-blue-500
-                via-cyan-400
-                to-blue-500
-                bg-[length:200%_100%]
+                bg-purple-500
                 px-5
                 text-sm
                 font-bold
                 text-white
-                shadow-[0_0_30px_rgba(34,211,238,0.15)]
+                shadow-[0_0_25px_rgba(168,85,247,0.14)]
                 transition-all
                 duration-300
-                hover:bg-right
-                hover:shadow-[0_0_40px_rgba(34,211,238,0.25)]
+                hover:bg-purple-400
+                hover:shadow-[0_0_35px_rgba(168,85,247,0.22)]
                 disabled:cursor-not-allowed
                 disabled:opacity-60
               "
@@ -1069,7 +1025,7 @@ export default function SignupPage() {
               justify-center
               gap-2
               text-xs
-              text-slate-600
+              text-slate-700
             "
           >
             <ShieldCheck size={14} />
@@ -1083,15 +1039,15 @@ export default function SignupPage() {
 
         <p className="mt-6 text-center text-sm text-slate-500">
 
-          Already have a Zora account?{" "}
+          Already have a Monobloc account?{" "}
 
           <Link
             href="/login"
             className="
-              font-medium
-              text-cyan-400
+              font-semibold
+              text-purple-400
               transition
-              hover:text-cyan-300
+              hover:text-purple-300
             "
           >
             Sign in
@@ -1103,13 +1059,14 @@ export default function SignupPage() {
           className="
             mt-7
             text-center
-            text-[11px]
+            text-[10px]
+            font-medium
             uppercase
             tracking-[0.25em]
             text-slate-700
           "
         >
-          Zora · Built for what comes next
+          Monobloc · Built for what comes next
         </p>
 
       </div>

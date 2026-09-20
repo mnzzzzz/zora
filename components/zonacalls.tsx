@@ -13,7 +13,7 @@ import {
   PhoneCall,
 } from "lucide-react";
 
-export default function ZoraCalls() {
+export default function Monoblocs() {
   const [showSetup, setShowSetup] = useState(false);
 
   return (
@@ -37,7 +37,7 @@ export default function ZoraCalls() {
             <div>
               <div className="flex flex-wrap items-center gap-3">
                 <h2 className="text-2xl font-bold text-white">
-                  Zora Calls
+                  Monoblocls
                 </h2>
 
                 <span className="flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-300">
@@ -47,7 +47,7 @@ export default function ZoraCalls() {
               </div>
 
               <p className="mt-1 max-w-xl text-sm leading-relaxed text-gray-400">
-                Let Zora handle calls, appointments, customer questions,
+                Let Monobloc handle calls, appointments, customer questions,
                 and follow-ups for you.
               </p>
             </div>
@@ -175,7 +175,7 @@ export default function ZoraCalls() {
             </div>
 
             <p className="mt-4 text-xs text-gray-500">
-              Your call analytics will appear here once Zora Calls is active.
+              Your call analytics will appear here once Monobloc Calls is active.
             </p>
 
           </div>
@@ -202,7 +202,7 @@ export default function ZoraCalls() {
                 </h3>
 
                 <p className="mt-2 text-sm leading-relaxed text-gray-400">
-                  Configure Zora to answer calls and handle appointments
+                  Configure Monobloc to answer calls and handle appointments
                   for your business.
                 </p>
               </div>
@@ -229,7 +229,7 @@ export default function ZoraCalls() {
               />
 
               <InputField
-                label="What should Zora help with?"
+                label="What should Monobloc help with?"
                 placeholder="Appointments, customer questions..."
               />
 

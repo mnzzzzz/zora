@@ -19,7 +19,7 @@ export default function AIAssistant() {
           </div>
 
           <h2 className="text-3xl font-bold">
-            Zora AI
+            Monobloc AI
           </h2>
 
           <p className="mt-3 max-w-md leading-relaxed text-white/80">

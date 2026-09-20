@@ -1,8 +1,39 @@
 @import "tailwindcss";
 
 /* =========================================
-   BASE
+   Monobloc GLOBAL SYSTEM
+   Clean • Premium • Neutral • Minimal
 ========================================= */
+
+:root {
+  --Monobloc-bg: #090a0c;
+  --Monobloc-bg-deep: #060708;
+  --Monobloc-surface: #101114;
+  --Monobloc-surface-hover: #15171b;
+
+  --Monobloc-border: rgba(255, 255, 255, 0.08);
+  --Monobloc-border-soft: rgba(255, 255, 255, 0.05);
+  --Monobloc-border-strong: rgba(255, 255, 255, 0.13);
+
+  --Monobloc-text: #f2f2ef;
+  --Monobloc-text-secondary: #e6e7e9;
+  --Monobloc-text-muted: #e4e5e9;
+
+  /* Warm signature accent instead of blue/cyan */
+  --Monobloc-accent: #e8ef8a;
+  --Monobloc-accent-soft: rgba(232, 239, 138, 0.12);
+  --Monobloc-accent-glow: rgba(232, 239, 138, 0.08);
+}
+
+/* =========================================
+   RESET
+========================================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 html,
 body {
@@ -13,110 +44,220 @@ body {
 }
 
 html {
-  background: #04070d;
+  background: var(--Monobloc-bg-deep);
+  color-scheme: dark;
 }
 
 body {
-  color: white;
+  min-width: 320px;
   overflow-x: hidden;
 
+  color: var(--Monobloc-text);
+
+  /*
+    Clean neutral background.
+    ZERO BLUE.
+    ZERO CYAN.
+    ZERO PURPLE.
+  */
   background:
-    radial-gradient(
-      circle at 10% 10%,
-      rgba(59, 130, 246, 0.35),
-      transparent 30%
-    ),
-    radial-gradient(
-      circle at 90% 15%,
-      rgba(6, 182, 212, 0.3),
-      transparent 30%
-    ),
-    radial-gradient(
-      circle at 50% 90%,
-      rgba(99, 102, 241, 0.22),
-      transparent 40%
-    ),
     linear-gradient(
-      135deg,
-      #04070d 0%,
-      #08111f 35%,
-      #0d1728 70%,
-      #05070c 100%
+      180deg,
+      #0b0c0e 0%,
+      #090a0c 45%,
+      #070809 100%
     );
 
-  background-attachment: fixed;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  text-rendering: optimizeLegibility;
 }
 
 /* =========================================
-   ZORA AMBIENT GLOW
-========================================= */
-
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-
-  background:
-    radial-gradient(
-      circle at 20% 20%,
-      #3b82f655,
-      transparent 18%
-    ),
-    radial-gradient(
-      circle at 80% 25%,
-      #06b6d455,
-      transparent 20%
-    ),
-    radial-gradient(
-      circle at 70% 80%,
-      #8b5cf633,
-      transparent 25%
-    );
-
-  filter: blur(140px);
-
-  pointer-events: none;
-
-  z-index: 0;
-}
-
-/* =========================================
-   GLASS ATMOSPHERE
-========================================= */
-
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-
-  pointer-events: none;
-
-  z-index: 0;
-}
-
-/* =========================================
-   NORMAL BROWSER CURSOR
+   REMOVE OLD AMBIENT EFFECTS
 ========================================= */
 
 /*
-  Keep the real Windows/browser cursor.
+   Your previous CSS created giant blue/cyan
+   radial gradients through body::before.
 
-  ZoraCursor.tsx only adds the glowing
-  trail behind it.
+   Completely disable them.
 */
 
-html,
-body,
+body::before,
+body::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* =========================================
+   CLEAN SUBTLE GRID
+========================================= */
+
+/*
+   Very subtle architectural grid.
+   Nothing animated.
+   No dots.
+   No loops.
+   No random alien geometry 💀
+*/
+
+#Monobloc-root,
+main {
+  position: relative;
+}
+
+main::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+
+  pointer-events: none;
+
+  background-image:
+    linear-gradient(
+      rgba(255, 255, 255, 0.018) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.018) 1px,
+      transparent 1px
+    );
+
+  background-size: 96px 96px;
+
+  mask-image:
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.75),
+      transparent 90%
+    );
+
+  -webkit-mask-image:
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.75),
+      transparent 90%
+    );
+
+  z-index: 0;
+}
+
+/* Keep actual content above grid */
+
+main > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* =========================================
+   TYPOGRAPHY
+========================================= */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--Monobloc-text);
+
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  font-weight: 600;
+
+  letter-spacing: -0.035em;
+
+  line-height: 1.08;
+}
+
+p {
+  line-height: 1.55;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+/* Make normal text feel cleaner */
+
+::placeholder {
+  color: #edeff3 !important;
+  opacity: 100;
+}
+
+/* =========================================
+   LINKS + BUTTONS
+========================================= */
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
 button,
 a,
 input,
 textarea,
-select,
-[role="button"] {
-  cursor: auto;
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  border: 0;
+}
+
+button:not(:disabled),
+a {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* =========================================
+   FOCUS STATES
+========================================= */
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid rgba(232, 239, 138, 0.7);
+  outline-offset: 3px;
 }
 
 /* =========================================
@@ -124,8 +265,8 @@ select,
 ========================================= */
 
 ::selection {
-  background: rgba(34, 211, 238, 0.25);
-  color: white;
+  background: rgba(232, 239, 138, 0.22);
+  color: #ffffff;
 }
 
 /* =========================================
@@ -133,28 +274,158 @@ select,
 ========================================= */
 
 ::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #08090b;
 }
 
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.12);
+  border: 2px solid #08090b;
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(34, 211, 238, 0.35);
+  background: rgba(255, 255, 255, 0.22);
 }
-
-/* Firefox */
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+  scrollbar-color:
+    rgba(255, 255, 255, 0.14)
+    #08090b;
+}
+
+/* =========================================
+   INPUT NORMALIZATION
+========================================= */
+
+input,
+textarea,
+select {
+  color: var(--Monobloc-text);
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--Monobloc-text);
+  -webkit-box-shadow: 0 0 0px 1000px #101114 inset;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* =========================================
+   Monobloc SURFACE UTILITIES
+========================================= */
+
+.Monobloc-glass {
+  background: rgba(16, 17, 20, 0.82) !important;
+
+  border: 1px solid var(--Monobloc-border) !important;
+
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.Monobloc-panel {
+  background: #101114;
+
+  border: 1px solid var(--Monobloc-border);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.Monobloc-panel-hover {
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.Monobloc-panel-hover:hover {
+  background: var(--Monobloc-surface-hover);
+  border-color: var(--Monobloc-border-strong);
+}
+
+/* =========================================
+   Monobloc ACCENT UTILITIES
+========================================= */
+
+.Monobloc-accent {
+  color: var(--Monobloc-accent);
+}
+
+.Monobloc-accent-bg {
+  background: var(--Monobloc-accent);
+  color: #11120b;
+}
+
+.Monobloc-accent-soft {
+  background: var(--Monobloc-accent-soft);
+  color: var(--Monobloc-accent);
+}
+
+/* =========================================
+   SUBTLE SHADOW
+========================================= */
+
+/*
+   NO cyan glow.
+   NO blue glow.
+*/
+
+.Monobloc-glow {
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+/* =========================================
+   KILL RANDOM CANVAS EFFECTS
+========================================= */
+
+/*
+   This is likely responsible for the
+   floating dots / giant outlined loops
+   visible in your screenshot.
+*/
+
+canvas {
+  display: none !important;
+}
+
+/* If a background animation has this class */
+
+.background-canvas,
+.particles,
+.particle-canvas,
+.neural-canvas,
+.starfield,
+.sci-fi-background,
+#background-canvas,
+#particle-canvas {
+  display: none !important;
+}
+
+/* =========================================
+   REMOVE CYAN / BLUE SHADOWS FROM COMMON
+   GLOBAL EFFECT CLASSES
+========================================= */
+
+.shadow-cyan,
+.shadow-blue,
+.shadow-glow {
+  box-shadow: none !important;
 }
 
 /* =========================================
@@ -166,41 +437,13 @@ a,
 input,
 textarea,
 select {
-  -webkit-tap-highlight-color: transparent;
-}
-
-button {
-  user-select: none;
-}
-
-/* =========================================
-   ZORA GLASS UTILITY
-========================================= */
-
-.zora-glass {
-  background: rgba(255, 255, 255, 0.04);
-
-  border: 1px solid rgba(255, 255, 255, 0.08);
-
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-/* =========================================
-   ZORA GLOW UTILITY
-========================================= */
-
-.zora-glow {
-  box-shadow:
-    0 0 30px rgba(34, 211, 238, 0.08),
-    0 0 80px rgba(59, 130, 246, 0.06);
-}
-
-/* =========================================
-   SCI-FI BACKGROUND CANVAS
-========================================= */
-
-canvas {
-  pointer-events: none;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
 }
 
 /* =========================================
@@ -209,20 +452,21 @@ canvas {
 
 @media (max-width: 768px) {
   body {
-    background-attachment: scroll;
+    background:
+      linear-gradient(
+        180deg,
+        #0b0c0e 0%,
+        #090a0c 100%
+      );
   }
 
-  /* Normal touch-device behavior */
+  main::before {
+    background-size: 72px 72px;
+    opacity: 0.65;
+  }
 
-  html,
-  body,
-  button,
-  a,
-  input,
-  textarea,
-  select,
-  [role="button"] {
-    cursor: auto;
+  h1 {
+    letter-spacing: -0.03em;
   }
 }
 
@@ -234,9 +478,9 @@ canvas {
   *,
   *::before,
   *::after {
-    scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
 }

@@ -1,4 +1,4 @@
-package com.zora.app;
+package com.Monobloc.app;
 
 import com.getcapacitor.BridgeActivity;
 

@@ -6,7 +6,7 @@ export type Transaction = {
   date: string;
 };
 
-const STORAGE_KEY = "zora-finance-transactions";
+const STORAGE_KEY = "Monobloc-finance-transactions";
 
 export function getTransactions(): Transaction[] {
   if (typeof window === "undefined") return [];

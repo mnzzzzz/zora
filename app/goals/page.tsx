@@ -1,90 +1,69 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import FloatingSidebar from "@/components/floatingsidebar";
 
 import {
-  Target,
-  Plus,
-  Trash2,
+  ArrowRight,
+  Bell,
   Check,
+  CheckCircle2,
+  ChevronRight,
+  Circle,
+  Flag,
+  Loader2,
+  Plus,
+  Search,
+  Sparkles,
+  Target,
+  Trash2,
+  TrendingUp,
   X,
   Zap,
-  Brain,
-  Activity,
-  ChevronRight,
-  Clock3,
-  Trophy,
-  CircleDot,
-  Crosshair,
-  Cpu,
-  Radio,
-  Sparkles,
-  Gauge,
-  ArrowUpRight,
-  ScanLine,
-  ShieldCheck,
-  Command,
-  RotateCcw,
 } from "lucide-react";
 
-import {
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
-
 type Goal = {
-  id: string;
+  id: number;
   title: string;
   description: string;
+  category: string;
   progress: number;
+  target: number;
   deadline: string;
-  priority: "Low" | "Medium" | "High";
-  completed: boolean;
-  createdAt: string;
-  updatedAt: string;
 };
 
-const priorityStyles = {
-  Low: {
-    badge: "border-white/10 bg-white/[0.04] text-slate-400",
-    dot: "bg-slate-500",
-  },
-  Medium: {
-    badge: "border-blue-400/20 bg-blue-400/[0.07] text-blue-300",
-    dot: "bg-blue-400",
-  },
-  High: {
-    badge: "border-cyan-400/25 bg-cyan-400/[0.08] text-cyan-300",
-    dot: "bg-cyan-300",
-  },
-};
+const STORAGE_KEY = "Monoblocls";
 
 export default function GoalsPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedGoalId, setSelectedGoalId] =
+    useState<number | null>(null);
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [deadline, setDeadline] = useState("");
-  const [priority, setPriority] =
-    useState<Goal["priority"]>("Medium");
+  const [search, setSearch] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
 
-  const [showCreator, setShowCreator] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newCategory, setNewCategory] = useState("PERSONAL");
+  const [newTarget, setNewTarget] = useState("100");
+  const [newDeadline, setNewDeadline] = useState("");
 
-  /* =========================================================
-     LOAD
-  ========================================================= */
+  const [isSaving, setIsSaving] = useState(false);
 
+  /*
+   * LOAD GOALS
+   */
   useEffect(() => {
-    const stored = localStorage.getItem("zora-goals");
-
-    if (!stored) return;
-
     try {
-      const parsed = JSON.parse(stored);
+      const saved = localStorage.getItem(STORAGE_KEY);
+
+      if (!saved) {
+        setGoals([]);
+        return;
+      }
+
+      const parsed = JSON.parse(saved);
 
       if (Array.isArray(parsed)) {
         setGoals(parsed);
@@ -94,1403 +73,1280 @@ export default function GoalsPage() {
     }
   }, []);
 
-  /* =========================================================
-     SAVE
-  ========================================================= */
-
+  /*
+   * SAVE GOALS
+   */
   useEffect(() => {
-    localStorage.setItem("zora-goals", JSON.stringify(goals));
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(goals)
+    );
   }, [goals]);
 
-  /* =========================================================
-     STATS
-  ========================================================= */
+  /*
+   * SEARCH
+   */
+  const filteredGoals = useMemo(() => {
+    const query = search.trim().toLowerCase();
 
-  const stats = useMemo(() => {
-    const total = goals.length;
+    if (!query) return goals;
 
-    const completed = goals.filter(
-      (goal) => goal.completed
-    ).length;
-
-    const active = goals.filter(
-      (goal) => !goal.completed
-    ).length;
-
-    const average =
-      total === 0
-        ? 0
-        : Math.round(
-            goals.reduce(
-              (sum, goal) => sum + goal.progress,
-              0
-            ) / total
-          );
-
-    const highPriority = goals.filter(
+    return goals.filter(
       (goal) =>
-        goal.priority === "High" && !goal.completed
-    ).length;
+        goal.title.toLowerCase().includes(query) ||
+        goal.description.toLowerCase().includes(query) ||
+        goal.category.toLowerCase().includes(query)
+    );
+  }, [goals, search]);
 
-    return {
-      total,
-      completed,
-      active,
-      average,
-      highPriority,
-    };
-  }, [goals]);
-
+  /*
+   * SELECTED GOAL
+   */
   const selectedGoal = goals.find(
-    (goal) => goal.id === selectedId
+    (goal) => goal.id === selectedGoalId
   );
 
-  /* =========================================================
-     CREATE
-  ========================================================= */
+  /*
+   * STATISTICS
+   */
+  const completedGoals = goals.filter(
+    (goal) => goal.progress >= goal.target
+  ).length;
 
+  const activeGoals = goals.filter(
+    (goal) => goal.progress < goal.target
+  ).length;
+
+  const highPriorityGoals = goals.filter(
+    (goal) => goal.progress < goal.target * 0.25
+  ).length;
+
+  const overallProgress =
+    goals.length === 0
+      ? 0
+      : Math.round(
+          goals.reduce((sum, goal) => {
+            const percentage =
+              goal.target > 0
+                ? Math.min(
+                    (goal.progress / goal.target) * 100,
+                    100
+                  )
+                : 0;
+
+            return sum + percentage;
+          }, 0) / goals.length
+        );
+
+  /*
+   * CREATE GOAL
+   */
   const createGoal = () => {
-    if (!title.trim()) return;
+    if (!newTitle.trim()) return;
 
-    const now = new Date().toISOString();
+    const targetNumber = Math.max(
+      Number(newTarget) || 100,
+      1
+    );
 
     const goal: Goal = {
-      id: crypto.randomUUID(),
-      title: title.trim(),
-      description: description.trim(),
+      id: Date.now(),
+      title: newTitle.trim(),
+      description:
+        newDescription.trim() ||
+        "No description added.",
+      category: newCategory,
       progress: 0,
-      deadline,
-      priority,
-      completed: false,
-      createdAt: now,
-      updatedAt: now,
+      target: targetNumber,
+      deadline: newDeadline,
     };
 
     setGoals((current) => [goal, ...current]);
-    setSelectedId(goal.id);
+    setSelectedGoalId(goal.id);
 
-    setTitle("");
-    setDescription("");
-    setDeadline("");
-    setPriority("Medium");
-    setShowCreator(false);
+    setNewTitle("");
+    setNewDescription("");
+    setNewCategory("PERSONAL");
+    setNewTarget("100");
+    setNewDeadline("");
+    setShowCreate(false);
   };
 
-  /* =========================================================
-     DELETE
-  ========================================================= */
+  /*
+   * UPDATE PROGRESS
+   */
+  const updateProgress = (
+    id: number,
+    amount: number
+  ) => {
+    setIsSaving(true);
 
-  const deleteGoal = (id: string) => {
+    setGoals((current) =>
+      current.map((goal) => {
+        if (goal.id !== id) return goal;
+
+        return {
+          ...goal,
+          progress: Math.max(
+            0,
+            Math.min(
+              goal.progress + amount,
+              goal.target
+            )
+          ),
+        };
+      })
+    );
+
+    window.setTimeout(() => {
+      setIsSaving(false);
+    }, 250);
+  };
+
+  /*
+   * DELETE GOAL
+   */
+  const deleteGoal = (id: number) => {
     setGoals((current) =>
       current.filter((goal) => goal.id !== id)
     );
 
-    if (selectedId === id) {
-      setSelectedId(null);
+    if (selectedGoalId === id) {
+      setSelectedGoalId(null);
     }
   };
 
-  /* =========================================================
-     COMPLETE
-  ========================================================= */
-
-  const toggleComplete = (id: string) => {
-    setGoals((current) =>
-      current.map((goal) =>
-        goal.id === id
-          ? {
-              ...goal,
-              completed: !goal.completed,
-              progress: !goal.completed
-                ? 100
-                : Math.min(goal.progress, 99),
-              updatedAt: new Date().toISOString(),
-            }
-          : goal
-      )
-    );
+  /*
+   * RESET CREATE FORM
+   */
+  const closeCreate = () => {
+    setShowCreate(false);
+    setNewTitle("");
+    setNewDescription("");
+    setNewCategory("PERSONAL");
+    setNewTarget("100");
+    setNewDeadline("");
   };
 
-  /* =========================================================
-     PROGRESS
-  ========================================================= */
-
-  const updateProgress = (
-    id: string,
-    value: number
-  ) => {
-    const progress = Math.max(
-      0,
-      Math.min(100, value)
-    );
-
-    setGoals((current) =>
-      current.map((goal) =>
-        goal.id === id
-          ? {
-              ...goal,
-              progress,
-              completed: progress === 100,
-              updatedAt: new Date().toISOString(),
-            }
-          : goal
-      )
-    );
-
-    setSaved(false);
-  };
-
-  /* =========================================================
-     SAVE
-  ========================================================= */
-
-  const saveSelected = () => {
-    if (!selectedGoal) return;
-
-    setGoals((current) =>
-      current.map((goal) =>
-        goal.id === selectedGoal.id
-          ? {
-              ...goal,
-              updatedAt: new Date().toISOString(),
-            }
-          : goal
-      )
-    );
-
-    setSaved(true);
-
-    setTimeout(() => {
-      setSaved(false);
-    }, 1500);
-  };
-
-  /* =========================================================
-     DATE
-  ========================================================= */
-
-  const formatDate = (date: string) => {
-    if (!date) return "No deadline";
-
-    return new Date(date).toLocaleDateString(
-      "en-US",
-      {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
+  /*
+   * KEYBOARD SHORTCUT
+   */
+  useEffect(() => {
+    const handleKeyboard = (event: KeyboardEvent) => {
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toLowerCase() === "k"
+      ) {
+        event.preventDefault();
+        setShowCreate(true);
       }
-    );
-  };
 
-  /* =========================================================
-     UI
-  ========================================================= */
+      if (event.key === "Escape") {
+        closeCreate();
+      }
+    };
+
+    window.addEventListener(
+      "keydown",
+      handleKeyboard
+    );
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleKeyboard
+      );
+    };
+  }, []);
 
   return (
-    <>
+    <div className="relative min-h-screen bg-[#070707] p-4 font-sans text-white antialiased">
       <FloatingSidebar />
 
-      <main className="relative min-h-screen overflow-hidden bg-[#020812] pl-[92px] text-white md:pl-[108px]">
+      <div className="mx-auto max-w-[1600px] overflow-hidden rounded-[32px] border border-white/10 bg-[#14131a] p-8 pl-20 shadow-2xl sm:pl-24">
 
         {/* =====================================================
-            JARVIS BACKGROUND
+            HEADER
         ===================================================== */}
 
-        <div className="pointer-events-none fixed inset-0 overflow-hidden">
-
-          {/* Ambient glow */}
-
-          <div className="absolute left-[5%] top-[8%] h-[420px] w-[420px] rounded-full bg-cyan-500/[0.07] blur-[150px]" />
-
-          <div className="absolute right-[2%] top-[18%] h-[500px] w-[500px] rounded-full bg-blue-600/[0.07] blur-[170px]" />
-
-          <div className="absolute bottom-[-150px] left-[35%] h-[450px] w-[450px] rounded-full bg-violet-600/[0.05] blur-[170px]" />
-
-          {/* HUD grid */}
-
-          <div
-            className="absolute inset-0 opacity-[0.035]"
-            style={{
-              backgroundImage:
-                "linear-gradient(rgba(100,220,255,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(100,220,255,.5) 1px, transparent 1px)",
-              backgroundSize: "55px 55px",
-            }}
-          />
-
-          {/* Scan lines */}
-
-          <div className="absolute left-0 right-0 top-[18%] h-px bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent" />
-
-          <div className="absolute left-0 right-0 top-[72%] h-px bg-gradient-to-r from-transparent via-blue-400/10 to-transparent" />
-
-          {/* Vertical HUD line */}
-
-          <div className="absolute bottom-0 left-[7%] top-0 w-px bg-gradient-to-b from-transparent via-cyan-400/[0.08] to-transparent" />
-
-          {/* Corner markers */}
-
-          <div className="absolute left-8 top-8 h-8 w-8 border-l border-t border-cyan-400/20" />
-
-          <div className="absolute right-8 top-8 h-8 w-8 border-r border-t border-cyan-400/20" />
-
-          <div className="absolute bottom-8 left-8 h-8 w-8 border-b border-l border-cyan-400/20" />
-
-          <div className="absolute bottom-8 right-8 h-8 w-8 border-b border-r border-cyan-400/20" />
-
-        </div>
-
-        <div className="relative z-10 mx-auto max-w-[1550px] px-5 py-6 md:px-8 md:py-8">
-
-          {/* =====================================================
-              TOP SYSTEM BAR
-          ===================================================== */}
-
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-cyan-400/[0.08] pb-3">
-
+        <header className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-center">
+          <div>
             <div className="flex items-center gap-3">
-
-              <div className="flex items-center gap-2">
-
-                <span className="relative flex h-2.5 w-2.5">
-
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-50" />
-
-                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-cyan-300" />
-
-                </span>
-
-                <span className="font-mono text-[10px] font-semibold tracking-[0.25em] text-cyan-300">
-                  ZORA ONLINE
-                </span>
-
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-purple-500/20 bg-purple-500/10 text-purple-400">
+                <Target size={20} />
               </div>
 
-              <span className="text-slate-800">
-                /
-              </span>
-
-              <span className="font-mono text-[10px] tracking-[0.2em] text-slate-600">
-                OBJECTIVE SYSTEM
-              </span>
-
-            </div>
-
-            <div className="flex items-center gap-4 font-mono text-[9px] tracking-[0.15em] text-slate-700">
-
-              <span className="flex items-center gap-1.5">
-                <Radio size={11} />
-                LIVE
-              </span>
-
-              <span>
-                CORE 01
-              </span>
-
-              <span>
-                SECURE
-              </span>
-
-            </div>
-
-          </div>
-
-          {/* =====================================================
-              HEADER
-          ===================================================== */}
-
-          <header className="relative mb-6 overflow-hidden rounded-[30px] border border-cyan-400/[0.12] bg-[#07121f]/80 shadow-[0_0_80px_rgba(0,200,255,0.035)] backdrop-blur-2xl">
-
-            {/* Header HUD lines */}
-
-            <div className="absolute right-0 top-0 h-px w-1/3 bg-gradient-to-l from-cyan-400/40 to-transparent" />
-
-            <div className="absolute bottom-0 left-0 h-px w-1/4 bg-gradient-to-r from-cyan-400/30 to-transparent" />
-
-            <div className="absolute right-8 top-8 opacity-30">
-              <ScanLine
-                size={100}
-                strokeWidth={0.6}
-                className="text-cyan-400"
-              />
-            </div>
-
-            <div className="relative flex flex-col gap-7 p-6 md:p-8 lg:flex-row lg:items-center lg:justify-between">
-
               <div>
-
-                <div className="mb-4 flex items-center gap-3">
-
-                  <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.07]">
-
-                    <Crosshair
-                      size={22}
-                      className="text-cyan-300"
-                    />
-
-                    <div className="absolute inset-0 animate-pulse rounded-2xl border border-cyan-400/10" />
-
-                  </div>
-
-                  <div>
-
-                    <div className="flex items-center gap-2">
-
-                      <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.3em] text-cyan-400">
-                        ZORA INTELLIGENCE
-                      </p>
-
-                      <span className="rounded-full border border-emerald-400/20 bg-emerald-400/[0.05] px-2 py-0.5 text-[8px] font-semibold text-emerald-400">
-                        ACTIVE
-                      </span>
-
-                    </div>
-
-                    <p className="mt-1 text-xs text-slate-600">
-                      Goal tracking & progress system
-                    </p>
-
-                  </div>
-
-                </div>
-
-                <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
-                  Your Goals
-                </h1>
-
-                <p className="mt-3 max-w-xl text-sm leading-6 text-slate-400">
-                  Set something you want to achieve,
-                  then let Zora keep track of your progress.
+                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-purple-400">
+                  MonoblocOALS
                 </p>
 
+                <p className="mt-0.5 text-[10px] text-slate-500">
+                  Personal achievement system
+                </p>
+              </div>
+            </div>
+
+            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white">
+              Goals
+            </h1>
+
+            <p className="mt-1 text-xs text-slate-400">
+              Define what matters. Track your progress. Make it happen.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* NOTIFICATION */}
+
+            <button
+              type="button"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white"
+              aria-label="Notifications"
+            >
+              <Bell size={18} />
+            </button>
+
+            {/* NEW GOAL */}
+
+            <button
+              type="button"
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:opacity-90"
+            >
+              <Plus size={16} />
+              New Goal
+            </button>
+
+            {/* USER */}
+
+            <div className="ml-1 flex items-center gap-3 rounded-full border border-white/10 bg-white/5 p-1.5 pr-4">
+              <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-purple-400 to-pink-400 p-0.5">
+                <div className="flex h-full w-full items-center justify-center rounded-full bg-[#17151f] text-[11px] font-semibold">
+                  Z
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-white">
+                  Monobloc User
+                </p>
+
+                <p className="text-[10px] text-slate-500">
+                  user@Monobloc.app
+                </p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* =====================================================
+            STAT CARDS
+        ===================================================== */}
+
+        <section className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
+          <MetricCard
+            icon={<Target size={16} />}
+            label="Active Goals"
+            value={String(activeGoals)}
+            subtext="In progress"
+          />
+
+          <MetricCard
+            icon={<CheckCircle2 size={16} />}
+            label="Completed"
+            value={String(completedGoals)}
+            subtext="Goals achieved"
+          />
+
+          <MetricCard
+            icon={<Flag size={16} />}
+            label="Needs Focus"
+            value={String(highPriorityGoals)}
+            subtext="Below 25%"
+          />
+
+          <MetricCard
+            icon={<TrendingUp size={16} />}
+            label="Completion"
+            value={`${overallProgress}%`}
+            subtext="Overall progress"
+          />
+        </section>
+
+        {/* =====================================================
+            PROGRESS HERO
+        ===================================================== */}
+
+        <section className="relative mb-6 overflow-hidden rounded-3xl border border-white/5 bg-gradient-to-r from-[#251f33] via-[#1b1924] to-[#181622] p-7">
+
+          <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-center">
+
+            <div className="max-w-3xl">
+              <div className="flex items-center gap-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-500/10 text-purple-400">
+                  <Sparkles size={17} />
+                </div>
+
+                <span className="text-xs font-semibold uppercase tracking-wider text-purple-400">
+                  YOUR PROGRESS
+                </span>
+              </div>
+
+              <h2 className="mt-3 text-2xl font-semibold text-white">
+                {goals.length === 0
+                  ? "Ready when you are."
+                  : overallProgress >= 100
+                  ? "Everything is complete."
+                  : "Keep moving forward."}
+              </h2>
+
+              <p className="mt-1 text-xs leading-5 text-slate-400">
+                {goals.length === 0
+                  ? "Create your first goal and Monobloc will start tracking your progress."
+                  : `${activeGoals} active goal${
+                      activeGoals === 1 ? "" : "s"
+                    } currently in your workspace.`}
+              </p>
+
+              <div className="mt-6 max-w-[520px]">
+                <div className="mb-2 flex items-center justify-between text-xs">
+                  <span className="font-medium text-slate-400">
+                    Overall Completion
+                  </span>
+
+                  <span className="font-semibold text-white">
+                    {overallProgress}%
+                  </span>
+                </div>
+
+                <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
+                    style={{
+                      width: `${overallProgress}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* CIRCLE */}
+
+            <div className="flex shrink-0 items-center justify-center lg:pr-8">
+              <div className="flex h-32 w-32 items-center justify-center rounded-full border border-purple-500/30 bg-purple-500/[0.04] shadow-[0_0_35px_rgba(168,85,247,0.12)]">
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-white">
+                    {overallProgress}%
+                  </p>
+
+                  <p className="mt-1 text-[10px] uppercase tracking-wider text-slate-400">
+                    completed
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* =====================================================
+            SEARCH
+        ===================================================== */}
+
+        <div className="mb-6 flex items-center gap-3">
+          <div className="relative flex-1">
+            <Search
+              size={16}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600"
+            />
+
+            <input
+              value={search}
+              onChange={(event) =>
+                setSearch(event.target.value)
+              }
+              placeholder="Search your goals..."
+              className="h-11 w-full rounded-xl border border-white/5 bg-[#1b1924] pl-11 pr-4 text-xs text-white outline-none transition placeholder:text-slate-600 focus:border-purple-500/40"
+            />
+          </div>
+
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/5 bg-[#1b1924] text-slate-500 transition hover:bg-white/5 hover:text-white"
+              aria-label="Clear search"
+            >
+              <X size={15} />
+            </button>
+          )}
+        </div>
+
+        {/* =====================================================
+            MAIN AREA
+        ===================================================== */}
+
+        <div className="grid gap-6 xl:grid-cols-12">
+
+          {/* =================================================
+              ACTIVE GOALS
+          ================================================= */}
+
+          <section className="min-h-[620px] rounded-3xl border border-white/5 bg-[#1b1924] xl:col-span-8">
+
+            <div className="flex items-center justify-between border-b border-white/5 p-5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Target
+                    size={16}
+                    className="text-purple-400"
+                  />
+
+                  <h2 className="text-sm font-semibold text-white">
+                    Active Goals
+                  </h2>
+
+                  <span className="rounded-full bg-white/5 px-2 py-0.5 text-[9px] text-slate-500">
+                    {filteredGoals.length}
+                  </span>
+                </div>
+
+                <p className="mt-1 text-[10px] text-slate-600">
+                  Everything you're working toward
+                </p>
               </div>
 
               <button
                 type="button"
-                onClick={() =>
-                  setShowCreator((value) => !value)
-                }
-                className="group flex h-12 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-6 text-sm font-bold text-slate-950 shadow-[0_0_35px_rgba(34,211,238,.13)] transition hover:-translate-y-0.5 hover:shadow-[0_0_45px_rgba(34,211,238,.22)]"
+                onClick={() => setShowCreate(true)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-500/10 text-purple-400 transition hover:bg-purple-500/20"
+                aria-label="Create goal"
               >
-
-                {showCreator ? (
-                  <>
-                    <X size={17} />
-                    Close
-                  </>
-                ) : (
-                  <>
-                    <Plus
-                      size={17}
-                      className="transition group-hover:rotate-90"
-                    />
-                    Create goal
-                  </>
-                )}
-
+                <Plus size={15} />
               </button>
-
             </div>
 
-            {/* Status strip */}
+            <div className="max-h-[560px] overflow-y-auto">
 
-            <div className="flex flex-wrap items-center gap-5 border-t border-white/[0.06] px-6 py-3 md:px-8">
+              {filteredGoals.length === 0 ? (
+                <div className="flex min-h-[500px] flex-col items-center justify-center px-8 text-center">
 
-              <div className="flex items-center gap-2">
-
-                <ShieldCheck
-                  size={13}
-                  className="text-cyan-400"
-                />
-
-                <span className="font-mono text-[9px] tracking-[0.15em] text-slate-600">
-                  SYSTEM READY
-                </span>
-
-              </div>
-
-              <div className="hidden h-3 w-px bg-white/10 sm:block" />
-
-              <div className="font-mono text-[9px] tracking-[0.15em] text-slate-600">
-                {stats.active} ACTIVE
-              </div>
-
-              <div className="font-mono text-[9px] tracking-[0.15em] text-slate-600">
-                {stats.completed} COMPLETED
-              </div>
-
-              {stats.highPriority > 0 && (
-                <>
-                  <div className="hidden h-3 w-px bg-white/10 sm:block" />
-
-                  <div className="flex items-center gap-1.5 text-[9px] font-semibold tracking-[0.15em] text-cyan-300">
-
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300" />
-
-                    {stats.highPriority} HIGH PRIORITY
-
+                  <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-white/5 bg-white/[0.03] text-slate-600">
+                    <Target size={28} />
                   </div>
-                </>
+
+                  <h3 className="mt-5 text-sm font-semibold text-slate-300">
+                    {search
+                      ? "No goals found"
+                      : "No goals yet"}
+                  </h3>
+
+                  <p className="mt-2 max-w-xs text-xs leading-5 text-slate-600">
+                    {search
+                      ? "Try another search term."
+                      : "Create your first goal and start turning plans into progress."}
+                  </p>
+
+                  {!search && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowCreate(true)
+                      }
+                      className="mt-5 flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-5 py-2.5 text-xs font-semibold text-white transition hover:opacity-90"
+                    >
+                      <Plus size={14} />
+                      Create Goal
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="p-3">
+                  {filteredGoals.map((goal) => {
+                    const percentage =
+                      goal.target > 0
+                        ? Math.min(
+                            Math.round(
+                              (goal.progress /
+                                goal.target) *
+                                100
+                            ),
+                            100
+                          )
+                        : 0;
+
+                    const isSelected =
+                      selectedGoalId === goal.id;
+
+                    const isComplete =
+                      percentage >= 100;
+
+                    return (
+                      <button
+                        key={goal.id}
+                        type="button"
+                        onClick={() =>
+                          setSelectedGoalId(
+                            goal.id
+                          )
+                        }
+                        className={`group relative mb-3 w-full rounded-2xl border p-5 text-left transition ${
+                          isSelected
+                            ? "border-purple-500/20 bg-purple-500/[0.06]"
+                            : "border-white/5 bg-white/[0.015] hover:bg-white/[0.035]"
+                        }`}
+                      >
+
+                        {isSelected && (
+                          <span className="absolute bottom-4 left-0 top-4 w-[3px] rounded-r-full bg-purple-500" />
+                        )}
+
+                        <div className="flex items-start justify-between gap-4">
+
+                          <div className="flex min-w-0 gap-3">
+
+                            <div
+                              className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                                isComplete
+                                  ? "bg-green-500/10 text-green-400"
+                                  : "bg-purple-500/10 text-purple-400"
+                              }`}
+                            >
+                              {isComplete ? (
+                                <CheckCircle2
+                                  size={17}
+                                />
+                              ) : (
+                                <Target
+                                  size={17}
+                                />
+                              )}
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+
+                                <p className="truncate text-sm font-semibold text-white">
+                                  {goal.title}
+                                </p>
+
+                                <span className="rounded-full bg-white/5 px-2 py-1 text-[8px] font-semibold uppercase tracking-wider text-slate-500">
+                                  {goal.category}
+                                </span>
+
+                              </div>
+
+                              <p className="mt-1.5 line-clamp-2 text-[10px] leading-5 text-slate-600">
+                                {goal.description}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex shrink-0 items-center gap-3">
+
+                            <div className="text-right">
+                              <p
+                                className={`text-sm font-bold ${
+                                  isComplete
+                                    ? "text-green-400"
+                                    : "text-purple-400"
+                                }`}
+                              >
+                                {percentage}%
+                              </p>
+
+                              <p className="text-[9px] text-slate-700">
+                                {goal.progress}/
+                                {goal.target}
+                              </p>
+                            </div>
+
+                            <ChevronRight
+                              size={15}
+                              className="text-slate-700 transition group-hover:text-slate-400"
+                            />
+                          </div>
+                        </div>
+
+                        {/* PROGRESS */}
+
+                        <div className="mt-5">
+
+                          <div className="mb-2 flex items-center justify-between">
+                            <span className="text-[9px] uppercase tracking-wider text-slate-600">
+                              Progress
+                            </span>
+
+                            <span className="text-[9px] text-slate-600">
+                              {goal.deadline
+                                ? `Due ${goal.deadline}`
+                                : "No deadline"}
+                            </span>
+                          </div>
+
+                          <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                isComplete
+                                  ? "bg-green-500"
+                                  : "bg-gradient-to-r from-purple-500 to-pink-500"
+                              }`}
+                              style={{
+                                width: `${percentage}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               )}
+            </div>
+          </section>
 
-              <div className="ml-auto hidden items-center gap-2 font-mono text-[9px] text-slate-700 sm:flex">
+          {/* =================================================
+              Monobloc ASSISTANT / SELECTED GOAL
+          ================================================= */}
 
-                <Cpu size={11} />
+          <aside className="space-y-6 xl:col-span-4">
 
-                CORE STATUS: NOMINAL
+            {/* SELECTED GOAL */}
 
+            <section className="rounded-3xl border border-white/5 bg-[#1b1924]">
+
+              <div className="border-b border-white/5 p-5">
+                <div className="flex items-center gap-3">
+
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
+                    <Target size={16} />
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-semibold text-white">
+                      Goal Focus
+                    </p>
+
+                    <p className="mt-0.5 text-[10px] text-slate-600">
+                      Selected objective
+                    </p>
+                  </div>
+                </div>
               </div>
 
-            </div>
+              {selectedGoal ? (
+                <div className="p-5">
 
-          </header>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-white">
+                        {selectedGoal.title}
+                      </p>
 
-          {/* =====================================================
-              CREATE GOAL
-          ===================================================== */}
+                      <p className="mt-1 text-[10px] leading-5 text-slate-600">
+                        {selectedGoal.description}
+                      </p>
+                    </div>
 
-          {showCreator && (
-            <section className="relative mb-6 overflow-hidden rounded-[30px] border border-cyan-400/[0.13] bg-[#07121f]/90 p-6 shadow-[0_0_60px_rgba(0,200,255,0.04)] backdrop-blur-2xl md:p-7">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        deleteGoal(
+                          selectedGoal.id
+                        )
+                      }
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-700 transition hover:bg-red-400/10 hover:text-red-400"
+                      aria-label="Delete goal"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
 
-              <div className="absolute right-0 top-0 h-32 w-32 rounded-full bg-cyan-400/[0.05] blur-3xl" />
+                  <div className="mt-6">
 
-              <div className="relative mb-6 flex items-center gap-3">
+                    <div className="mb-2 flex items-end justify-between">
+                      <div>
+                        <p className="text-3xl font-bold text-white">
+                          {selectedGoal.target >
+                          0
+                            ? Math.min(
+                                Math.round(
+                                  (selectedGoal.progress /
+                                    selectedGoal.target) *
+                                    100
+                                ),
+                                100
+                              )
+                            : 0}
+                          %
+                        </p>
 
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/[0.07]">
+                        <p className="mt-1 text-[9px] uppercase tracking-wider text-slate-600">
+                          completion
+                        </p>
+                      </div>
 
-                  <Command
-                    size={18}
-                    className="text-cyan-300"
-                  />
+                      <div className="text-right">
+                        <p className="text-xs font-semibold text-purple-400">
+                          {selectedGoal.progress}
+                          /
+                          {selectedGoal.target}
+                        </p>
 
+                        <p className="mt-1 text-[9px] text-slate-700">
+                          current / target
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
+                        style={{
+                          width: `${Math.min(
+                            (selectedGoal.progress /
+                              selectedGoal.target) *
+                              100,
+                            100
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-6 grid grid-cols-3 gap-2">
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateProgress(
+                          selectedGoal.id,
+                          1
+                        )
+                      }
+                      className="rounded-xl border border-white/5 bg-white/[0.03] py-3 text-center transition hover:bg-purple-500/10"
+                    >
+                      <p className="text-sm font-bold text-purple-400">
+                        +1
+                      </p>
+
+                      <p className="mt-1 text-[8px] text-slate-600">
+                        progress
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateProgress(
+                          selectedGoal.id,
+                          5
+                        )
+                      }
+                      className="rounded-xl border border-white/5 bg-white/[0.03] py-3 text-center transition hover:bg-purple-500/10"
+                    >
+                      <p className="text-sm font-bold text-purple-400">
+                        +5
+                      </p>
+
+                      <p className="mt-1 text-[8px] text-slate-600">
+                        progress
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateProgress(
+                          selectedGoal.id,
+                          10
+                        )
+                      }
+                      className="rounded-xl border border-white/5 bg-white/[0.03] py-3 text-center transition hover:bg-purple-500/10"
+                    >
+                      <p className="text-sm font-bold text-purple-400">
+                        +10
+                      </p>
+
+                      <p className="mt-1 text-[8px] text-slate-600">
+                        progress
+                      </p>
+                    </button>
+                  </div>
+
+                  {selectedGoal.deadline && (
+                    <div className="mt-4 flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3">
+                      <span className="text-[10px] text-slate-600">
+                        Deadline
+                      </span>
+
+                      <span className="text-[10px] font-medium text-slate-300">
+                        {selectedGoal.deadline}
+                      </span>
+                    </div>
+                  )}
+
+                </div>
+              ) : (
+                <div className="flex min-h-[300px] flex-col items-center justify-center px-6 text-center">
+
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.03] text-slate-700">
+                    <Circle size={23} />
+                  </div>
+
+                  <p className="mt-4 text-xs font-medium text-slate-500">
+                    No goal selected
+                  </p>
+
+                  <p className="mt-1 max-w-[220px] text-[10px] leading-5 text-slate-700">
+                    Select a goal to view its progress and update it.
+                  </p>
+
+                </div>
+              )}
+            </section>
+
+            {/* =================================================
+                SYSTEM STATUS
+            ================================================= */}
+
+            <section className="rounded-3xl border border-white/5 bg-[#1b1924] p-5">
+
+              <div className="mb-5 flex items-center gap-3">
+
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
+                  <Zap size={16} />
                 </div>
 
                 <div>
-
-                  <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-cyan-400">
-                    NEW GOAL
+                  <p className="text-sm font-semibold text-white">
+                    Monobloc Assistant
                   </p>
 
-                  <p className="mt-1 text-sm text-slate-500">
-                    Tell Zora what you want to accomplish.
+                  <p className="mt-0.5 text-[10px] text-slate-600">
+                    Goal intelligence
                   </p>
-
                 </div>
+              </div>
+
+              <div className="space-y-2">
+
+                <StatusRow
+                  label="Goal System"
+                  value="ONLINE"
+                  active
+                />
+
+                <StatusRow
+                  label="Progress Tracking"
+                  value="ACTIVE"
+                  active
+                />
+
+                <StatusRow
+                  label="Active Goals"
+                  value={String(activeGoals)}
+                />
+
+                <StatusRow
+                  label="Completion"
+                  value={`${overallProgress}%`}
+                />
 
               </div>
 
-              <div className="relative grid gap-5 lg:grid-cols-2">
+              <Link
+                href="/ai-assistant"
+                className="mt-5 flex items-center justify-between rounded-xl border border-purple-500/10 bg-purple-500/[0.04] px-4 py-3 text-[10px] font-semibold text-purple-400 transition hover:bg-purple-500/[0.08]"
+              >
+                <span className="flex items-center gap-2">
+                  <Sparkles size={13} />
+                  Ask Monobloc
+                </span>
 
-                <div className="lg:col-span-2">
+                <ArrowRight size={13} />
+              </Link>
+            </section>
 
-                  <label className="mb-2 block font-mono text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-600">
-                    Goal
+          </aside>
+        </div>
+
+        {/* =====================================================
+            BOTTOM SYSTEM BAR
+        ===================================================== */}
+
+        <section className="mt-6 rounded-3xl border border-white/5 bg-[#1b1924] p-5">
+
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+
+            <div className="flex items-center gap-3">
+
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
+                <TrendingUp size={16} />
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-white">
+                  Goal System
+                </p>
+
+                <p className="mt-0.5 text-[10px] text-slate-600">
+                  Your objectives are being tracked locally.
+                </p>
+              </div>
+
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+
+              <SystemBadge
+                label="Goals"
+                value={String(goals.length)}
+              />
+
+              <SystemBadge
+                label="Active"
+                value={String(activeGoals)}
+              />
+
+              <SystemBadge
+                label="Completed"
+                value={String(completedGoals)}
+              />
+
+              <SystemBadge
+                label="Status"
+                value="ONLINE"
+              />
+
+            </div>
+          </div>
+        </section>
+
+        {/* =====================================================
+            CREATE GOAL MODAL
+        ===================================================== */}
+
+        {showCreate && (
+          <div
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 px-5 backdrop-blur-md"
+            onMouseDown={(event) => {
+              if (
+                event.target === event.currentTarget
+              ) {
+                closeCreate();
+              }
+            }}
+          >
+            <div className="w-full max-w-[480px] rounded-3xl border border-white/10 bg-[#17151f] p-6 shadow-2xl">
+
+              <div className="mb-6 flex items-center justify-between">
+
+                <div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
+                      <Target size={15} />
+                    </div>
+
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-purple-400">
+                      New Goal
+                    </p>
+                  </div>
+
+                  <h2 className="mt-2 text-xl font-semibold text-white">
+                    Define your objective
+                  </h2>
+
+                  <p className="mt-1 text-[10px] text-slate-600">
+                    Monobloc will track your progress.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={closeCreate}
+                  className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.04] text-slate-600 transition hover:bg-white/10 hover:text-white"
+                >
+                  <X size={16} />
+                </button>
+
+              </div>
+
+              <div className="space-y-4">
+
+                {/* TITLE */}
+
+                <div>
+                  <label className="mb-2 block text-[10px] font-medium text-slate-500">
+                    Goal name
                   </label>
 
                   <input
-                    value={title}
-                    onChange={(e) =>
-                      setTitle(e.target.value)
+                    value={newTitle}
+                    onChange={(event) =>
+                      setNewTitle(
+                        event.target.value
+                      )
                     }
-                    placeholder="e.g. Finish my physics project"
-                    className="h-12 w-full rounded-xl border border-white/[0.08] bg-black/20 px-4 text-sm text-white outline-none transition placeholder:text-slate-700 focus:border-cyan-400/30 focus:bg-cyan-400/[0.02]"
+                    placeholder="What do you want to achieve?"
+                    autoFocus
+                    className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-xs text-white outline-none transition placeholder:text-slate-700 focus:border-purple-500/40"
                   />
-
                 </div>
 
-                <div className="lg:col-span-2">
+                {/* DESCRIPTION */}
 
-                  <label className="mb-2 block font-mono text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-600">
-                    Details
+                <div>
+                  <label className="mb-2 block text-[10px] font-medium text-slate-500">
+                    Description
                   </label>
 
                   <textarea
-                    value={description}
-                    onChange={(e) =>
-                      setDescription(e.target.value)
+                    value={newDescription}
+                    onChange={(event) =>
+                      setNewDescription(
+                        event.target.value
+                      )
                     }
-                    placeholder="Add some context or describe what success looks like..."
-                    className="min-h-[100px] w-full resize-none rounded-xl border border-white/[0.08] bg-black/20 p-4 text-sm text-white outline-none transition placeholder:text-slate-700 focus:border-cyan-400/30 focus:bg-cyan-400/[0.02]"
+                    placeholder="What does success look like?"
+                    rows={3}
+                    className="w-full resize-none rounded-xl border border-white/10 bg-white/[0.03] p-4 text-xs text-white outline-none transition placeholder:text-slate-700 focus:border-purple-500/40"
                   />
+                </div>
+
+                {/* CATEGORY */}
+
+                <div className="grid grid-cols-2 gap-3">
+
+                  <div>
+                    <label className="mb-2 block text-[10px] font-medium text-slate-500">
+                      Category
+                    </label>
+
+                    <select
+                      value={newCategory}
+                      onChange={(event) =>
+                        setNewCategory(
+                          event.target.value
+                        )
+                      }
+                      className="h-11 w-full rounded-xl border border-white/10 bg-[#1b1924] px-3 text-xs text-white outline-none focus:border-purple-500/40"
+                    >
+                      <option value="PERSONAL">
+                        Personal
+                      </option>
+
+                      <option value="CAREER">
+                        Career
+                      </option>
+
+                      <option value="STUDY">
+                        Study
+                      </option>
+
+                      <option value="HEALTH">
+                        Health
+                      </option>
+
+                      <option value="BUSINESS">
+                        Business
+                      </option>
+
+                      <option value="FINANCE">
+                        Finance
+                      </option>
+                    </select>
+                  </div>
+
+                  {/* TARGET */}
+
+                  <div>
+                    <label className="mb-2 block text-[10px] font-medium text-slate-500">
+                      Target
+                    </label>
+
+                    <input
+                      type="number"
+                      min="1"
+                      value={newTarget}
+                      onChange={(event) =>
+                        setNewTarget(
+                          event.target.value
+                        )
+                      }
+                      className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-xs text-white outline-none focus:border-purple-500/40"
+                    />
+                  </div>
 
                 </div>
 
-                <div>
+                {/* DEADLINE */}
 
-                  <label className="mb-2 block font-mono text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-600">
+                <div>
+                  <label className="mb-2 block text-[10px] font-medium text-slate-500">
                     Deadline
                   </label>
 
                   <input
                     type="date"
-                    value={deadline}
-                    onChange={(e) =>
-                      setDeadline(e.target.value)
-                    }
-                    className="h-12 w-full rounded-xl border border-white/[0.08] bg-black/20 px-4 text-sm text-white outline-none focus:border-cyan-400/30"
-                  />
-
-                </div>
-
-                <div>
-
-                  <label className="mb-2 block font-mono text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-600">
-                    Priority
-                  </label>
-
-                  <select
-                    value={priority}
-                    onChange={(e) =>
-                      setPriority(
-                        e.target.value as Goal["priority"]
+                    value={newDeadline}
+                    onChange={(event) =>
+                      setNewDeadline(
+                        event.target.value
                       )
                     }
-                    className="h-12 w-full rounded-xl border border-white/[0.08] bg-[#081421] px-4 text-sm text-white outline-none focus:border-cyan-400/30"
-                  >
-                    <option value="Low">Low</option>
-                    <option value="Medium">Medium</option>
-                    <option value="High">High</option>
-                  </select>
-
-                </div>
-
-              </div>
-
-              <div className="relative mt-5 flex justify-end">
-
-                <button
-                  type="button"
-                  onClick={createGoal}
-                  disabled={!title.trim()}
-                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-3 text-sm font-bold text-slate-950 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-30"
-                >
-
-                  <Target size={16} />
-
-                  Add goal
-
-                </button>
-
-              </div>
-
-            </section>
-          )}
-
-          {/* =====================================================
-              TELEMETRY
-          ===================================================== */}
-
-          <section className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-
-            <TelemetryCard
-              icon={<Target size={17} />}
-              label="TOTAL GOALS"
-              value={stats.total}
-              detail="Tracked"
-            />
-
-            <TelemetryCard
-              icon={<Activity size={17} />}
-              label="IN PROGRESS"
-              value={stats.active}
-              detail="Active"
-            />
-
-            <TelemetryCard
-              icon={<Trophy size={17} />}
-              label="COMPLETED"
-              value={stats.completed}
-              detail="Achieved"
-            />
-
-            <TelemetryCard
-              icon={<Gauge size={17} />}
-              label="OVERALL PROGRESS"
-              value={`${stats.average}%`}
-              detail="Average"
-            />
-
-          </section>
-
-          {/* =====================================================
-              MAIN GRID
-          ===================================================== */}
-
-          <div className="grid gap-6 xl:grid-cols-[1fr_390px]">
-
-            {/* ===================================================
-                GOAL BOARD
-            =================================================== */}
-
-            <section className="relative overflow-hidden rounded-[30px] border border-white/[0.08] bg-[#07121f]/80 p-5 backdrop-blur-2xl md:p-6">
-
-              <div className="absolute right-0 top-0 h-px w-1/3 bg-gradient-to-l from-cyan-400/30 to-transparent" />
-
-              <div className="mb-6 flex items-center justify-between">
-
-                <div>
-
-                  <div className="flex items-center gap-2">
-
-                    <CircleDot
-                      size={14}
-                      className="text-cyan-400"
-                    />
-
-                    <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-cyan-400">
-                      GOAL MATRIX
-                    </p>
-
-                  </div>
-
-                  <h2 className="mt-2 text-xl font-bold">
-                    Your goals
-                  </h2>
-
-                  <p className="mt-1 text-xs text-slate-600">
-                    Select a goal to view and update it.
-                  </p>
-
-                </div>
-
-                <div className="hidden items-center gap-2 rounded-lg border border-white/[0.06] bg-black/20 px-3 py-2 sm:flex">
-
-                  <Radio
-                    size={12}
-                    className="text-cyan-400"
+                    className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-xs text-white outline-none focus:border-purple-500/40"
                   />
+                </div>
 
-                  <span className="font-mono text-[8px] tracking-[0.15em] text-slate-600">
-                    LIVE TRACKING
-                  </span>
+                {/* BUTTONS */}
+
+                <div className="flex gap-3 pt-2">
+
+                  <button
+                    type="button"
+                    onClick={closeCreate}
+                    className="flex-1 rounded-xl border border-white/10 bg-white/[0.03] py-3 text-xs font-semibold text-slate-500 transition hover:bg-white/10 hover:text-white"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={createGoal}
+                    disabled={!newTitle.trim()}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 py-3 text-xs font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    <Plus size={15} />
+                    Create Goal
+                  </button>
 
                 </div>
 
               </div>
-
-              {goals.length === 0 ? (
-
-                <EmptyGoals
-                  onCreate={() => setShowCreator(true)}
-                />
-
-              ) : (
-
-                <div className="grid gap-3 md:grid-cols-2">
-
-                  {goals.map((goal) => (
-
-                    <GoalCard
-                      key={goal.id}
-                      goal={goal}
-                      selected={selectedId === goal.id}
-                      onClick={() =>
-                        setSelectedId(goal.id)
-                      }
-                      formatDate={formatDate}
-                    />
-
-                  ))}
-
-                </div>
-
-              )}
-
-            </section>
-
-            {/* ===================================================
-                CONTROL PANEL
-            =================================================== */}
-
-            <aside className="relative overflow-hidden rounded-[30px] border border-cyan-400/[0.1] bg-[#07121f]/85 backdrop-blur-2xl">
-
-              {!selectedGoal ? (
-
-                <IdleControlPanel />
-
-              ) : (
-
-                <ControlPanel
-                  goal={selectedGoal}
-                  saved={saved}
-                  formatDate={formatDate}
-                  onClose={() => setSelectedId(null)}
-                  onProgress={(value) =>
-                    updateProgress(
-                      selectedGoal.id,
-                      value
-                    )
-                  }
-                  onComplete={() =>
-                    toggleComplete(selectedGoal.id)
-                  }
-                  onSave={saveSelected}
-                  onDelete={() =>
-                    deleteGoal(selectedGoal.id)
-                  }
-                />
-
-              )}
-
-            </aside>
-
-          </div>
-
-          {/* =====================================================
-              BOTTOM SYSTEM MESSAGE
-          ===================================================== */}
-
-          <div className="mt-5 flex items-center gap-3 border-t border-white/[0.05] pt-4">
-
-            <Sparkles
-              size={13}
-              className="text-cyan-400"
-            />
-
-            <p className="text-[10px] text-slate-600">
-
-              {goals.length === 0
-                ? "Zora is ready. Create your first goal to begin."
-                : stats.average >= 75
-                  ? "You're making strong progress. Keep the momentum going."
-                  : stats.highPriority > 0
-                    ? "You have high-priority goals that may need attention."
-                    : "Zora is tracking your progress in real time."}
-
-            </p>
-
-            <div className="ml-auto hidden font-mono text-[8px] tracking-[0.15em] text-slate-800 sm:block">
-              ZORA CORE / NOMINAL
             </div>
-
           </div>
+        )}
 
-        </div>
-      </main>
-    </>
+        {/* SAVING INDICATOR */}
+
+        {isSaving && (
+          <div className="fixed bottom-6 right-6 z-[250] flex items-center gap-2 rounded-full border border-white/10 bg-[#17151f] px-4 py-2.5 text-[10px] font-medium text-slate-400 shadow-2xl">
+            <Loader2
+              size={13}
+              className="animate-spin text-purple-400"
+            />
+            Saving progress
+          </div>
+        )}
+
+      </div>
+    </div>
   );
 }
 
 /* =========================================================
-   TELEMETRY CARD
+   METRIC CARD
 ========================================================= */
 
-function TelemetryCard({
+function MetricCard({
   icon,
   label,
   value,
-  detail,
+  subtext,
 }: {
-  icon: ReactNode;
+  icon: React.ReactNode;
   label: string;
-  value: string | number;
-  detail: string;
+  value: string;
+  subtext: string;
 }) {
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[#07121f]/75 p-4 backdrop-blur-xl transition hover:border-cyan-400/[0.15]">
-
-      <div className="absolute right-0 top-0 h-px w-1/2 bg-gradient-to-l from-cyan-400/20 to-transparent" />
+    <div className="rounded-2xl border border-white/5 bg-[#1b1924] p-4 transition hover:bg-white/5">
 
       <div className="flex items-center justify-between">
 
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-400/10 bg-cyan-400/[0.06] text-cyan-300">
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-slate-300">
           {icon}
         </div>
 
-        <ArrowUpRight
-          size={13}
-          className="text-slate-800 transition group-hover:text-cyan-400"
-        />
-
-      </div>
-
-      <div className="mt-4 flex items-end justify-between">
-
-        <div>
-
-          <p className="font-mono text-[8px] uppercase tracking-[0.18em] text-slate-600">
-            {label}
-          </p>
-
-          <p className="mt-1 text-2xl font-bold text-white">
-            {value}
-          </p>
-
-        </div>
-
-        <span className="pb-1 text-[9px] text-slate-700">
-          {detail}
+        <span className="text-[10px] text-slate-500">
+          {label}
         </span>
 
       </div>
+
+      <p className="mt-3 text-2xl font-bold text-white">
+        {value}
+      </p>
+
+      <p className="mt-0.5 text-[10px] text-slate-400">
+        {subtext}
+      </p>
 
     </div>
   );
 }
 
 /* =========================================================
-   GOAL CARD
+   STATUS ROW
 ========================================================= */
 
-function GoalCard({
-  goal,
-  selected,
-  onClick,
-  formatDate,
+function StatusRow({
+  label,
+  value,
+  active = false,
 }: {
-  goal: Goal;
-  selected: boolean;
-  onClick: () => void;
-  formatDate: (date: string) => string;
-}) {
-  const styles = priorityStyles[goal.priority];
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`group relative overflow-hidden rounded-2xl border p-5 text-left transition duration-300 ${
-        selected
-          ? "border-cyan-400/25 bg-cyan-400/[0.055] shadow-[0_0_35px_rgba(34,211,238,0.05)]"
-          : "border-white/[0.07] bg-black/10 hover:-translate-y-0.5 hover:border-cyan-400/[0.16] hover:bg-white/[0.025]"
-      }`}
-    >
-
-      {/* Selected scanner */}
-
-      {selected && (
-        <div className="absolute left-0 top-0 h-px w-full bg-gradient-to-r from-transparent via-cyan-400/60 to-transparent" />
-      )}
-
-      <div className="flex items-start justify-between gap-4">
-
-        <div className="flex min-w-0 items-start gap-3">
-
-          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-400/10 bg-cyan-400/[0.06]">
-
-            {goal.completed ? (
-              <Check
-                size={17}
-                className="text-emerald-300"
-              />
-            ) : (
-              <Target
-                size={17}
-                className="text-cyan-300"
-              />
-            )}
-
-            {!goal.completed && (
-              <span className="absolute right-1.5 top-1.5 h-1 w-1 rounded-full bg-cyan-300 shadow-[0_0_7px_rgba(103,232,249,0.9)]" />
-            )}
-
-          </div>
-
-          <div className="min-w-0">
-
-            <h3
-              className={`truncate font-semibold ${
-                goal.completed
-                  ? "text-slate-500"
-                  : "text-white"
-              }`}
-            >
-              {goal.title}
-            </h3>
-
-            <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">
-              {goal.description ||
-                "No additional details added."}
-            </p>
-
-          </div>
-
-        </div>
-
-        <ChevronRight
-          size={15}
-          className={`shrink-0 transition ${
-            selected
-              ? "translate-x-0.5 text-cyan-400"
-              : "text-slate-800 group-hover:translate-x-0.5 group-hover:text-cyan-400"
-          }`}
-        />
-
-      </div>
-
-      {/* Progress */}
-
-      <div className="mt-5">
-
-        <div className="mb-2 flex items-center justify-between">
-
-          <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-slate-700">
-            Progress
-          </span>
-
-          <span className="font-mono text-[10px] font-semibold text-cyan-300">
-            {goal.progress}%
-          </span>
-
-        </div>
-
-        <div className="relative h-1.5 overflow-hidden rounded-full bg-white/[0.05]">
-
-          <div
-            className="absolute left-0 top-0 h-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-500"
-            style={{
-              width: `${goal.progress}%`,
-            }}
-          />
-
-          {goal.progress > 0 && (
-            <div
-              className="absolute top-0 h-full w-8 bg-white/30 blur-sm"
-              style={{
-                left: `calc(${goal.progress}% - 16px)`,
-              }}
-            />
-          )}
-
-        </div>
-
-      </div>
-
-      {/* Bottom */}
-
-      <div className="mt-4 flex items-center justify-between">
-
-        <span
-          className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.15em] ${styles.badge}`}
-        >
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${styles.dot}`}
-          />
-
-          {goal.priority}
-        </span>
-
-        <span className="flex items-center gap-1.5 text-[9px] text-slate-700">
-
-          <Clock3 size={11} />
-
-          {formatDate(goal.deadline)}
-
-        </span>
-
-      </div>
-
-    </button>
-  );
-}
-
-/* =========================================================
-   EMPTY GOALS
-========================================================= */
-
-function EmptyGoals({
-  onCreate,
-}: {
-  onCreate: () => void;
+  label: string;
+  value: string;
+  active?: boolean;
 }) {
   return (
-    <div className="relative flex min-h-[430px] flex-col items-center justify-center overflow-hidden text-center">
+    <div className="flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3">
 
-      {/* Radar */}
+      <span className="text-[10px] text-slate-500">
+        {label}
+      </span>
 
-      <div className="absolute h-64 w-64 rounded-full border border-cyan-400/[0.04]">
-
-        <div className="absolute inset-7 rounded-full border border-cyan-400/[0.05]" />
-
-        <div className="absolute inset-14 rounded-full border border-cyan-400/[0.06]" />
-
-        <div className="absolute left-1/2 top-0 h-1/2 w-px origin-bottom bg-gradient-to-t from-cyan-400/20 to-transparent" />
-
-      </div>
-
-      <div className="relative flex h-20 w-20 items-center justify-center rounded-full border border-cyan-400/15 bg-cyan-400/[0.04] shadow-[0_0_50px_rgba(34,211,238,0.06)]">
-
-        <Crosshair
-          size={31}
-          className="text-cyan-400/60"
-        />
-
-      </div>
-
-      <p className="relative mt-7 text-sm font-semibold text-slate-400">
-        No goals yet
-      </p>
-
-      <p className="relative mt-2 max-w-sm text-xs leading-6 text-slate-600">
-        Create your first goal and Zora will keep
-        track of your progress here.
-      </p>
-
-      <button
-        type="button"
-        onClick={onCreate}
-        className="relative mt-6 flex items-center gap-2 rounded-xl border border-cyan-400/15 bg-cyan-400/[0.05] px-4 py-3 text-xs font-semibold text-cyan-300 transition hover:border-cyan-400/30 hover:bg-cyan-400/[0.09]"
+      <span
+        className={`flex items-center gap-1.5 text-[10px] font-medium ${
+          active
+            ? "text-purple-400"
+            : "text-slate-500"
+        }`}
       >
+        {active && (
+          <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />
+        )}
 
-        <Plus size={15} />
-
-        Create your first goal
-
-      </button>
-
-    </div>
-  );
-}
-
-/* =========================================================
-   IDLE CONTROL PANEL
-========================================================= */
-
-function IdleControlPanel() {
-  return (
-    <div className="relative flex min-h-[500px] flex-col items-center justify-center overflow-hidden px-6 text-center">
-
-      {/* Radar rings */}
-
-      <div className="absolute h-72 w-72 rounded-full border border-cyan-400/[0.04]">
-
-        <div className="absolute inset-8 rounded-full border border-cyan-400/[0.05]" />
-
-        <div className="absolute inset-16 rounded-full border border-cyan-400/[0.06]" />
-
-      </div>
-
-      <div className="relative flex h-24 w-24 items-center justify-center">
-
-        <div className="absolute inset-0 animate-[spin_18s_linear_infinite] rounded-full border border-cyan-400/10 border-t-cyan-400/40" />
-
-        <div className="absolute inset-4 rounded-full border border-blue-400/10 border-b-blue-400/30" />
-
-        <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-cyan-400/[0.06]">
-
-          <Crosshair
-            size={23}
-            className="text-cyan-400/70"
-          />
-
-        </div>
-
-      </div>
-
-      <p className="relative mt-7 font-mono text-[10px] font-semibold uppercase tracking-[0.25em] text-cyan-400">
-        CONTROL CENTER
-      </p>
-
-      <p className="relative mt-3 text-sm font-semibold text-slate-400">
-        Select a goal
-      </p>
-
-      <p className="relative mt-2 max-w-[260px] text-xs leading-6 text-slate-600">
-        Choose an objective from the list to see
-        its progress and available actions.
-      </p>
-
-      <div className="relative mt-7 flex items-center gap-2 font-mono text-[8px] tracking-[0.2em] text-slate-800">
-
-        <span className="h-1.5 w-1.5 rounded-full bg-slate-700" />
-
-        AWAITING INPUT
-
-      </div>
+        {value}
+      </span>
 
     </div>
   );
 }
 
 /* =========================================================
-   CONTROL PANEL
+   SYSTEM BADGE
 ========================================================= */
 
-function ControlPanel({
-  goal,
-  saved,
-  formatDate,
-  onClose,
-  onProgress,
-  onComplete,
-  onSave,
-  onDelete,
+function SystemBadge({
+  label,
+  value,
 }: {
-  goal: Goal;
-  saved: boolean;
-  formatDate: (date: string) => string;
-  onClose: () => void;
-  onProgress: (value: number) => void;
-  onComplete: () => void;
-  onSave: () => void;
-  onDelete: () => void;
+  label: string;
+  value: string;
 }) {
-  const styles = priorityStyles[goal.priority];
-
   return (
-    <div>
-
-      {/* Header */}
-
-      <div className="relative border-b border-white/[0.07] p-5">
-
-        <div className="absolute left-0 top-0 h-px w-full bg-gradient-to-r from-cyan-400/30 via-cyan-400/10 to-transparent" />
-
-        <div className="flex items-start justify-between">
-
-          <div>
-
-            <div className="flex items-center gap-2">
-
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-300 shadow-[0_0_8px_rgba(103,232,249,.8)]" />
-
-              <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.25em] text-cyan-400">
-                GOAL CONTROL
-              </p>
-
-            </div>
-
-            <p className="mt-2 font-mono text-[8px] tracking-[0.15em] text-slate-700">
-              ID / {goal.id.slice(0, 8).toUpperCase()}
-            </p>
-
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/[0.06] text-slate-700 transition hover:border-white/10 hover:text-white"
-          >
-            <X size={15} />
-          </button>
-
-        </div>
-
-      </div>
-
-      <div className="p-6">
-
-        {/* Goal title */}
-
-        <div>
-
-          <div className="flex items-center gap-2">
-
-            <span
-              className={`rounded-lg border px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.15em] ${styles.badge}`}
-            >
-              {goal.priority}
-            </span>
-
-            {goal.completed && (
-              <span className="rounded-lg border border-emerald-400/15 bg-emerald-400/[0.05] px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.15em] text-emerald-300">
-                Complete
-              </span>
-            )}
-
-          </div>
-
-          <h2 className="mt-4 text-2xl font-bold leading-tight">
-            {goal.title}
-          </h2>
-
-          <p className="mt-3 text-sm leading-6 text-slate-500">
-            {goal.description ||
-              "No additional details added."}
-          </p>
-
-        </div>
-
-        {/* Progress core */}
-
-        <div className="mt-8 flex items-center gap-6">
-
-          <div className="relative flex h-28 w-28 shrink-0 items-center justify-center">
-
-            <div
-              className="absolute inset-0 rounded-full"
-              style={{
-                background: `conic-gradient(#22d3ee ${goal.progress * 3.6}deg, rgba(255,255,255,0.04) 0deg)`,
-              }}
-            />
-
-            <div className="absolute inset-[3px] rounded-full bg-[#07121f]" />
-
-            <div className="relative text-center">
-
-              <p className="font-mono text-2xl font-bold text-cyan-300">
-                {goal.progress}%
-              </p>
-
-              <p className="font-mono text-[7px] uppercase tracking-[0.2em] text-slate-700">
-                Progress
-              </p>
-
-            </div>
-
-          </div>
-
-          <div className="min-w-0">
-
-            <p className="font-mono text-[8px] uppercase tracking-[0.2em] text-slate-700">
-              STATUS
-            </p>
-
-            <p className="mt-2 text-sm font-semibold text-slate-300">
-              {goal.completed
-                ? "Goal completed"
-                : goal.progress === 0
-                  ? "Ready to start"
-                  : "In progress"}
-            </p>
-
-            <div className="mt-3 flex items-center gap-2 text-[9px] text-slate-600">
-
-              <Clock3 size={11} />
-
-              {formatDate(goal.deadline)}
-
-            </div>
-
-          </div>
-
-        </div>
-
-        {/* Slider */}
-
-        <div className="mt-8">
-
-          <div className="mb-3 flex items-center justify-between">
-
-            <span className="font-mono text-[8px] uppercase tracking-[0.18em] text-slate-700">
-              Update progress
-            </span>
-
-            <span className="font-mono text-[9px] text-cyan-400">
-              {goal.progress}/100
-            </span>
-
-          </div>
-
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={goal.progress}
-            onChange={(e) =>
-              onProgress(Number(e.target.value))
-            }
-            className="w-full accent-cyan-400"
-          />
-
-          <div className="mt-2 flex justify-between font-mono text-[8px] text-slate-800">
-            <span>0</span>
-            <span>25</span>
-            <span>50</span>
-            <span>75</span>
-            <span>100</span>
-          </div>
-
-        </div>
-
-        {/* AI insight */}
-
-        <div className="mt-7 rounded-2xl border border-cyan-400/[0.1] bg-cyan-400/[0.025] p-4">
-
-          <div className="flex items-center gap-2">
-
-            <Brain
-              size={14}
-              className="text-cyan-400"
-            />
-
-            <span className="font-mono text-[8px] font-semibold uppercase tracking-[0.2em] text-cyan-400">
-              ZORA INSIGHT
-            </span>
-
-          </div>
-
-          <p className="mt-2 text-xs leading-5 text-slate-500">
-
-            {goal.completed
-              ? "Nice work. This goal is complete."
-              : goal.progress >= 75
-                ? "You're almost there. Keep the momentum going."
-                : goal.progress >= 40
-                  ? "Good progress. Keep moving toward the finish line."
-                  : goal.progress > 0
-                    ? "You've started. A little progress every day adds up."
-                    : "This goal hasn't started yet. Pick one small action to begin."}
-
-          </p>
-
-        </div>
-
-        {/* Actions */}
-
-        <div className="mt-6 grid gap-2.5">
-
-          <button
-            type="button"
-            onClick={onComplete}
-            className="flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-sm font-bold text-slate-950 shadow-[0_0_25px_rgba(34,211,238,.08)] transition hover:-translate-y-0.5"
-          >
-
-            {goal.completed ? (
-              <>
-                <RotateCcw size={15} />
-                Reopen goal
-              </>
-            ) : (
-              <>
-                <Check size={15} />
-                Mark as complete
-              </>
-            )}
-
-          </button>
-
-          <button
-            type="button"
-            onClick={onSave}
-            className="flex h-11 items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.025] text-sm font-semibold text-slate-300 transition hover:border-cyan-400/15 hover:bg-cyan-400/[0.04]"
-          >
-
-            {saved ? (
-              <>
-                <Check
-                  size={15}
-                  className="text-emerald-400"
-                />
-
-                Saved
-
-              </>
-            ) : (
-              <>
-                <Zap size={15} />
-
-                Save changes
-
-              </>
-            )}
-
-          </button>
-
-          <button
-            type="button"
-            onClick={onDelete}
-            className="flex h-10 items-center justify-center gap-2 rounded-xl border border-red-400/[0.08] bg-red-400/[0.025] text-xs font-semibold text-red-400/80 transition hover:border-red-400/20 hover:bg-red-400/[0.06]"
-          >
-
-            <Trash2 size={14} />
-
-            Delete goal
-
-          </button>
-
-        </div>
-
-      </div>
+    <div className="rounded-xl border border-white/5 bg-white/[0.02] px-4 py-2">
+
+      <p className="text-[8px] uppercase tracking-[0.15em] text-slate-600">
+        {label}
+      </p>
+
+      <p className="mt-0.5 font-mono text-[10px] font-semibold text-purple-400">
+        {value}
+      </p>
 
     </div>
   );

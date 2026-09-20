@@ -303,7 +303,7 @@ export default function DocumentsPage() {
     };
 
     localStorage.setItem(
-      `zora-pdf-${file.name}`,
+      `Monoblocile.name}`,
       JSON.stringify(data)
     );
 

@@ -1,37 +1,17 @@
 "use client";
 
-import DocumentsCard from "@/components/DocumentsCard";
-import FloatingSidebar from "@/components/floatingsidebar";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
-  ArrowRight,
-  CalendarDays,
+  ArrowUpRight,
+  Bell,
   CheckCircle2,
-  Clock3,
-  FileText,
-  GraduationCap,
-  Plus,
+  ChevronDown,
+  Inbox,
+  Search,
   Sparkles,
   Target,
   TrendingUp,
-  Wallet,
-  X,
-  Send,
-  Brain,
-  Building2,
-  Zap,
-  ChevronRight,
-  Timer,
-  Play,
-  Pause,
-  RotateCcw,
-  Activity,
-  Radio,
-  Cpu,
-  Command,
-  ShieldCheck,
-  Orbit,
 } from "lucide-react";
 
 type Task = {
@@ -42,7 +22,6 @@ type Task = {
 
 export default function Dashboard() {
   const [command, setCommand] = useState("");
-  const [showCommand, setShowCommand] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
 
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -52,28 +31,58 @@ export default function Dashboard() {
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerLoaded, setTimerLoaded] = useState(false);
 
+  const [timeframe, setTimeframe] = useState("6M");
+
+  /* =========================================================
+     LOAD SAVED DATA
+  ========================================================= */
+
   useEffect(() => {
-    const saved = localStorage.getItem("zora-focus-seconds");
+    const savedTasks = localStorage.getItem("Monoblocrd-tasks");
+    const savedFocus = localStorage.getItem("Monobloc-focus-seconds");
 
-    if (saved) {
-      const parsed = Number(saved);
+    if (savedTasks) {
+      try {
+        const parsedTasks = JSON.parse(savedTasks);
+        if (Array.isArray(parsedTasks)) {
+          setTasks(parsedTasks);
+        }
+      } catch {
+        // Ignore invalid localStorage data
+      }
+    }
 
-      if (Number.isFinite(parsed)) {
-        setFocusSeconds(parsed);
+    if (savedFocus) {
+      const parsedFocus = Number(savedFocus);
+      if (Number.isFinite(parsedFocus) && parsedFocus >= 0) {
+        setFocusSeconds(parsedFocus);
       }
     }
 
     setTimerLoaded(true);
   }, []);
 
+  /* =========================================================
+     SAVE TASKS
+  ========================================================= */
+
   useEffect(() => {
     if (!timerLoaded) return;
+    localStorage.setItem("Monobloc-dashboard-tasks", JSON.stringify(tasks));
+  }, [tasks, timerLoaded]);
 
-    localStorage.setItem(
-      "zora-focus-seconds",
-      focusSeconds.toString()
-    );
+  /* =========================================================
+     SAVE FOCUS TIME
+  ========================================================= */
+
+  useEffect(() => {
+    if (!timerLoaded) return;
+    localStorage.setItem("Monobloc-focus-seconds", focusSeconds.toString());
   }, [focusSeconds, timerLoaded]);
+
+  /* =========================================================
+     FOCUS TIMER
+  ========================================================= */
 
   useEffect(() => {
     if (!timerRunning) return;
@@ -85,34 +94,29 @@ export default function Dashboard() {
     return () => window.clearInterval(interval);
   }, [timerRunning]);
 
+  /* =========================================================
+     HELPERS
+  ========================================================= */
+
   const formatFocusTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
 
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    }
-
-    if (minutes > 0) {
-      return `${minutes}m`;
-    }
-
-    return `${seconds}s`;
-  };
-
-  const resetFocusTimer = () => {
-    setTimerRunning(false);
-    setFocusSeconds(0);
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    if (minutes > 0) return `${minutes}m`;
+    return `${remainingSeconds}s`;
   };
 
   const addTask = () => {
-    if (!newTask.trim()) return;
+    const title = newTask.trim();
+    if (!title) return;
 
     setTasks((current) => [
       ...current,
       {
         id: Date.now(),
-        title: newTask.trim(),
+        title,
         completed: false,
       },
     ]);
@@ -123,983 +127,332 @@ export default function Dashboard() {
   const toggleTask = (id: number) => {
     setTasks((current) =>
       current.map((task) =>
-        task.id === id
-          ? {
-              ...task,
-              completed: !task.completed,
-            }
-          : task
+        task.id === id ? { ...task, completed: !task.completed } : task
       )
     );
   };
 
-  const completedTasks = tasks.filter(
-    (task) => task.completed
-  ).length;
+  const completedTasks = tasks.filter((task) => task.completed).length;
 
   const productivity =
     tasks.length === 0
       ? 0
-      : Math.round(
-          (completedTasks / tasks.length) * 100
-        );
+      : Math.round((completedTasks / tasks.length) * 100);
 
   const openAI = () => {
-    if (!command.trim()) return;
+    const prompt = command.trim();
+    if (!prompt || isThinking) return;
 
     setIsThinking(true);
-
-    window.setTimeout(() => {
-      window.location.href = `/ai-assistant?prompt=${encodeURIComponent(
-        command.trim()
-      )}`;
-    }, 450);
-  };
-
-  const activateCommand = (text: string) => {
-    setCommand(text);
-    setShowCommand(true);
+    window.location.href = `/ai?prompt=${encodeURIComponent(prompt)}`;
   };
 
   return (
-    <main className="min-h-screen bg-[#030811] px-5 py-6 pl-24 text-white sm:px-7 sm:pl-24 lg:px-10 lg:pl-28">
+    <div className="min-h-screen bg-[#070707] p-4 font-sans text-white antialiased">
+      {/* Container Wrapper without Sidebar */}
+      <div className="mx-auto max-w-[1600px] overflow-hidden rounded-[32px] border border-white/10 bg-[#14131a] p-8 shadow-2xl">
+        {/* =========================================================
+            HEADER SECTION
+        ========================================================= */}
+        <header className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-white">
+              The stage is yours.
+            </h1>
+            <p className="mt-1 text-xs text-slate-400">
+              Everything you need, connected in one place.
+            </p>
+          </div>
 
-      <FloatingSidebar />
-
-      {/* BACKGROUND */}
-
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute left-[15%] top-[5%] h-[500px] w-[500px] rounded-full bg-cyan-500/[0.035] blur-[150px]" />
-        <div className="absolute right-[5%] top-[20%] h-[600px] w-[600px] rounded-full bg-blue-600/[0.04] blur-[170px]" />
-        <div className="absolute bottom-[-200px] left-[35%] h-[500px] w-[500px] rounded-full bg-violet-600/[0.025] blur-[150px]" />
-
-        <div
-          className="absolute inset-0 opacity-[0.025]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px)",
-            backgroundSize: "70px 70px",
-          }}
-        />
-      </div>
-
-      <div className="relative z-10 mx-auto max-w-[1600px]">
-
-        {/* HEADER */}
-
-        <section className="mb-6 rounded-[30px] border border-white/10 bg-[#08111e]/80 p-6 shadow-2xl backdrop-blur-2xl">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-
-            <div>
-              <div className="mb-3 flex items-center gap-2">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400 shadow-[0_0_18px_rgba(34,211,238,1)]" />
-
-                <span className="text-xs font-bold uppercase tracking-[0.3em] text-cyan-400">
-                  ZORA OS
-                </span>
-
-                <span className="ml-2 rounded-full border border-cyan-400/20 bg-cyan-400/[0.05] px-2 py-0.5 text-[9px] uppercase tracking-wider text-cyan-500">
-                  Online
-                </span>
-              </div>
-
-              <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-                The stage is yours.
-              </h1>
-
-              <p className="mt-2 text-sm text-slate-400">
-                Everything you need, connected in one place.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowCommand(true)}
-              className="group flex items-center gap-3 rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.07] px-5 py-3 text-sm font-semibold text-cyan-300 transition hover:border-cyan-400/40 hover:bg-cyan-400/[0.12]"
+          {/* Notifications & Profile */}
+          <div className="flex items-center gap-3">
+            <Link
+              href="/inbox"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white"
             >
-              <Sparkles
-                size={18}
-                className="transition group-hover:rotate-12"
-              />
+              <Inbox size={18} />
+            </Link>
+            <button className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white">
+              <Bell size={18} />
+            </button>
 
-              Ask Zora
+            <div className="ml-2 flex items-center gap-3 rounded-full border border-white/10 bg-white/5 p-1.5 pr-4">
+              <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-purple-400 to-pink-400 p-0.5">
+                <div className="h-full w-full rounded-full bg-slate-800" />
+              </div>
+              <div className="text-left text-xs">
+                <p className="font-medium text-white">Monobloc User</p>
+                <p className="text-[10px] text-slate-400">
+                  user@Monobloc.app
+                </p>
+              </div>
+            </div>
+          </div>
+        </header>
 
-              <span className="rounded-lg border border-white/10 px-2 py-1 text-[10px] text-slate-500">
-                ⌘ K
-              </span>
+        {/* =========================================================
+            ACTION BUTTONS & AI INPUT BAR
+        ========================================================= */}
+        <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-center">
+          <div className="flex items-center gap-2">
+            <button className="rounded-full bg-white px-5 py-2 text-xs font-semibold text-black transition hover:bg-slate-200">
+              Workspace
+            </button>
+            <button className="rounded-full border border-white/10 bg-white/5 px-5 py-2 text-xs font-medium text-slate-300 transition hover:bg-white/10">
+              Focus Mode
+            </button>
+            <button className="rounded-full border border-white/10 bg-white/5 px-5 py-2 text-xs font-medium text-slate-300 transition hover:bg-white/10">
+              Analytics
             </button>
           </div>
-        </section>
 
-        {/* STATS */}
-
-        <section className="mb-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
-
-          <Stat
-            icon={<CheckCircle2 size={19} />}
-            label="Tasks completed"
-            value={completedTasks.toString()}
-            href="/tasks"
-          />
-
-          <Stat
-            icon={<TrendingUp size={19} />}
-            label="Productivity"
-            value={`${productivity}%`}
-            href="/tasks"
-          />
-
-          <Stat
-            icon={<Target size={19} />}
-            label="Active goals"
-            value="—"
-            href="/goals"
-          />
-
-          <Link
-            href="/tutor"
-            className="group rounded-[26px] border border-white/10 bg-[#08111e]/75 p-5 backdrop-blur-xl transition hover:-translate-y-1 hover:border-cyan-400/20"
-          >
-            <div className="flex items-center justify-between">
-
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-400">
-                <Clock3 size={19} />
-              </div>
-
-              <ArrowRight
-                size={15}
-                className="text-slate-700 transition group-hover:translate-x-1 group-hover:text-cyan-400"
-              />
-            </div>
-
-            <p className="mt-5 text-2xl font-bold">
-              {formatFocusTime(focusSeconds)}
-            </p>
-
-            <p className="mt-1 text-xs text-slate-500">
-              Focus time
-            </p>
-          </Link>
-        </section>
-
-        {/* FOCUS */}
-
-        <section className="relative mb-6 overflow-hidden rounded-[30px] border border-cyan-400/10 bg-gradient-to-br from-[#0d2035] via-[#091522] to-[#050b13] p-6 shadow-2xl">
-
-          <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-cyan-400/10 blur-[100px]" />
-
-          <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-
-            <div className="flex items-center gap-4">
-
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-400/10">
-                <Timer
-                  size={25}
-                  className={
-                    timerRunning
-                      ? "animate-pulse text-cyan-400"
-                      : "text-slate-400"
-                  }
-                />
-              </div>
-
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.25em] text-cyan-400">
-                  Focus Protocol
-                </p>
-
-                <h2 className="mt-1 text-xl font-bold">
-                  {timerRunning
-                    ? "Zora is tracking your focus."
-                    : "Ready when you are."}
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  Study time is saved automatically.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-
-              <div className="min-w-[110px] text-center">
-                <p className="text-3xl font-bold">
-                  {formatFocusTime(focusSeconds)}
-                </p>
-
-                <p className="text-[10px] uppercase tracking-[0.2em] text-slate-600">
-                  total focus
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setTimerRunning((running) => !running)
-                }
-                className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-400 shadow-lg shadow-cyan-500/10 transition hover:scale-105"
-              >
-                {timerRunning ? (
-                  <Pause size={18} />
-                ) : (
-                  <Play size={18} className="ml-0.5" />
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={resetFocusTimer}
-                className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-slate-500 transition hover:bg-white/[0.08] hover:text-white"
-              >
-                <RotateCcw size={17} />
-              </button>
-            </div>
+          {/* AI Prompt Input Bar */}
+          <div className="relative w-full max-w-sm">
+            <Sparkles
+              size={16}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-400"
+            />
+            <input
+              type="text"
+              value={command}
+              onChange={(e) => setCommand(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && openAI()}
+              placeholder="Ask Monobloc anything..."
+              className="w-full rounded-full border border-white/10 bg-[#1c1a26] py-2.5 pl-10 pr-4 text-xs text-white placeholder-slate-500 outline-none focus:border-purple-500/50"
+            />
           </div>
-        </section>
+        </div>
 
-        {/* ZORA COMMAND CENTER */}
-
-        <section className="relative mb-6 min-h-[620px] overflow-hidden rounded-[36px] border border-cyan-400/20 bg-[#050d18] shadow-[0_0_100px_rgba(34,211,238,0.06)]">
-
-          {/* GRID */}
-
-          <div
-            className="pointer-events-none absolute inset-0 opacity-[0.07]"
-            style={{
-              backgroundImage:
-                "linear-gradient(rgba(34,211,238,.35) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,.35) 1px, transparent 1px)",
-              backgroundSize: "45px 45px",
-            }}
-          />
-
-          {/* AMBIENT GLOW */}
-
-          <div className="pointer-events-none absolute left-1/2 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-400/[0.06] blur-[120px]" />
-
-          {/* TOP HUD */}
-
-          <div className="absolute left-6 right-6 top-5 flex items-center justify-between">
-
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-400/20 bg-cyan-400/[0.05]">
-                <Cpu size={14} className="text-cyan-400" />
-              </div>
-
-              <div>
-                <p className="text-[9px] uppercase tracking-[0.3em] text-cyan-500">
-                  ZORA INTELLIGENCE
-                </p>
-
-                <p className="text-[10px] text-slate-600">
-                  Neural command interface
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 text-[9px] uppercase tracking-wider text-slate-600">
-
-              <span className="hidden sm:flex items-center gap-2">
-                <Activity size={12} className="text-cyan-500" />
-                Neural link active
-              </span>
-
-              <span className="flex items-center gap-2">
-                <ShieldCheck size={12} className="text-cyan-500" />
-                Secure
-              </span>
-            </div>
-          </div>
-
-          {/* CORNER HUD */}
-
-          <div className="absolute left-6 top-20 h-10 w-10 border-l border-t border-cyan-400/30" />
-          <div className="absolute right-6 top-20 h-10 w-10 border-r border-t border-cyan-400/30" />
-          <div className="absolute bottom-6 left-6 h-10 w-10 border-b border-l border-cyan-400/30" />
-          <div className="absolute bottom-6 right-6 h-10 w-10 border-b border-r border-cyan-400/30" />
-
-          {/* CENTER */}
-
-          <div className="relative z-10 flex min-h-[620px] flex-col items-center justify-center px-5 py-24">
-
-            {/* CORE */}
-
-            <div className="relative flex h-[280px] w-[280px] items-center justify-center sm:h-[330px] sm:w-[330px]">
-
-              {/* outer ring */}
-
-              <div className="absolute inset-0 rounded-full border border-cyan-400/10" />
-
-              <div className="absolute inset-4 rounded-full border border-cyan-400/10" />
-
-              {/* rotating ring */}
-
-              <div className="absolute inset-7 animate-[spin_18s_linear_infinite] rounded-full border border-dashed border-cyan-400/20" />
-
-              <div className="absolute inset-12 animate-[spin_12s_linear_infinite_reverse] rounded-full border border-blue-400/20" />
-
-              {/* orbital dots */}
-
-              <div className="absolute inset-0 animate-[spin_9s_linear_infinite]">
-                <span className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 rounded-full bg-cyan-300 shadow-[0_0_15px_rgba(34,211,238,1)]" />
-              </div>
-
-              <div className="absolute inset-0 animate-[spin_14s_linear_infinite_reverse]">
-                <span className="absolute bottom-[12%] right-[5%] h-1.5 w-1.5 rounded-full bg-blue-400 shadow-[0_0_12px_rgba(59,130,246,1)]" />
-              </div>
-
-              {/* radar */}
-
-              <div className="absolute inset-[58px] overflow-hidden rounded-full border border-cyan-400/20">
-                <div className="absolute left-1/2 top-1/2 h-1/2 w-1/2 origin-bottom-left animate-[spin_3s_linear_infinite] bg-gradient-to-tr from-cyan-400/20 to-transparent" />
-
-                <div
-                  className="absolute inset-0 opacity-20"
-                  style={{
-                    backgroundImage:
-                      "linear-gradient(90deg, transparent 49.5%, rgba(34,211,238,.7) 50%, transparent 50.5%), linear-gradient(0deg, transparent 49.5%, rgba(34,211,238,.7) 50%, transparent 50.5%)",
-                  }}
-                />
-              </div>
-
-              {/* core */}
-
-              <div className="relative flex h-[135px] w-[135px] items-center justify-center rounded-full border border-cyan-300/40 bg-[#061522] shadow-[0_0_45px_rgba(34,211,238,0.25),inset_0_0_40px_rgba(34,211,238,0.12)] sm:h-[155px] sm:w-[155px]">
-
-                <div className="absolute inset-3 animate-pulse rounded-full border border-cyan-400/20" />
-
-                <div className="absolute inset-8 rounded-full bg-cyan-400/10 blur-xl" />
-
-                <div className="relative flex flex-col items-center">
-                  <Sparkles
-                    size={34}
-                    className="text-cyan-300 drop-shadow-[0_0_15px_rgba(34,211,238,.8)]"
-                  />
-
-                  <span className="mt-2 text-[10px] font-bold uppercase tracking-[0.35em] text-cyan-400">
-                    ZORA
-                  </span>
-
-                  <span className="mt-1 text-[8px] uppercase tracking-widest text-slate-600">
-                    ONLINE
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* TITLE */}
-
-            <div className="mt-4 text-center">
-
-              <div className="mb-3 flex items-center justify-center gap-3">
-
-                <span className="h-px w-12 bg-gradient-to-r from-transparent to-cyan-400/40" />
-
-                <span className="text-[9px] uppercase tracking-[0.4em] text-cyan-500">
-                  Intelligence Core
+        {/* =========================================================
+            GRID ROW 1: STATS, AI CTA, QUICK TASKS, WORKSPACE
+        ========================================================= */}
+        <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-12">
+          {/* Total Focus & AI Decisions Card */}
+          <div className="space-y-6 xl:col-span-4">
+            {/* Focus Time Card */}
+            <div className="rounded-3xl border border-white/5 bg-[#1b1924] p-6">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-slate-400">
+                  Focus Time
                 </span>
-
-                <span className="h-px w-12 bg-gradient-to-l from-transparent to-cyan-400/40" />
+                <button
+                  onClick={() => setTimerRunning((prev) => !prev)}
+                  className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-slate-300 hover:bg-white/10"
+                >
+                  {timerRunning ? "Pause" : "Start"} <ChevronDown size={12} />
+                </button>
               </div>
-
-              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-                What do you need?
-              </h2>
-
-              <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-500">
-                Tell Zora what you're working on. Your tasks,
-                schedule, goals, notes and workspace are all
-                connected.
+              <p className="mt-4 text-3xl font-bold tracking-tight text-white">
+                {formatFocusTime(focusSeconds)}
               </p>
             </div>
 
-            {/* COMMAND INPUT */}
-
-            <div className="mt-7 w-full max-w-3xl">
-
-              <div className="group relative">
-
-                <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-cyan-400/30 via-blue-500/20 to-cyan-400/30 opacity-70 blur-[2px]" />
-
-                <div className="relative flex items-center rounded-2xl border border-white/10 bg-[#07111d]/95 p-2 shadow-2xl">
-
-                  <Command
-                    size={18}
-                    className="ml-3 shrink-0 text-cyan-500"
-                  />
-
-                  <input
-                    value={command}
-                    onChange={(e) =>
-                      setCommand(e.target.value)
-                    }
-                    onKeyDown={(e) => {
-                      if (
-                        e.key === "Enter" &&
-                        command.trim()
-                      ) {
-                        openAI();
-                      }
-                    }}
-                    placeholder="Talk to Zora..."
-                    className="min-w-0 flex-1 bg-transparent px-4 py-4 text-sm text-white outline-none placeholder:text-slate-700"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={openAI}
-                    disabled={!command.trim()}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 text-white shadow-[0_0_25px_rgba(34,211,238,.15)] transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-30"
-                  >
-                    <Send size={17} />
-                  </button>
-                </div>
-              </div>
-
-              {/* QUICK COMMANDS */}
-
-              <div className="mt-4 flex flex-wrap justify-center gap-2">
-
-                <QuickCommand
-                  icon={<CalendarDays size={12} />}
-                  text="Plan my day"
-                  onClick={() =>
-                    activateCommand(
-                      "Plan my day based on my tasks and schedule"
-                    )
-                  }
-                />
-
-                <QuickCommand
-                  icon={<CheckCircle2 size={12} />}
-                  text="Organize tasks"
-                  onClick={() =>
-                    activateCommand(
-                      "Help me organize my tasks"
-                    )
-                  }
-                />
-
-                <QuickCommand
-                  icon={<Brain size={12} />}
-                  text="Study plan"
-                  onClick={() =>
-                    activateCommand(
-                      "Create a study plan for me"
-                    )
-                  }
-                />
-
-                <QuickCommand
-                  icon={<Target size={12} />}
-                  text="Review goals"
-                  onClick={() =>
-                    activateCommand(
-                      "Review my goals and tell me what I should focus on"
-                    )
-                  }
-                />
-              </div>
-            </div>
-
-            {/* TELEMETRY */}
-
-            <div className="mt-7 grid w-full max-w-3xl grid-cols-2 gap-2 sm:grid-cols-4">
-
-              <Telemetry
-                label="CORE"
-                value="99.9%"
-              />
-
-              <Telemetry
-                label="STATUS"
-                value="READY"
-              />
-
-              <Telemetry
-                label="LATENCY"
-                value="12ms"
-              />
-
-              <Telemetry
-                label="LINK"
-                value="ACTIVE"
-              />
-            </div>
-
-            {/* WAVEFORM */}
-
-            <div className="mt-5 flex h-6 items-center justify-center gap-[3px] opacity-50">
-
-              {Array.from({ length: 42 }).map(
-                (_, index) => (
-                  <span
-                    key={index}
-                    className="w-[2px] rounded-full bg-cyan-400"
-                    style={{
-                      height: `${5 + ((index * 17) % 18)}px`,
-                      opacity:
-                        0.25 +
-                        ((index * 13) % 70) / 100,
-                    }}
-                  />
-                )
-              )}
+            {/* AI Decisions Banner */}
+            <div className="relative overflow-hidden rounded-3xl border border-white/5 bg-gradient-to-b from-[#251f33] to-[#181622] p-6 text-center">
+              <h3 className="text-sm font-semibold text-white">
+                Decisions Powered by Data
+              </h3>
+              <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
+                Move beyond guesswork with AI-driven productivity insights
+                tailored to your workflow.
+              </p>
+              <button
+                onClick={openAI}
+                className="mt-5 w-full rounded-full bg-gradient-to-r from-purple-500 to-pink-500 py-2.5 text-xs font-medium text-white shadow-lg shadow-purple-500/20 transition hover:opacity-90"
+              >
+                Explore AI Insights
+              </button>
             </div>
           </div>
-        </section>
 
-        {/* MAIN CONTENT */}
+          {/* Quick Task List */}
+          <div className="rounded-3xl border border-white/5 bg-[#1b1924] p-6 xl:col-span-4">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-white">Task List</h3>
+              <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] text-white">
+                {completedTasks}/{tasks.length} Done
+              </span>
+            </div>
 
-        <div className="grid gap-6 xl:grid-cols-[1.35fr_0.85fr]">
+            <div className="mb-3 flex gap-2">
+              <input
+                value={newTask}
+                onChange={(e) => setNewTask(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addTask()}
+                placeholder="Add a new task..."
+                className="w-full rounded-2xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-xs text-white placeholder-slate-600 outline-none focus:border-purple-500/50"
+              />
+            </div>
 
-          <div className="space-y-6">
-
-            {/* TASKS */}
-
-            <section className="rounded-[30px] border border-white/10 bg-[#08111e]/80 p-6 backdrop-blur-xl">
-
-              <div className="mb-5 flex items-center justify-between">
-
-                <div className="flex items-center gap-3">
-
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-400">
-                    <CheckCircle2 size={20} />
-                  </div>
-
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                      Today
-                    </p>
-
-                    <h2 className="text-xl font-bold">
-                      Tasks
-                    </h2>
-                  </div>
-                </div>
-
-                <Link
-                  href="/tasks"
-                  className="text-slate-500 transition hover:text-cyan-400"
-                >
-                  <ChevronRight size={20} />
-                </Link>
-              </div>
-
-              <div className="flex gap-2">
-
-                <input
-                  value={newTask}
-                  onChange={(e) =>
-                    setNewTask(e.target.value)
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") addTask();
-                  }}
-                  placeholder="Add a task..."
-                  className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30"
-                />
-
-                <button
-                  type="button"
-                  onClick={addTask}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-400 transition hover:scale-105"
-                >
-                  <Plus size={19} />
-                </button>
-              </div>
-
-              <div className="mt-4 space-y-2">
-
-                {tasks.length === 0 ? (
-                  <Link
-                    href="/tasks"
-                    className="block rounded-2xl border border-dashed border-white/10 p-7 text-center transition hover:border-cyan-400/20 hover:bg-white/[0.02]"
+            <div className="max-h-[220px] space-y-2.5 overflow-y-auto">
+              {tasks.length === 0 ? (
+                <p className="py-8 text-center text-xs text-slate-500">
+                  No active tasks. Add one above!
+                </p>
+              ) : (
+                tasks.map((task) => (
+                  <div
+                    key={task.id}
+                    onClick={() => toggleTask(task.id)}
+                    className="flex cursor-pointer items-center justify-between rounded-2xl border border-white/5 bg-white/[0.02] p-3 transition hover:bg-white/5"
                   >
-                    <CheckCircle2
-                      size={27}
-                      className="mx-auto mb-3 text-slate-700"
-                    />
-
-                    <p className="text-sm text-slate-400">
-                      No tasks yet.
-                    </p>
-
-                    <p className="mt-1 text-xs text-slate-600">
-                      Add one above or open Tasks.
-                    </p>
-                  </Link>
-                ) : (
-                  tasks.map((task) => (
-                    <button
-                      type="button"
-                      key={task.id}
-                      onClick={() =>
-                        toggleTask(task.id)
-                      }
-                      className="flex w-full items-center gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4 text-left transition hover:bg-white/[0.05]"
-                    >
+                    <div className="flex items-center gap-3">
                       <CheckCircle2
-                        size={19}
+                        size={16}
                         className={
-                          task.completed
-                            ? "text-cyan-400"
-                            : "text-slate-600"
+                          task.completed ? "text-purple-400" : "text-slate-600"
                         }
                       />
-
                       <span
-                        className={
+                        className={`text-xs ${
                           task.completed
-                            ? "text-sm text-slate-600 line-through"
-                            : "text-sm text-slate-300"
-                        }
+                            ? "text-slate-500 line-through"
+                            : "text-white"
+                        }`}
                       >
                         {task.title}
                       </span>
-                    </button>
-                  ))
-                )}
-              </div>
-
-              <Link
-                href="/tasks"
-                className="mt-5 flex items-center gap-2 text-xs font-semibold text-cyan-400"
-              >
-                Open full task manager
-                <ArrowRight size={14} />
-              </Link>
-            </section>
-
-            {/* DOCUMENTS */}
-
-            <section>
-              <DocumentsCard />
-            </section>
-
-            {/* TOOLS */}
-
-            <section>
-
-              <div className="mb-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                  Workspace
-                </p>
-
-                <h2 className="mt-1 text-xl font-bold">
-                  Everything connected
-                </h2>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-
-                <Tool
-                  href="/notes"
-                  icon={<FileText size={20} />}
-                  title="Notes"
-                  description="Capture ideas"
-                />
-
-                <Tool
-                  href="/goals"
-                  icon={<Target size={20} />}
-                  title="Goals"
-                  description="Track progress"
-                />
-
-                <Tool
-                  href="/tutor"
-                  icon={<GraduationCap size={20} />}
-                  title="Tutor"
-                  description="Learn"
-                />
-
-                <Tool
-                  href="/business-helper"
-                  icon={<Building2 size={20} />}
-                  title="Business"
-                  description="Operate"
-                />
-              </div>
-            </section>
-          </div>
-
-          {/* RIGHT */}
-
-          <div className="space-y-6">
-
-            <DashboardLink
-              href="/calendar"
-              icon={<CalendarDays size={20} />}
-              label="Schedule"
-              title="Calendar"
-              description="Schedule and manage your events."
-            />
-
-            <Link
-              href="/finance"
-              className="group block rounded-[30px] border border-white/10 bg-[#08111e]/80 p-6 backdrop-blur-xl transition hover:-translate-y-1 hover:border-cyan-400/20"
-            >
-
-              <div className="flex items-center justify-between">
-
-                <div className="flex items-center gap-3">
-
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-400/10 text-cyan-400">
-                    <Wallet size={20} />
-                  </div>
-
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                      Finance
-                    </p>
-
-                    <h2 className="font-bold">
-                      Money overview
-                    </h2>
-                  </div>
-                </div>
-
-                <ArrowRight
-                  size={18}
-                  className="text-slate-600 transition group-hover:translate-x-1 group-hover:text-cyan-400"
-                />
-              </div>
-
-              <div className="mt-5">
-                <p className="text-xs text-slate-600">
-                  Current balance
-                </p>
-
-                <p className="mt-1 text-3xl font-bold">
-                  ₹0
-                </p>
-
-                <p className="mt-3 text-xs text-slate-600">
-                  Open Finance to manage your transactions.
-                </p>
-              </div>
-            </Link>
-
-            <DashboardLink
-              href="/goals"
-              icon={<Target size={20} />}
-              label="Progress"
-              title="Goals"
-              description="Create and track your goals."
-            />
-
-            <DashboardLink
-              href="/ai-assistant"
-              icon={<Brain size={20} />}
-              label="Intelligence"
-              title="Zora AI"
-              description="Open the full AI workspace."
-            />
-
-          </div>
-        </div>
-      </div>
-
-      {/* COMMAND OVERLAY */}
-
-      {showCommand && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-[#02060c]/75 px-5 backdrop-blur-xl"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowCommand(false);
-            }
-          }}
-        >
-
-          <div className="relative w-full max-w-3xl overflow-hidden rounded-[32px] border border-cyan-400/20 bg-[#06101c] shadow-[0_0_100px_rgba(34,211,238,0.12)]">
-
-            <div className="pointer-events-none absolute inset-0 opacity-[0.06]">
-              <div
-                className="h-full w-full"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(rgba(34,211,238,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(34,211,238,.5) 1px, transparent 1px)",
-                  backgroundSize: "40px 40px",
-                }}
-              />
-            </div>
-
-            <div className="relative p-6 sm:p-8">
-
-              <div className="mb-7 flex items-center justify-between">
-
-                <div className="flex items-center gap-4">
-
-                  <div className="relative flex h-14 w-14 items-center justify-center rounded-full border border-cyan-400/30 bg-cyan-400/[0.06]">
-
-                    <div className="absolute inset-1 animate-pulse rounded-full border border-cyan-400/20" />
-
-                    <Sparkles
-                      size={22}
-                      className="text-cyan-300"
-                    />
-                  </div>
-
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-cyan-400">
-                      ZORA CORE
-                    </p>
-
-                    <h2 className="mt-1 text-xl font-bold">
-                      Command Interface
-                    </h2>
-
-                    <div className="mt-1 flex items-center gap-2">
-                      <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,1)]" />
-                      <span className="text-[10px] uppercase tracking-wider text-slate-600">
-                        Ready
-                      </span>
                     </div>
                   </div>
-                </div>
+                ))
+              )}
+            </div>
+          </div>
 
+          {/* Workspace Overview */}
+          <div className="rounded-3xl border border-white/5 bg-[#1b1924] p-6 xl:col-span-4">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-white">Workspace</h3>
+              <Link
+                href="/tasks"
+                className="flex items-center gap-1 text-xs text-slate-400 hover:text-white"
+              >
+                See all <ArrowUpRight size={12} />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <MetricCard
+                title="Completed"
+                value={completedTasks.toString()}
+                subtext="Tasks total"
+              />
+              <MetricCard
+                title="Productivity"
+                value={`${productivity}%`}
+                subtext="Completion rate"
+              />
+              <MetricCard
+                title="Focus Time"
+                value={formatFocusTime(focusSeconds)}
+                subtext="Total session"
+              />
+              <MetricCard
+                title="Active Goals"
+                value="4"
+                subtext="In progress"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* =========================================================
+            GRID ROW 2: PERFORMANCE / PRODUCTIVITY CHART
+        ========================================================= */}
+        <div className="rounded-3xl border border-white/5 bg-[#1b1924] p-6">
+          <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <h3 className="text-sm font-semibold text-white">
+              Productivity Performance
+            </h3>
+
+            <div className="flex rounded-full border border-white/5 bg-[#14131a] p-1">
+              {["1D", "1W", "1M", "6M", "1Y"].map((item) => (
                 <button
-                  type="button"
-                  onClick={() => setShowCommand(false)}
-                  className="rounded-xl border border-white/5 p-2 text-slate-600 transition hover:bg-white/5 hover:text-white"
+                  key={item}
+                  onClick={() => setTimeframe(item)}
+                  className={`rounded-full px-3 py-1 text-[11px] font-medium transition ${
+                    timeframe === item
+                      ? "bg-white/10 text-white"
+                      : "text-slate-500 hover:text-slate-300"
+                  }`}
                 >
-                  <X size={18} />
+                  {item}
                 </button>
-              </div>
+              ))}
+            </div>
+          </div>
 
-              <div className="relative">
-
-                <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-cyan-400/20 to-blue-500/20 blur-md" />
-
-                <div className="relative flex items-center rounded-2xl border border-cyan-400/20 bg-[#030b14] p-2">
-
-                  <Radio
-                    size={18}
-                    className="ml-4 text-cyan-400"
-                  />
-
-                  <input
-                    autoFocus
-                    value={command}
-                    onChange={(e) =>
-                      setCommand(e.target.value)
-                    }
-                    onKeyDown={(e) => {
-                      if (
-                        e.key === "Enter" &&
-                        command.trim()
-                      ) {
-                        openAI();
-                      }
-                    }}
-                    placeholder="What can I do for you?"
-                    className="min-w-0 flex-1 bg-transparent px-4 py-5 text-sm text-white outline-none placeholder:text-slate-700"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={openAI}
-                    disabled={
-                      !command.trim() || isThinking
-                    }
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 transition hover:scale-105 disabled:opacity-40"
-                  >
-                    {isThinking ? (
-                      <Activity
-                        size={18}
-                        className="animate-pulse"
-                      />
-                    ) : (
-                      <Send size={18} />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-7">
-
-                <p className="mb-3 text-[9px] font-bold uppercase tracking-[0.25em] text-slate-600">
-                  Suggested commands
-                </p>
-
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-
-                  <CommandSuggestion
-                    icon={<CalendarDays size={15} />}
-                    title="Plan my day"
-                    description="Build a schedule around my priorities"
-                    onClick={() =>
-                      setCommand(
-                        "Plan my day around my priorities"
-                      )
-                    }
-                  />
-
-                  <CommandSuggestion
-                    icon={<CheckCircle2 size={15} />}
-                    title="Organize my tasks"
-                    description="Help me decide what to work on"
-                    onClick={() =>
-                      setCommand(
-                        "Organize my tasks and tell me what to prioritize"
-                      )
-                    }
-                  />
-
-                  <CommandSuggestion
-                    icon={<Brain size={15} />}
-                    title="Create a study plan"
-                    description="Build a focused study schedule"
-                    onClick={() =>
-                      setCommand(
-                        "Create a study plan for me"
-                      )
-                    }
-                  />
-
-                  <CommandSuggestion
-                    icon={<Target size={15} />}
-                    title="Review my goals"
-                    description="Tell me what deserves attention"
-                    onClick={() =>
-                      setCommand(
-                        "Review my goals and tell me what I should focus on"
-                      )
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-white/5 pt-5">
-
-                <div className="flex items-center gap-4 text-[9px] uppercase tracking-wider text-slate-700">
-
-                  <span className="flex items-center gap-2">
-                    <ShieldCheck size={12} />
-                    Secure
-                  </span>
-
-                  <span className="flex items-center gap-2">
-                    <Cpu size={12} />
-                    Core active
-                  </span>
-
-                  <span className="hidden sm:flex items-center gap-2">
-                    <Zap size={12} />
-                    Low latency
-                  </span>
-                </div>
-
-                <span className="font-mono text-[9px] text-slate-700">
-                  ZORA//CMD_01
+          {/* Productivity Graph */}
+          <div className="relative h-52 w-full">
+            <div className="absolute left-[46%] top-4 z-10 -translate-x-1/2 rounded-xl border border-white/10 bg-[#252233] p-2.5 text-center shadow-xl">
+              <p className="text-[10px] text-slate-400">1st Jun 2026</p>
+              <div className="mt-1 flex items-center gap-2">
+                <span className="text-sm font-bold text-white">88% Peak</span>
+                <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-medium text-emerald-400">
+                  +35%
                 </span>
               </div>
             </div>
+
+            <svg
+              className="h-full w-full"
+              viewBox="0 0 1000 200"
+              preserveAspectRatio="none"
+            >
+              <defs>
+                <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#a855f7" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="#a855f7" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M 0,50 Q 100,140 200,90 T 400,100 T 500,130 T 600,70 T 800,110 T 1000,90 L 1000,200 L 0,200 Z"
+                fill="url(#chartGradient)"
+              />
+              <path
+                d="M 0,50 Q 100,140 200,90 T 400,100 T 500,130 T 600,70 T 800,110 T 1000,90"
+                fill="none"
+                stroke="#c084fc"
+                strokeWidth="2.5"
+              />
+              <circle
+                cx="500"
+                cy="130"
+                r="5"
+                fill="#f472b6"
+                stroke="#ffffff"
+                strokeWidth="2"
+              />
+              <line
+                x1="500"
+                y1="130"
+                x2="500"
+                y2="200"
+                stroke="#f472b6"
+                strokeDasharray="3 3"
+                opacity="0.6"
+              />
+            </svg>
+
+            <div className="absolute left-0 top-0 flex h-full flex-col justify-between text-[10px] text-slate-600">
+              <span>100%</span>
+              <span>75%</span>
+              <span>50%</span>
+              <span>25%</span>
+              <span>0%</span>
+            </div>
+          </div>
+
+          <div className="mt-4 flex justify-between px-6 text-[11px] text-slate-500">
+            {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map(
+              (m) => (
+                <span key={m}>{m}</span>
+              )
+            )}
           </div>
         </div>
-      )}
-    </main>
+      </div>
+    </div>
   );
 }
 
@@ -1107,221 +460,20 @@ export default function Dashboard() {
    COMPONENTS
 ========================================================= */
 
-function Telemetry({
-  label,
+function MetricCard({
+  title,
   value,
+  subtext,
 }: {
-  label: string;
+  title: string;
   value: string;
+  subtext: string;
 }) {
   return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.025] px-3 py-2 text-center">
-      <p className="text-[8px] uppercase tracking-[0.2em] text-slate-700">
-        {label}
-      </p>
-
-      <p className="mt-1 font-mono text-[10px] font-semibold text-cyan-500/80">
-        {value}
-      </p>
+    <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-3.5 transition hover:bg-white/5">
+      <p className="text-[11px] font-medium text-slate-400">{title}</p>
+      <p className="mt-1 text-lg font-bold text-white">{value}</p>
+      <p className="mt-1 text-[10px] text-slate-500">{subtext}</p>
     </div>
-  );
-}
-
-function QuickCommand({
-  icon,
-  text,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  text: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.025] px-3 py-2 text-[10px] text-slate-500 transition hover:border-cyan-400/20 hover:bg-cyan-400/[0.05] hover:text-cyan-300"
-    >
-      {icon}
-      {text}
-    </button>
-  );
-}
-
-function CommandSuggestion({
-  icon,
-  title,
-  description,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4 text-left transition hover:border-cyan-400/20 hover:bg-cyan-400/[0.04]"
-    >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-400/[0.06] text-cyan-500 transition group-hover:bg-cyan-400/10 group-hover:text-cyan-300">
-        {icon}
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold text-slate-300">
-          {title}
-        </p>
-
-        <p className="mt-1 truncate text-[10px] text-slate-600">
-          {description}
-        </p>
-      </div>
-
-      <ArrowRight
-        size={13}
-        className="text-slate-700 transition group-hover:translate-x-1 group-hover:text-cyan-400"
-      />
-    </button>
-  );
-}
-
-function DashboardLink({
-  href,
-  icon,
-  label,
-  title,
-  description,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  label: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group block rounded-[30px] border border-white/10 bg-[#08111e]/80 p-6 backdrop-blur-xl transition hover:-translate-y-1 hover:border-cyan-400/20"
-    >
-      <div className="flex items-center justify-between">
-
-        <div className="flex items-center gap-3">
-
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-400/10 text-cyan-400">
-            {icon}
-          </div>
-
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-              {label}
-            </p>
-
-            <h2 className="font-bold">
-              {title}
-            </h2>
-          </div>
-        </div>
-
-        <ArrowRight
-          size={18}
-          className="text-slate-600 transition group-hover:translate-x-1 group-hover:text-cyan-400"
-        />
-      </div>
-
-      <div className="mt-5 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-6 text-center">
-
-        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.03] text-slate-700">
-          {icon}
-        </div>
-
-        <p className="text-sm text-slate-400">
-          Open {title}
-        </p>
-
-        <p className="mt-1 text-xs text-slate-600">
-          {description}
-        </p>
-      </div>
-    </Link>
-  );
-}
-
-function Stat({
-  icon,
-  label,
-  value,
-  href,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  href: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group rounded-[26px] border border-white/10 bg-[#08111e]/75 p-5 backdrop-blur-xl transition hover:-translate-y-1 hover:border-cyan-400/20"
-    >
-      <div className="flex items-center justify-between">
-
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-400">
-          {icon}
-        </div>
-
-        <ArrowRight
-          size={15}
-          className="text-slate-700 transition group-hover:translate-x-1 group-hover:text-cyan-400"
-        />
-      </div>
-
-      <p className="mt-5 text-2xl font-bold">
-        {value}
-      </p>
-
-      <p className="mt-1 text-xs text-slate-500">
-        {label}
-      </p>
-    </Link>
-  );
-}
-
-function Tool({
-  href,
-  icon,
-  title,
-  description,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="group rounded-2xl border border-white/10 bg-[#08111e]/70 p-4 backdrop-blur-xl transition hover:-translate-y-1 hover:border-cyan-400/20"
-    >
-      <div className="flex items-center justify-between">
-
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-400">
-          {icon}
-        </div>
-
-        <ArrowRight
-          size={14}
-          className="text-slate-700 transition group-hover:translate-x-1 group-hover:text-cyan-400"
-        />
-      </div>
-
-      <p className="mt-4 text-sm font-semibold">
-        {title}
-      </p>
-
-      <p className="mt-1 text-xs text-slate-600">
-        {description}
-      </p>
-    </Link>
   );
 }

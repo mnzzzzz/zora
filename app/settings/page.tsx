@@ -45,7 +45,7 @@ export default function SettingsPage() {
 
   // Load saved settings
   useEffect(() => {
-    const savedData = localStorage.getItem("zora-settings");
+    const savedData = localStorage.getItem("Monobloctings");
 
     if (savedData) {
       try {
@@ -73,7 +73,7 @@ export default function SettingsPage() {
 
   function saveSettings() {
     localStorage.setItem(
-      "zora-settings",
+      "Monobloctings",
       JSON.stringify(settings)
     );
 
@@ -101,7 +101,7 @@ export default function SettingsPage() {
               </div>
 
               <span className="text-sm font-medium uppercase tracking-[0.2em] text-cyan-400">
-                Zora
+                Monobloc
               </span>
             </div>
 
@@ -110,7 +110,7 @@ export default function SettingsPage() {
             </h1>
 
             <p className="mt-2 text-gray-400">
-              Customize your Zora experience.
+              Customize your Monobloc experience.
             </p>
           </div>
 
@@ -218,7 +218,7 @@ export default function SettingsPage() {
                 </h2>
 
                 <p className="text-sm text-gray-400">
-                  Control how Zora keeps you updated.
+                  Control how Monobloc keeps you updated.
                 </p>
               </div>
 
@@ -229,7 +229,7 @@ export default function SettingsPage() {
               <ToggleRow
                 icon={<Bell size={18} />}
                 title="Notifications"
-                description="Allow Zora to send notifications."
+                description="Allow Monobloc to send notifications."
                 enabled={settings.notifications}
                 onChange={(value) =>
                   updateSetting("notifications", value)
@@ -280,7 +280,7 @@ export default function SettingsPage() {
                 </h2>
 
                 <p className="text-sm text-gray-400">
-                  Choose how Zora looks.
+                  Choose how Monobloc looks.
                 </p>
               </div>
 
@@ -345,7 +345,7 @@ export default function SettingsPage() {
             <ToggleRow
               icon={<Lock size={18} />}
               title="Show activity"
-              description="Allow your activity to appear on your Zora dashboard."
+              description="Allow your activity to appear on your Monoblochboard."
               enabled={settings.showActivity}
               onChange={(value) =>
                 updateSetting("showActivity", value)

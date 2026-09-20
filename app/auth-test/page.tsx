@@ -65,7 +65,7 @@ export default function AuthTestPage() {
       return;
     }
 
-    setMessage("Signed in. Creating your Zora profile...");
+    setMessage("Signed in. Creating your Monobloc...");
 
     const cleanUsername = username
       .trim()
@@ -119,7 +119,7 @@ export default function AuthTestPage() {
     }
 
     setMessage(
-      "Zora profile created successfully 🚀"
+      "Monoblocfile created successfully 🚀"
     );
   };
 
@@ -147,7 +147,7 @@ export default function AuthTestPage() {
       return;
     }
 
-    setMessage("Creating Zora profile...");
+    setMessage("Creating Monoblocfile...");
 
     const { error } = await supabase
       .from("profiles")
@@ -180,7 +180,7 @@ export default function AuthTestPage() {
     }
 
     setMessage(
-      "Zora profile created successfully 🚀"
+      "Monobloc profile created successfully 🚀"
     );
   };
 
@@ -242,15 +242,15 @@ export default function AuthTestPage() {
       <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#0b1525] p-6 shadow-2xl">
         <div className="mb-6">
           <p className="text-xs font-bold uppercase tracking-[0.25em] text-cyan-400">
-            ZORA / PROFILE TEST
+            Monobloc / PROFILE TEST
           </p>
 
           <h1 className="mt-2 text-2xl font-bold">
-            Zora Account
+            Monobloc Account
           </h1>
 
           <p className="mt-2 text-sm text-slate-500">
-            Create and test your Zora profile.
+            Create and test your Monobloc profile.
           </p>
         </div>
 
@@ -315,7 +315,7 @@ export default function AuthTestPage() {
             onClick={createProfile}
             className="w-full rounded-xl border border-cyan-400/20 bg-cyan-400/[0.05] py-3 text-sm font-semibold text-cyan-300"
           >
-            Create Zora Profile
+            Create Monobloc Profile
           </button>
 
           <div className="grid grid-cols-2 gap-3">

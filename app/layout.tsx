@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import ZoraBackground from "@/components/ZoraBackground";
+import MonoblocBackground from "@/components/MonoblocBackground";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Zora",
+  title: "Monobloc",
   description: "Your AI Operating System",
 };
 
@@ -15,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-[#070B14] text-white antialiased">
-        <ZoraBackground />
+        <MonoblocBackground />
         {children}
       </body>
     </html>

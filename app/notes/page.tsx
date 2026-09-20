@@ -1,59 +1,57 @@
 "use client";
 
-import {
-  Brain,
-  Search,
-  Plus,
-  Trash2,
-  Pin,
-  PinOff,
-  Save,
-  X,
-  Command,
-  Sparkles,
-  FileText,
-  Clock3,
-  ChevronRight,
-  Cpu,
-} from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import FloatingSidebar from "@/components/floatingsidebar";
 
+import {
+  ArrowRight,
+  Bell,
+  BookOpen,
+  Check,
+  FileText,
+  Loader2,
+  Plus,
+  Search,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
+
 type Note = {
-  id: string;
+  id: number;
   title: string;
   content: string;
-  pinned: boolean;
-  createdAt: string;
-  updatedAt: string;
 };
 
-export default function NotesPage() {
-  const searchRef = useRef<HTMLInputElement>(null);
+const STORAGE_KEY = "polaris-notes";
 
+export default function NotesPage() {
   const [notes, setNotes] = useState<Note[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedNoteId, setSelectedNoteId] =
+    useState<number | null>(null);
+
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
 
   const [search, setSearch] = useState("");
-  const [editingTitle, setEditingTitle] = useState("");
-  const [editingContent, setEditingContent] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] =
+    useState(false);
 
-  const [saved, setSaved] = useState(false);
-
-  /* =========================================
-     LOAD NOTES
-  ========================================= */
-
+  /*
+   * LOAD NOTES
+   */
   useEffect(() => {
-    const stored = localStorage.getItem("zora-notes");
-
-    if (!stored) {
-      setNotes([]);
-      return;
-    }
-
     try {
-      const parsed = JSON.parse(stored);
+      const saved = localStorage.getItem(STORAGE_KEY);
+
+      if (!saved) {
+        setNotes([]);
+        return;
+      }
+
+      const parsed = JSON.parse(saved);
 
       if (Array.isArray(parsed)) {
         setNotes(parsed);
@@ -63,764 +61,842 @@ export default function NotesPage() {
     }
   }, []);
 
-  /* =========================================
-     SAVE NOTES TO STORAGE
-  ========================================= */
-
+  /*
+   * LIVE SYNC WITH OTHER Monobloc PAGES
+   */
   useEffect(() => {
-    localStorage.setItem("zora-notes", JSON.stringify(notes));
-  }, [notes]);
+    const syncNotes = () => {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
 
-  /* =========================================
-     KEYBOARD SHORTCUTS
-  ========================================= */
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const modifier = event.ctrlKey || event.metaKey;
-
-      if (modifier && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        searchRef.current?.focus();
-      }
-
-      if (modifier && event.key.toLowerCase() === "s") {
-        event.preventDefault();
-
-        if (selectedId) {
-          saveCurrentNote();
+        if (!saved) {
+          setNotes([]);
+          return;
         }
+
+        const parsed = JSON.parse(saved);
+
+        if (Array.isArray(parsed)) {
+          setNotes(parsed);
+        }
+      } catch {
+        setNotes([]);
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("storage", syncNotes);
+    window.addEventListener("focus", syncNotes);
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("storage", syncNotes);
+      window.removeEventListener("focus", syncNotes);
     };
-  });
+  }, []);
 
-  /* =========================================
-     SELECTED NOTE
-  ========================================= */
+  /*
+   * SAVE NOTES
+   */
+  useEffect(() => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(notes)
+    );
+  }, [notes]);
 
-  const selectedNote = notes.find(
-    (note) => note.id === selectedId
-  );
-
-  /* =========================================
-     FILTER NOTES
-  ========================================= */
-
+  /*
+   * FILTER
+   */
   const filteredNotes = useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    if (!query) {
-      return [...notes].sort(
-        (a, b) =>
-          Number(b.pinned) - Number(a.pinned) ||
-          new Date(b.updatedAt).getTime() -
-            new Date(a.updatedAt).getTime()
-      );
-    }
+    if (!query) return notes;
 
-    return notes
-      .filter(
-        (note) =>
-          note.title.toLowerCase().includes(query) ||
-          note.content.toLowerCase().includes(query)
-      )
-      .sort(
-        (a, b) =>
-          new Date(b.updatedAt).getTime() -
-          new Date(a.updatedAt).getTime()
-      );
+    return notes.filter(
+      (note) =>
+        note.title.toLowerCase().includes(query) ||
+        note.content.toLowerCase().includes(query)
+    );
   }, [notes, search]);
 
-  /* =========================================
-     CREATE NOTE
-  ========================================= */
+  /*
+   * SELECTED NOTE
+   */
+  const selectedNote = notes.find(
+    (note) => note.id === selectedNoteId
+  );
 
-  const createNote = () => {
-    const now = new Date().toISOString();
-
-    const note: Note = {
-      id: crypto.randomUUID(),
+  /*
+   * NEW NOTE
+   */
+  const createNewNote = () => {
+    const newNote: Note = {
+      id: Date.now(),
       title: "",
       content: "",
-      pinned: false,
-      createdAt: now,
-      updatedAt: now,
     };
 
-    setNotes((current) => [note, ...current]);
-    setSelectedId(note.id);
+    setNotes((current) => [
+      newNote,
+      ...current,
+    ]);
 
-    setEditingTitle("");
-    setEditingContent("");
-
+    setSelectedNoteId(newNote.id);
+    setTitle("");
+    setContent("");
     setSearch("");
   };
 
-  /* =========================================
-     OPEN NOTE
-  ========================================= */
-
-  const openNote = (note: Note) => {
-    setSelectedId(note.id);
-    setEditingTitle(note.title);
-    setEditingContent(note.content);
-    setSaved(false);
+  /*
+   * SELECT NOTE
+   */
+  const selectNote = (note: Note) => {
+    setSelectedNoteId(note.id);
+    setTitle(note.title);
+    setContent(note.content);
+    setShowDeleteConfirm(false);
   };
 
-  /* =========================================
-     SAVE CURRENT NOTE
-  ========================================= */
+  /*
+   * SAVE CURRENT NOTE
+   */
+  const saveNote = () => {
+    if (!selectedNoteId) return;
 
-  const saveCurrentNote = () => {
-    if (!selectedId) return;
-
-    const now = new Date().toISOString();
+    setIsSaving(true);
 
     setNotes((current) =>
       current.map((note) =>
-        note.id === selectedId
+        note.id === selectedNoteId
           ? {
               ...note,
-              title: editingTitle,
-              content: editingContent,
-              updatedAt: now,
+              title:
+                title.trim() || "Untitled Note",
+              content,
             }
           : note
       )
     );
 
-    setSaved(true);
-
-    setTimeout(() => {
-      setSaved(false);
-    }, 1500);
+    window.setTimeout(() => {
+      setIsSaving(false);
+    }, 350);
   };
 
-  /* =========================================
-     DELETE NOTE
-  ========================================= */
+  /*
+   * DELETE NOTE
+   */
+  const deleteCurrentNote = () => {
+    if (!selectedNoteId) return;
 
-  const deleteNote = (id: string) => {
     setNotes((current) =>
-      current.filter((note) => note.id !== id)
-    );
-
-    if (selectedId === id) {
-      setSelectedId(null);
-      setEditingTitle("");
-      setEditingContent("");
-    }
-  };
-
-  /* =========================================
-     PIN NOTE
-  ========================================= */
-
-  const togglePin = (id: string) => {
-    setNotes((current) =>
-      current.map((note) =>
-        note.id === id
-          ? {
-              ...note,
-              pinned: !note.pinned,
-              updatedAt: new Date().toISOString(),
-            }
-          : note
+      current.filter(
+        (note) => note.id !== selectedNoteId
       )
     );
+
+    setSelectedNoteId(null);
+    setTitle("");
+    setContent("");
+    setShowDeleteConfirm(false);
   };
 
-  /* =========================================
-     CLOSE EDITOR
-  ========================================= */
-
-  const closeEditor = () => {
-    setSelectedId(null);
-    setEditingTitle("");
-    setEditingContent("");
-    setSaved(false);
+  /*
+   * EMPTY EDITOR
+   */
+  const clearEditor = () => {
+    setSelectedNoteId(null);
+    setTitle("");
+    setContent("");
+    setShowDeleteConfirm(false);
   };
 
-  /* =========================================
-     FORMAT DATE
-  ========================================= */
+  /*
+   * KEYBOARD SAVE
+   */
+  useEffect(() => {
+    const handleKeyboard = (event: KeyboardEvent) => {
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toLowerCase() === "s"
+      ) {
+        event.preventDefault();
+        saveNote();
+      }
 
-  const formatDate = (value: string) => {
-    return new Date(value).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
+      if (event.key === "Escape") {
+        setShowDeleteConfirm(false);
+      }
+    };
 
-  const formatTime = (value: string) => {
-    return new Date(value).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+    window.addEventListener(
+      "keydown",
+      handleKeyboard
+    );
 
-  /* =========================================
-     MAIN UI
-  ========================================= */
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleKeyboard
+      );
+    };
+  });
 
   return (
-    <div className="relative min-h-screen bg-[#050b16] text-white">
-
-      {/* =========================================
-          EXISTING ZORA FLOATING SIDEBAR
-      ========================================= */}
-
+    <div className="relative min-h-screen bg-[#070707] p-4 font-sans text-white antialiased">
       <FloatingSidebar />
 
-      {/* =========================================
-          PAGE CONTENT
-          
-          ml-24 creates the permanent safe zone
-          for the floating sidebar.
-      ========================================= */}
+      {/* MAIN WORKSPACE */}
+      <div className="mx-auto max-w-[1600px] overflow-hidden rounded-[32px] border border-white/10 bg-[#14131a] p-8 pl-20 shadow-2xl sm:pl-24">
+        {/* =====================================================
+            HEADER
+        ===================================================== */}
 
-      <main className="relative min-h-screen overflow-hidden px-5 py-6 md:ml-24 md:px-8">
-
-        {/* =========================================
-            AMBIENT JARVIS BACKGROUND
-        ========================================= */}
-
-        <div className="pointer-events-none fixed inset-0 overflow-hidden">
-
-          <div className="absolute left-[8%] top-[10%] h-72 w-72 rounded-full bg-cyan-500/10 blur-[130px]" />
-
-          <div className="absolute right-[5%] top-[20%] h-96 w-96 rounded-full bg-blue-600/10 blur-[150px]" />
-
-          <div className="absolute bottom-[0%] left-[35%] h-80 w-80 rounded-full bg-violet-600/10 blur-[150px]" />
-
-          <div
-            className="absolute inset-0 opacity-[0.035]"
-            style={{
-              backgroundImage:
-                "linear-gradient(rgba(255,255,255,.35) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.35) 1px, transparent 1px)",
-              backgroundSize: "60px 60px",
-            }}
-          />
-
-        </div>
-
-        {/* =========================================
-            CONTENT
-        ========================================= */}
-
-        <div className="relative z-10 mx-auto max-w-[1500px]">
-
-          {/* =========================================
-              HEADER
-          ========================================= */}
-
-          <header className="mb-6 overflow-hidden rounded-[28px] border border-white/10 bg-[#0b1525]/80 backdrop-blur-2xl">
-
-            <div className="flex flex-col gap-5 p-6 lg:flex-row lg:items-center lg:justify-between">
-
-              <div>
-
-                <div className="mb-3 flex items-center gap-3">
-
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-400/20 bg-cyan-400/10 shadow-[0_0_25px_rgba(34,211,238,.08)]">
-
-                    <Brain
-                      size={22}
-                      className="text-cyan-300"
-                    />
-
-                  </div>
-
-                  <div>
-
-                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">
-                      ZORA / MEMORY CORE
-                    </p>
-
-                    <p className="mt-1 text-xs text-slate-600">
-                      Personal knowledge system
-                    </p>
-
-                  </div>
-
-                </div>
-
-                <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-                  Notes
-                </h1>
-
-                <p className="mt-1 text-sm text-slate-400">
-                  Capture ideas. Store thoughts. Build your second brain.
-                </p>
-
+        <header className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-center">
+          <div>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-purple-500/20 bg-purple-500/10 text-purple-400">
+                <FileText size={20} />
               </div>
 
-              <div className="flex items-center gap-3">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-purple-400">
+                  Monobloc / NOTES
+                </p>
 
-                <div className="flex h-12 w-full items-center rounded-2xl border border-white/10 bg-white/[0.035] px-4 transition focus-within:border-cyan-400/30 lg:w-[300px]">
+                <p className="mt-0.5 text-[10px] text-slate-500">
+                  Personal knowledge workspace
+                </p>
+              </div>
+            </div>
 
+            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white">
+              Notes
+            </h1>
+
+            <p className="mt-1 text-xs text-slate-400">
+              Capture ideas, thoughts, plans, and everything worth remembering.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* NOTIFICATION */}
+            <button
+              type="button"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white"
+              aria-label="Notifications"
+            >
+              <Bell size={18} />
+            </button>
+
+            {/* NEW NOTE */}
+            <button
+              type="button"
+              onClick={createNewNote}
+              className="flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:opacity-90"
+            >
+              <Plus size={16} />
+              New Note
+            </button>
+
+            {/* USER */}
+            <div className="ml-1 flex items-center gap-3 rounded-full border border-white/10 bg-white/5 p-1.5 pr-4">
+              <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-purple-400 to-pink-400 p-0.5">
+                <div className="flex h-full w-full items-center justify-center rounded-full bg-[#17151f] text-[11px] font-semibold">
+                  Z
+                </div>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium text-white">
+                  Monobloc User
+                </p>
+
+                <p className="text-[10px] text-slate-500">
+                  user@Monobloc.app
+                </p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* =====================================================
+            METRICS
+        ===================================================== */}
+
+        <section className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <MetricCard
+            icon={<FileText size={16} />}
+            label="Total Notes"
+            value={String(notes.length)}
+            subtext="Saved notes"
+          />
+
+          <MetricCard
+            icon={<BookOpen size={16} />}
+            label="Written"
+            value={String(
+              notes.filter(
+                (note) => note.content.trim()
+              ).length
+            )}
+            subtext="With content"
+          />
+
+          <MetricCard
+            icon={<Sparkles size={16} />}
+            label="Workspace"
+            value={
+              search
+                ? String(filteredNotes.length)
+                : String(notes.length)
+            }
+            subtext={
+              search
+                ? "Search results"
+                : "Available notes"
+            }
+          />
+
+          <MetricCard
+            icon={<Check size={16} />}
+            label="System"
+            value="ON"
+            subtext="Notes active"
+          />
+        </section>
+
+        {/* =====================================================
+            Monobloc INTELLIGENCE BANNER
+        ===================================================== */}
+
+        <section className="relative mb-6 overflow-hidden rounded-3xl border border-white/5 bg-gradient-to-r from-[#251f33] via-[#1b1924] to-[#181622] p-6">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-500/10 text-purple-400">
+                  <Sparkles size={16} />
+                </div>
+
+                <span className="text-xs font-semibold uppercase tracking-wider text-purple-400">
+                  Monobloc Intelligence
+                </span>
+              </div>
+
+              <h2 className="mt-3 text-xl font-semibold text-white sm:text-2xl">
+                Your thoughts. Organized.
+              </h2>
+
+              <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-400">
+                Keep your ideas in one place and build your personal knowledge base without the clutter.
+              </p>
+
+              <div className="mt-5 flex items-center gap-2">
+                <div className="relative flex-1">
                   <Search
-                    size={18}
-                    className="mr-3 shrink-0 text-slate-500"
+                    size={15}
+                    className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-600"
                   />
 
                   <input
-                    ref={searchRef}
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search memory..."
-                    className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-600"
+                    onChange={(event) =>
+                      setSearch(event.target.value)
+                    }
+                    placeholder="Search your notes..."
+                    className="h-11 w-full rounded-xl border border-white/10 bg-[#14131a] pl-10 pr-4 text-xs text-white outline-none transition placeholder:text-slate-600 focus:border-purple-500/50"
                   />
-
-                  <kbd className="hidden rounded-md border border-white/10 px-1.5 py-0.5 text-[10px] text-slate-600 md:block">
-                    ⌘K
-                  </kbd>
-
                 </div>
 
-                <button
-                  onClick={createNote}
-                  className="flex h-12 shrink-0 items-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 text-sm font-bold text-white shadow-[0_0_30px_rgba(34,211,238,.12)] transition hover:scale-[1.02]"
-                >
-                  <Plus size={18} />
-
-                  <span className="hidden sm:inline">
-                    New note
-                  </span>
-                </button>
-
-              </div>
-
-            </div>
-
-            <div className="flex items-center gap-2 border-t border-white/10 px-6 py-3 text-xs text-slate-600">
-
-              <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,.8)]" />
-
-              Memory core online
-
-              <span className="ml-auto font-mono">
-                {notes.length}{" "}
-                {notes.length === 1 ? "ENTRY" : "ENTRIES"}
-              </span>
-
-            </div>
-
-          </header>
-
-          {/* =========================================
-              COMMAND PANEL
-          ========================================= */}
-
-          <section className="mb-6 rounded-[26px] border border-cyan-400/10 bg-gradient-to-r from-cyan-400/[0.06] via-blue-500/[0.04] to-transparent p-5 backdrop-blur-xl">
-
-            <div className="flex flex-col gap-4 md:flex-row md:items-center">
-
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-cyan-400/10">
-
-                <Sparkles
-                  size={20}
-                  className="text-cyan-300"
-                />
-
-              </div>
-
-              <div className="flex-1">
-
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-400">
-                  Zora Memory
-                </p>
-
-                <p className="mt-1 text-sm text-slate-400">
-                  Your notes stay inside your Zora workspace.
-                  Nothing is invented or preloaded.
-                </p>
-
-              </div>
-
-              <div className="flex items-center gap-2 text-xs text-slate-600">
-
-                <Cpu size={15} />
-
-                LOCAL WORKSPACE
-
-              </div>
-
-            </div>
-
-          </section>
-
-          {/* =========================================
-              MAIN WORKSPACE
-          ========================================= */}
-
-          <div className="grid min-h-[600px] gap-6 xl:grid-cols-[360px_1fr]">
-
-            {/* =======================================
-                NOTES LIST
-            ======================================= */}
-
-            <aside className="overflow-hidden rounded-[28px] border border-white/10 bg-[#0b1525]/80 backdrop-blur-2xl">
-
-              <div className="border-b border-white/10 px-6 py-5">
-
-                <div className="flex items-center justify-between">
-
-                  <div>
-
-                    <p className="text-xs uppercase tracking-[0.2em] text-slate-600">
-                      Archive
-                    </p>
-
-                    <h2 className="mt-1 text-lg font-bold">
-                      Your notes
-                    </h2>
-
-                  </div>
-
-                  <FileText
-                    size={19}
-                    className="text-slate-600"
-                  />
-
-                </div>
-
-              </div>
-
-              <div className="max-h-[620px] overflow-y-auto p-3">
-
-                {filteredNotes.length === 0 ? (
-
-                  <div className="flex min-h-[420px] flex-col items-center justify-center px-6 text-center">
-
-                    <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03]">
-
-                      <Brain
-                        size={27}
-                        className="text-slate-700"
-                      />
-
-                    </div>
-
-                    <p className="text-sm font-semibold text-slate-400">
-                      {search
-                        ? "No memories found"
-                        : "Memory core is empty"}
-                    </p>
-
-                    <p className="mt-2 max-w-[240px] text-xs leading-5 text-slate-600">
-
-                      {search
-                        ? "Try a different search query."
-                        : "Create your first note and give Zora something to remember."}
-
-                    </p>
-
-                    {!search && (
-                      <button
-                        onClick={createNote}
-                        className="mt-5 flex items-center gap-2 rounded-xl bg-white/[0.05] px-4 py-2.5 text-xs font-semibold text-cyan-300 transition hover:bg-cyan-400/10"
-                      >
-                        <Plus size={14} />
-                        Create first note
-                      </button>
-                    )}
-
-                  </div>
-
-                ) : (
-
-                  <div className="space-y-2">
-
-                    {filteredNotes.map((note) => {
-
-                      const active = note.id === selectedId;
-
-                      return (
-                        <button
-                          key={note.id}
-                          onClick={() => openNote(note)}
-                          className={`group w-full rounded-2xl border p-4 text-left transition ${
-                            active
-                              ? "border-cyan-400/20 bg-cyan-400/[0.08]"
-                              : "border-transparent bg-white/[0.02] hover:border-white/10 hover:bg-white/[0.04]"
-                          }`}
-                        >
-
-                          <div className="flex items-start gap-3">
-
-                            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.04]">
-
-                              {note.pinned ? (
-                                <Pin
-                                  size={15}
-                                  className="text-cyan-300"
-                                />
-                              ) : (
-                                <FileText
-                                  size={15}
-                                  className="text-slate-600"
-                                />
-                              )}
-
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-
-                              <p className="truncate text-sm font-semibold text-slate-200">
-
-                                {note.title.trim() ||
-                                  "Untitled memory"}
-
-                              </p>
-
-                              <p className="mt-1 truncate text-xs text-slate-600">
-
-                                {note.content.trim() ||
-                                  "Empty note"}
-
-                              </p>
-
-                              <p className="mt-2 text-[10px] uppercase tracking-wider text-slate-700">
-
-                                {formatDate(note.updatedAt)}
-
-                              </p>
-
-                            </div>
-
-                            <ChevronRight
-                              size={15}
-                              className={`mt-1 transition ${
-                                active
-                                  ? "text-cyan-400"
-                                  : "text-slate-800 group-hover:text-slate-500"
-                              }`}
-                            />
-
-                          </div>
-
-                        </button>
-                      );
-                    })}
-
-                  </div>
-
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-500 transition hover:bg-white/10 hover:text-white"
+                    aria-label="Clear search"
+                  >
+                    <X size={15} />
+                  </button>
                 )}
+              </div>
+            </div>
 
+            {/* KNOWLEDGE SUMMARY */}
+            <div className="min-w-[220px] lg:pr-5">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                  Knowledge Base
+                </p>
+
+                <BookOpen
+                  size={15}
+                  className="text-purple-400"
+                />
               </div>
 
-            </aside>
+              <div className="rounded-2xl border border-white/5 bg-[#14131a] p-4">
+                <div className="flex items-end justify-between">
+                  <div>
+                    <p className="text-3xl font-bold text-white">
+                      {notes.length}
+                    </p>
 
-            {/* =======================================
-                EDITOR
-            ======================================= */}
-
-            <section className="overflow-hidden rounded-[28px] border border-white/10 bg-[#0b1525]/80 backdrop-blur-2xl">
-
-              {!selectedNote ? (
-
-                <div className="flex min-h-[620px] flex-col items-center justify-center px-6 text-center">
-
-                  <div className="relative mb-7">
-
-                    <div className="absolute inset-0 rounded-3xl bg-cyan-400/10 blur-2xl" />
-
-                    <div className="relative flex h-20 w-20 items-center justify-center rounded-3xl border border-cyan-400/10 bg-cyan-400/[0.05]">
-
-                      <Brain
-                        size={34}
-                        className="text-cyan-300"
-                      />
-
-                    </div>
-
+                    <p className="mt-1 text-[10px] text-slate-500">
+                      notes in workspace
+                    </p>
                   </div>
 
-                  <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">
-                    Memory interface
-                  </p>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-purple-400">
+                      {notes.length === 0
+                        ? "0%"
+                        : "ACTIVE"}
+                    </p>
 
-                  <h2 className="mt-3 text-2xl font-bold">
-                    Select a memory
+                    <p className="mt-1 text-[9px] uppercase tracking-wider text-slate-600">
+                      status
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* =====================================================
+            MAIN NOTES WORKSPACE
+        ===================================================== */}
+
+        <div className="grid gap-6 xl:grid-cols-12">
+          {/* =================================================
+              NOTES LIST
+          ================================================= */}
+
+          <section className="min-h-[620px] rounded-3xl border border-white/5 bg-[#1b1924] xl:col-span-5">
+            <div className="flex items-center justify-between border-b border-white/5 p-5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <FileText
+                    size={16}
+                    className="text-purple-400"
+                  />
+
+                  <h2 className="text-sm font-semibold text-white">
+                    All Notes
                   </h2>
 
-                  <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
-                    Choose a note from your archive or create
-                    something new. Your workspace starts with
-                    nothing until you put something in it.
-                  </p>
-
-                  <button
-                    onClick={createNote}
-                    className="mt-7 flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-3 text-sm font-bold"
-                  >
-                    <Plus size={17} />
-                    Create note
-                  </button>
-
+                  <span className="rounded-full bg-white/5 px-2 py-0.5 text-[9px] text-slate-500">
+                    {filteredNotes.length}
+                  </span>
                 </div>
 
+                <p className="mt-1 text-[10px] text-slate-600">
+                  Your personal knowledge base
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={createNewNote}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-500/10 text-purple-400 transition hover:bg-purple-500/20"
+                aria-label="Create note"
+              >
+                <Plus size={15} />
+              </button>
+            </div>
+
+            <div className="max-h-[560px] overflow-y-auto">
+              {filteredNotes.length === 0 ? (
+                <div className="flex min-h-[500px] flex-col items-center justify-center px-8 text-center">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-white/5 bg-white/[0.03] text-slate-600">
+                    <FileText size={27} />
+                  </div>
+
+                  <h3 className="mt-5 text-sm font-semibold text-slate-300">
+                    {search
+                      ? "No notes found"
+                      : "Your workspace is empty"}
+                  </h3>
+
+                  <p className="mt-2 max-w-xs text-xs leading-5 text-slate-600">
+                    {search
+                      ? "Try another search term."
+                      : "Create your first note and start building your knowledge base."}
+                  </p>
+
+                  {!search && (
+                    <button
+                      type="button"
+                      onClick={createNewNote}
+                      className="mt-5 flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-5 py-2.5 text-xs font-semibold text-white transition hover:opacity-90"
+                    >
+                      <Plus size={14} />
+                      Create Note
+                    </button>
+                  )}
+                </div>
               ) : (
+                <div className="p-3">
+                  {filteredNotes.map((note) => {
+                    const isSelected =
+                      selectedNoteId === note.id;
 
-                <div className="flex min-h-[620px] flex-col">
-
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-6 py-4">
-
-                    <div className="flex items-center gap-3">
-
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-400/10">
-
-                        <FileText
-                          size={16}
-                          className="text-cyan-300"
-                        />
-
-                      </div>
-
-                      <div>
-
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-600">
-                          Editing memory
-                        </p>
-
-                        <p className="text-xs text-slate-500">
-                          Updated{" "}
-                          {formatTime(selectedNote.updatedAt)}
-                        </p>
-
-                      </div>
-
-                    </div>
-
-                    <div className="flex items-center gap-2">
-
+                    return (
                       <button
+                        key={note.id}
+                        type="button"
                         onClick={() =>
-                          togglePin(selectedNote.id)
+                          selectNote(note)
                         }
-                        className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-500 transition hover:text-cyan-300"
-                        title={
-                          selectedNote.pinned
-                            ? "Unpin note"
-                            : "Pin note"
-                        }
+                        className={`group relative mb-2 flex w-full gap-3 rounded-2xl border p-4 text-left transition ${
+                          isSelected
+                            ? "border-purple-500/20 bg-purple-500/[0.07]"
+                            : "border-white/5 bg-white/[0.015] hover:bg-white/[0.04]"
+                        }`}
                       >
-                        {selectedNote.pinned ? (
-                          <PinOff size={16} />
-                        ) : (
-                          <Pin size={16} />
+                        {isSelected && (
+                          <span className="absolute bottom-3 left-0 top-3 w-[3px] rounded-r-full bg-purple-500" />
                         )}
-                      </button>
 
-                      <button
-                        onClick={() =>
-                          deleteNote(selectedNote.id)
-                        }
-                        className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-500 transition hover:border-red-400/20 hover:text-red-400"
-                        title="Delete note"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                        <div
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                            isSelected
+                              ? "bg-purple-500/10 text-purple-400"
+                              : "bg-white/5 text-slate-500"
+                          }`}
+                        >
+                          <FileText size={16} />
+                        </div>
 
-                      <button
-                        onClick={closeEditor}
-                        className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] text-slate-500 transition hover:text-white"
-                      >
-                        <X size={16} />
-                      </button>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p
+                              className={`truncate text-xs font-semibold ${
+                                isSelected
+                                  ? "text-white"
+                                  : "text-slate-300"
+                              }`}
+                            >
+                              {note.title.trim() ||
+                                "Untitled Note"}
+                            </p>
 
+                            <span className="shrink-0 text-[9px] text-slate-700">
+                              #{note.id
+                                .toString()
+                                .slice(-4)}
+                            </span>
+                          </div>
+
+                          <p className="mt-1.5 line-clamp-2 text-[10px] leading-5 text-slate-600">
+                            {note.content.trim() ||
+                              "Empty note"}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* =================================================
+              NOTE EDITOR
+          ================================================= */}
+
+          <section className="min-h-[620px] rounded-3xl border border-white/5 bg-[#1b1924] xl:col-span-7">
+            {selectedNote ? (
+              <>
+                {/* EDITOR HEADER */}
+                <div className="flex items-center justify-between border-b border-white/5 p-5">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
+                        <Sparkles size={14} />
+                      </div>
+
+                      <p className="text-sm font-semibold text-white">
+                        Note Editor
+                      </p>
                     </div>
 
+                    <p className="mt-1 text-[10px] text-slate-600">
+                      Changes are saved locally to your Monobloc workspace.
+                    </p>
                   </div>
 
-                  <div className="px-7 pt-8">
-
-                    <input
-                      value={editingTitle}
-                      onChange={(e) =>
-                        setEditingTitle(e.target.value)
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowDeleteConfirm(
+                          true
+                        )
                       }
-                      placeholder="Untitled memory"
-                      className="w-full bg-transparent text-3xl font-bold tracking-tight text-white outline-none placeholder:text-slate-700 md:text-4xl"
-                    />
-
-                    <div className="mt-4 flex items-center gap-2 text-xs text-slate-600">
-
-                      <Clock3 size={13} />
-
-                      Created{" "}
-                      {formatDate(selectedNote.createdAt)}
-
-                    </div>
-
-                  </div>
-
-                  <div className="flex-1 px-7 py-7">
-
-                    <textarea
-                      value={editingContent}
-                      onChange={(e) =>
-                        setEditingContent(e.target.value)
-                      }
-                      placeholder="Start writing..."
-                      className="h-full min-h-[350px] w-full resize-none bg-transparent text-[15px] leading-8 text-slate-300 outline-none placeholder:text-slate-700"
-                    />
-
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 px-7 py-4">
-
-                    <div className="flex items-center gap-2 text-xs text-slate-600">
-
-                      <Command size={13} />
-
-                      <span>
-                        Ctrl/Cmd + S to save
-                      </span>
-
-                    </div>
+                      className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/5 bg-white/[0.03] text-slate-600 transition hover:bg-red-400/10 hover:text-red-400"
+                      aria-label="Delete note"
+                    >
+                      <Trash2 size={15} />
+                    </button>
 
                     <button
-                      onClick={saveCurrentNote}
-                      className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
+                      type="button"
+                      onClick={saveNote}
+                      disabled={isSaving}
+                      className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-2 text-[10px] font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
                     >
-
-                      {saved ? (
+                      {isSaving ? (
                         <>
-                          <span>Saved</span>
-                          <span className="text-xs">✓</span>
+                          <Loader2
+                            size={13}
+                            className="animate-spin"
+                          />
+                          Saving
                         </>
                       ) : (
                         <>
-                          <Save size={16} />
-                          Save memory
+                          <Check size={13} />
+                          Save
                         </>
                       )}
-
                     </button>
-
                   </div>
-
                 </div>
 
-              )}
+                {/* EDITOR */}
+                <div className="p-6">
+                  <input
+                    value={title}
+                    onChange={(event) =>
+                      setTitle(event.target.value)
+                    }
+                    placeholder="Untitled Note"
+                    className="w-full border-0 bg-transparent text-2xl font-semibold tracking-tight text-white outline-none placeholder:text-slate-700"
+                  />
 
-            </section>
+                  <div className="mt-3 flex items-center gap-3 text-[9px] uppercase tracking-[0.15em] text-slate-700">
+                    <span>NOTE</span>
 
-          </div>
+                    <span className="h-1 w-1 rounded-full bg-slate-700" />
 
+                    <span>
+                      {content.length} characters
+                    </span>
+
+                    <span className="h-1 w-1 rounded-full bg-slate-700" />
+
+                    <span>
+                      CTRL / ⌘ + S TO SAVE
+                    </span>
+                  </div>
+
+                  <div className="my-6 h-px bg-white/5" />
+
+                  <textarea
+                    value={content}
+                    onChange={(event) =>
+                      setContent(event.target.value)
+                    }
+                    placeholder="Start writing..."
+                    className="min-h-[430px] w-full resize-none border-0 bg-transparent text-sm leading-7 text-slate-300 outline-none placeholder:text-slate-700"
+                  />
+
+                  <div className="mt-5 flex items-center justify-between border-t border-white/5 pt-4">
+                    <div className="flex items-center gap-2 text-[10px] text-slate-600">
+                      <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />
+                      Local workspace
+                    </div>
+
+                    <Link
+                      href="/ai-assistant"
+                      className="flex items-center gap-2 text-[10px] font-semibold text-purple-400 transition hover:text-purple-300"
+                    >
+                      Ask Monobloc about this note
+                      <ArrowRight size={13} />
+                    </Link>
+                  </div>
+                </div>
+
+                {/* DELETE CONFIRMATION */}
+                {showDeleteConfirm && (
+                  <div className="border-t border-red-400/10 bg-red-400/[0.03] px-6 py-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-xs font-semibold text-red-300">
+                          Delete this note?
+                        </p>
+
+                        <p className="mt-1 text-[10px] text-slate-600">
+                          This action cannot be undone.
+                        </p>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowDeleteConfirm(
+                              false
+                            )
+                          }
+                          className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[10px] font-medium text-slate-400 transition hover:bg-white/10 hover:text-white"
+                        >
+                          Cancel
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={
+                            deleteCurrentNote
+                          }
+                          className="rounded-full bg-red-500/80 px-4 py-2 text-[10px] font-semibold text-white transition hover:bg-red-500"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* EMPTY EDITOR */
+              <div className="flex min-h-[620px] flex-col items-center justify-center p-8 text-center">
+                <div className="flex h-20 w-20 items-center justify-center rounded-[28px] border border-white/5 bg-white/[0.025] text-slate-600">
+                  <BookOpen size={30} />
+                </div>
+
+                <h2 className="mt-6 text-lg font-semibold text-white">
+                  Select a note
+                </h2>
+
+                <p className="mt-2 max-w-sm text-xs leading-6 text-slate-600">
+                  Choose a note from your workspace or create something new to start writing.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={createNewNote}
+                  className="mt-6 flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-5 py-2.5 text-xs font-semibold text-white transition hover:opacity-90"
+                >
+                  <Plus size={14} />
+                  New Note
+                </button>
+              </div>
+            )}
+          </section>
         </div>
 
-      </main>
+        {/* =====================================================
+            BOTTOM SYSTEM BAR
+        ===================================================== */}
 
+        <section className="mt-6 rounded-3xl border border-white/5 bg-[#1b1924] p-5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
+                <Sparkles size={16} />
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold text-white">
+                  Notes System
+                </p>
+
+                <p className="mt-0.5 text-[10px] text-slate-600">
+                  Your knowledge workspace is operational.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <SystemBadge
+                label="Storage"
+                value="LOCAL"
+              />
+
+              <SystemBadge
+                label="Notes"
+                value={String(notes.length)}
+              />
+
+              <SystemBadge
+                label="Monobloc"
+                value="ONLINE"
+              />
+
+              <Link
+                href="/ai-assistant"
+                className="flex items-center gap-2 rounded-full border border-purple-500/10 bg-purple-500/[0.05] px-4 py-2 text-[10px] font-semibold text-purple-400 transition hover:bg-purple-500/10"
+              >
+                Open Monobloc AI
+                <ArrowRight size={13} />
+              </Link>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   METRIC CARD
+========================================================= */
+
+function MetricCard({
+  icon,
+  label,
+  value,
+  subtext,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  subtext: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/5 bg-[#1b1924] p-4 transition hover:bg-white/5">
+      <div className="flex items-center justify-between">
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-slate-300">
+          {icon}
+        </div>
+
+        <span className="text-[10px] text-slate-500">
+          {label}
+        </span>
+      </div>
+
+      <p className="mt-3 text-2xl font-bold text-white">
+        {value}
+      </p>
+
+      <p className="mt-0.5 text-[10px] text-slate-400">
+        {subtext}
+      </p>
+    </div>
+  );
+}
+
+/* =========================================================
+   SYSTEM BADGE
+========================================================= */
+
+function SystemBadge({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-white/5 bg-white/[0.02] px-4 py-2">
+      <p className="text-[8px] uppercase tracking-[0.15em] text-slate-600">
+        {label}
+      </p>
+
+      <p className="mt-0.5 font-mono text-[10px] font-semibold text-purple-400">
+        {value}
+      </p>
     </div>
   );
 }

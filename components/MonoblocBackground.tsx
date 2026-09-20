@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-export default function ZoraBackground() {
+export default function MonoblocBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
