@@ -87,8 +87,8 @@ export default function BusinessHelperPage() {
     setShowActionModal(false);
   }
 
-  function askMonobloc
-    if (!question.trim()) return;
+function askMonobloc() {
+  if (!question.trim()) return;
 
     setSubmittedQuestion(question.trim());
     setQuestion("");
@@ -99,10 +99,6 @@ export default function BusinessHelperPage() {
   ).length;
 
   const activeActions = actions.length - completedActions;
-
-  function askMonobloc() {
-    throw new Error("Function not implemented.");
-  }
 
   return (
     <>

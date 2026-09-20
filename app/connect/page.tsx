@@ -268,7 +268,7 @@ export default function ConnectPage() {
       console.error(profileError);
 
       setError(
-        "Could not load your Monobloc
+        "Could not load your Monobloc Profile"
       );
 
       return;
@@ -276,7 +276,7 @@ export default function ConnectPage() {
 
     const profile: User = {
       id: data.id,
-      name: data.name || "Monobloc
+      name: data.name || "Monobloc Profile",
       username: data.username || "user",
       initials:
         data.initials ||

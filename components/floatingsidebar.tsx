@@ -97,7 +97,7 @@ export default function FloatingSidebar() {
 
   return (
     <aside
-      className={`fixed left-4 top-4 bottom-4 z-[100] flex flex-col overflow-hidden rounded-[28px] border border-white/[0.08] bg-[#090909]/95 shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-[width] duration-300 ease-out ${
+      className={`fixed left-4 top-4 bottom-4 z-[100] flex flex-col overflow-visible rounded-[28px] border border-white/[0.08] bg-[#090909]/95 shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl transition-[width] duration-300 ease-out ${
         expanded ? "w-[230px]" : "w-[68px]"
       }`}
     >
@@ -137,7 +137,7 @@ export default function FloatingSidebar() {
       {/* =========================================
           NAVIGATION
       ========================================= */}
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-4">
+      <nav className="flex-1 overflow-y-auto px-2 py-4">
         {/* MAIN */}
         <SidebarSection
           title="Workspace"
@@ -154,7 +154,7 @@ export default function FloatingSidebar() {
         <SidebarSection
           title="Intelligence"
           expanded={expanded}
-          items={MonoblocItems}
+          items={Monoblocs}
           pathname={pathname}
           isActive={isActive}
         />
