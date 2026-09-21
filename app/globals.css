@@ -1,13 +1,14 @@
 @import "tailwindcss";
 
 /* =========================================
-   Monobloc GLOBAL SYSTEM
+   MONOBLOC GLOBAL SYSTEM
    Clean • Premium • Neutral • Minimal
 ========================================= */
 
 :root {
   --Monobloc-bg: #090a0c;
   --Monobloc-bg-deep: #060708;
+
   --Monobloc-surface: #101114;
   --Monobloc-surface-hover: #15171b;
 
@@ -17,9 +18,9 @@
 
   --Monobloc-text: #f2f2ef;
   --Monobloc-text-secondary: #e6e7e9;
-  --Monobloc-text-muted: #e4e5e9;
+  --Monobloc-text-muted: #a5a7ad;
 
-  /* Warm signature accent instead of blue/cyan */
+  /* Warm Monobloc signature accent */
   --Monobloc-accent: #e8ef8a;
   --Monobloc-accent-soft: rgba(232, 239, 138, 0.12);
   --Monobloc-accent-glow: rgba(232, 239, 138, 0.08);
@@ -54,12 +55,6 @@ body {
 
   color: var(--Monobloc-text);
 
-  /*
-    Clean neutral background.
-    ZERO BLUE.
-    ZERO CYAN.
-    ZERO PURPLE.
-  */
   background:
     linear-gradient(
       180deg,
@@ -84,14 +79,16 @@ body {
 }
 
 /* =========================================
-   REMOVE OLD AMBIENT EFFECTS
+   GLOBAL BACKGROUND EFFECTS
 ========================================= */
 
 /*
-   Your previous CSS created giant blue/cyan
-   radial gradients through body::before.
+   IMPORTANT:
+   Do NOT attach positioning rules to <main>.
+   Individual pages control their own layout.
 
-   Completely disable them.
+   The MonoblocBackground component is handled
+   by app/layout.tsx and is fixed there.
 */
 
 body::before,
@@ -101,23 +98,24 @@ body::after {
 }
 
 /* =========================================
-   CLEAN SUBTLE GRID
+   MONOBLOC ROOT
+========================================= */
+
+#Monobloc-root {
+  position: relative;
+  min-height: 100vh;
+}
+
+/* =========================================
+   SUBTLE ARCHITECTURAL GRID
 ========================================= */
 
 /*
-   Very subtle architectural grid.
-   Nothing animated.
-   No dots.
-   No loops.
-   No random alien geometry 💀
+   The grid sits behind the application.
+   It does NOT create document height.
 */
 
-#Monobloc-root,
-main {
-  position: relative;
-}
-
-main::before {
+#Monobloc-root::before {
   content: "";
   position: fixed;
   inset: 0;
@@ -152,13 +150,6 @@ main::before {
     );
 
   z-index: 0;
-}
-
-/* Keep actual content above grid */
-
-main > * {
-  position: relative;
-  z-index: 1;
 }
 
 /* =========================================
@@ -210,15 +201,17 @@ select {
   font: inherit;
 }
 
-/* Make normal text feel cleaner */
+/* =========================================
+   PLACEHOLDERS
+========================================= */
 
 ::placeholder {
-  color: #edeff3 !important;
-  opacity: 100;
+  color: #777a81 !important;
+  opacity: 1;
 }
 
 /* =========================================
-   LINKS + BUTTONS
+   LINKS
 ========================================= */
 
 a {
@@ -234,8 +227,13 @@ select {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* =========================================
+   BUTTONS
+========================================= */
+
 button {
   border: 0;
+  background: transparent;
 }
 
 button:not(:disabled),
@@ -284,7 +282,9 @@ button:disabled {
 
 ::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.12);
+
   border: 2px solid #08090b;
+
   border-radius: 999px;
 }
 
@@ -316,12 +316,16 @@ textarea:-webkit-autofill,
 textarea:-webkit-autofill:hover,
 textarea:-webkit-autofill:focus {
   -webkit-text-fill-color: var(--Monobloc-text);
-  -webkit-box-shadow: 0 0 0px 1000px #101114 inset;
-  transition: background-color 9999s ease-in-out 0s;
+
+  -webkit-box-shadow:
+    0 0 0px 1000px #101114 inset;
+
+  transition:
+    background-color 9999s ease-in-out 0s;
 }
 
 /* =========================================
-   Monobloc SURFACE UTILITIES
+   MONOBLOC SURFACE UTILITIES
 ========================================= */
 
 .Monobloc-glass {
@@ -354,11 +358,12 @@ textarea:-webkit-autofill:focus {
 
 .Monobloc-panel-hover:hover {
   background: var(--Monobloc-surface-hover);
+
   border-color: var(--Monobloc-border-strong);
 }
 
 /* =========================================
-   Monobloc ACCENT UTILITIES
+   MONOBLOC ACCENT UTILITIES
 ========================================= */
 
 .Monobloc-accent {
@@ -367,22 +372,19 @@ textarea:-webkit-autofill:focus {
 
 .Monobloc-accent-bg {
   background: var(--Monobloc-accent);
+
   color: #11120b;
 }
 
 .Monobloc-accent-soft {
   background: var(--Monobloc-accent-soft);
+
   color: var(--Monobloc-accent);
 }
 
 /* =========================================
    SUBTLE SHADOW
 ========================================= */
-
-/*
-   NO cyan glow.
-   NO blue glow.
-*/
 
 .Monobloc-glow {
   box-shadow:
@@ -391,20 +393,12 @@ textarea:-webkit-autofill:focus {
 }
 
 /* =========================================
-   KILL RANDOM CANVAS EFFECTS
+   DISABLE RANDOM CANVAS EFFECTS
 ========================================= */
-
-/*
-   This is likely responsible for the
-   floating dots / giant outlined loops
-   visible in your screenshot.
-*/
 
 canvas {
   display: none !important;
 }
-
-/* If a background animation has this class */
 
 .background-canvas,
 .particles,
@@ -418,8 +412,7 @@ canvas {
 }
 
 /* =========================================
-   REMOVE CYAN / BLUE SHADOWS FROM COMMON
-   GLOBAL EFFECT CLASSES
+   REMOVE OLD BLUE / CYAN EFFECTS
 ========================================= */
 
 .shadow-cyan,
@@ -429,7 +422,7 @@ canvas {
 }
 
 /* =========================================
-   SMOOTH INTERACTIONS
+   TRANSITIONS
 ========================================= */
 
 button,
@@ -460,8 +453,9 @@ select {
       );
   }
 
-  main::before {
+  #Monobloc-root::before {
     background-size: 72px 72px;
+
     opacity: 0.65;
   }
 
@@ -479,8 +473,11 @@ select {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+
     animation-iteration-count: 1 !important;
+
     scroll-behavior: auto !important;
+
     transition-duration: 0.01ms !important;
   }
 }

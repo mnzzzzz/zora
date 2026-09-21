@@ -14,9 +14,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="bg-[#070B14] text-white antialiased">
-        <MonoblocBackground />
-        {children}
+      <body className="bg-[#070707] text-white antialiased">
+        {/* Background MUST NOT take up document space */}
+        <div className="pointer-events-none fixed inset-0 z-0">
+          <MonoblocBackground />
+        </div>
+
+        {/* Actual application */}
+        <div className="relative z-10 min-h-screen">
+          {children}
+        </div>
       </body>
     </html>
   );
