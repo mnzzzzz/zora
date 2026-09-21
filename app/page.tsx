@@ -1,1076 +1,631 @@
-"use client";
+"use client"
 
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { useState } from "react";
-
+import { useEffect, useState } from "react"
+import Link from "next/link"
 import {
-  Eye,
-  EyeOff,
-  Mail,
-  Lock,
-  User,
-  ArrowRight,
+  Bell,
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  Clock3,
+  Inbox,
+  MessageSquare,
+  MoreHorizontal,
+  Play,
+  Plus,
   Sparkles,
-  ShieldCheck,
-} from "lucide-react";
+  Target,
+  TrendingUp,
+  Zap,
+} from "lucide-react"
 
-import { createClient } from "@/lib/supabase/client";
+import FloatingSidebar from "@/components/floatingsidebar"
 
-export default function SignupPage() {
-  const router = useRouter();
-  const supabase = createClient();
+type Task = {
+  id: number
+  title: string
+  priority: "LOW" | "MEDIUM" | "HIGH"
+  completed: boolean
+}
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] =
-    useState(false);
+const initialTasks: Task[] = []
 
-  const [agree, setAgree] = useState(false);
+export default function Dashboard() {
+  const [tasks, setTasks] = useState<Task[]>(initialTasks)
+  const [command, setCommand] = useState("")
+  const [focusSeconds, setFocusSeconds] = useState(0)
+  const [isThinking, setIsThinking] = useState(false)
+  const [isFocusMode, setIsFocusMode] = useState(false)
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  // Load saved data
+  useEffect(() => {
+    const savedTasks = localStorage.getItem("Monobloc-dashboard-tasks")
+    const savedFocus = localStorage.getItem("zora-focus-seconds")
 
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  // =========================================
-  // CREATE ACCOUNT
-  // =========================================
-
-  const handleSubmit = async (
-    e: React.FormEvent<HTMLFormElement>
-  ) => {
-    e.preventDefault();
-
-    if (loading) return;
-
-    setError("");
-    setSuccess("");
-
-    const cleanName = name.trim();
-    const cleanEmail = email.trim().toLowerCase();
-
-    // =========================================
-    // BASIC VALIDATION
-    // =========================================
-
-    if (!cleanName) {
-      setError("Please enter your name.");
-      return;
-    }
-
-    if (!cleanEmail) {
-      setError("Please enter your email.");
-      return;
-    }
-
-    if (password.length < 8) {
-      setError(
-        "Your password must be at least 8 characters."
-      );
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError("Passwords don't match.");
-      return;
-    }
-
-    if (!agree) {
-      setError(
-        "Please accept the Terms of Service and Privacy Policy."
-      );
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      // =========================================
-      // CREATE SUPABASE ACCOUNT
-      // =========================================
-
-      const {
-        data,
-        error: signupError,
-      } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password,
-        options: {
-          data: {
-            name: cleanName,
-          },
-        },
-      });
-
-      // =========================================
-      // SIGNUP ERROR
-      // =========================================
-
-      if (signupError) {
-        console.error("Signup error:", signupError);
-
-        const message = signupError.message.toLowerCase();
-
-        if (
-          message.includes("already registered") ||
-          message.includes("already exists")
-        ) {
-          setError(
-            "An account with this email already exists. Try signing in instead."
-          );
-        } else if (message.includes("password")) {
-          setError(signupError.message);
-        } else {
-          setError(signupError.message);
-        }
-
-        setLoading(false);
-        return;
+    if (savedTasks) {
+      try {
+        setTasks(JSON.parse(savedTasks))
+      } catch {
+        setTasks([])
       }
-
-      // =========================================
-      // MAKE SURE USER WAS CREATED
-      // =========================================
-
-      if (!data.user) {
-        setError(
-          "Account creation failed. Please try again."
-        );
-
-        setLoading(false);
-        return;
-      }
-
-      // =========================================
-      // GENERATE USERNAME
-      // =========================================
-
-      const emailUsername = cleanEmail
-        .split("@")[0]
-        .toLowerCase()
-        .replace(/[^a-z0-9_]/g, "")
-        .slice(0, 20);
-
-      const fallbackUsername =
-        emailUsername ||
-        `Monoblocuser${Date.now().toString().slice(-6)}`;
-
-      const initials = cleanName
-        .split(/\s+/)
-        .filter(Boolean)
-        .map((part) => part.charAt(0))
-        .join("")
-        .slice(0, 2)
-        .toUpperCase();
-
-      // =========================================
-      // CREATE Monobloc PROFILE
-      // =========================================
-
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .insert({
-          id: data.user.id,
-          name: cleanName,
-          username: fallbackUsername,
-          initials:
-            initials ||
-            cleanName.charAt(0).toUpperCase(),
-          role: "Connection",
-          status: "online",
-        });
-
-      // =========================================
-      // PROFILE ERROR
-      // =========================================
-
-      if (profileError) {
-        console.error(
-          "Profile creation error:",
-          profileError
-        );
-
-        if (profileError.code === "23505") {
-          setError(
-            "Your account was created, but that username already exists. You can continue and fix your profile later."
-          );
-        } else {
-          setError(
-            `Account created, but your Monobloc profile could not be created: ${profileError.message}`
-          );
-        }
-
-        setLoading(false);
-        return;
-      }
-
-      // =========================================
-      // EMAIL CONFIRMATION REQUIRED
-      // =========================================
-
-      if (data.user && !data.session) {
-        setSuccess(
-          "Account created! Check your email to confirm your Monobloc account."
-        );
-
-        setLoading(false);
-        return;
-      }
-
-      // =========================================
-      // FULL SUCCESS
-      // =========================================
-
-      if (data.user && data.session) {
-        setSuccess(
-          "Account created successfully! Welcome to Monobloc."
-        );
-
-        setTimeout(() => {
-          router.replace("/");
-          router.refresh();
-        }, 500);
-
-        return;
-      }
-
-      setLoading(false);
-    } catch (err) {
-      console.error("Unexpected signup error:", err);
-
-      setError(
-        "Something went wrong while creating your account. Please try again."
-      );
-
-      setLoading(false);
     }
-  };
 
-  // =========================================
-  // GOOGLE SIGNUP / LOGIN
-  // =========================================
-
-  const handleGoogleSignup = async () => {
-    if (loading) return;
-
-    setError("");
-    setSuccess("");
-    setLoading(true);
-
-    try {
-      const { error: googleError } =
-        await supabase.auth.signInWithOAuth({
-          provider: "google",
-          options: {
-            redirectTo:
-              `${window.location.origin}/auth/callback`,
-          },
-        });
-
-      if (googleError) {
-        console.error(
-          "Google signup error:",
-          googleError
-        );
-
-        setError(googleError.message);
-        setLoading(false);
-      }
-    } catch (err) {
-      console.error(
-        "Unexpected Google error:",
-        err
-      );
-
-      setError(
-        "Unable to continue with Google."
-      );
-
-      setLoading(false);
+    if (savedFocus) {
+      setFocusSeconds(Number(savedFocus))
     }
-  };
+  }, [])
+
+  // Save tasks
+  useEffect(() => {
+    localStorage.setItem(
+      "Monobloc-dashboard-tasks",
+      JSON.stringify(tasks)
+    )
+  }, [tasks])
+
+  // Save focus time
+  useEffect(() => {
+    localStorage.setItem(
+      "zora-focus-seconds",
+      String(focusSeconds)
+    )
+  }, [focusSeconds])
+
+  // Focus timer
+  useEffect(() => {
+    if (!isFocusMode) return
+
+    const interval = setInterval(() => {
+      setFocusSeconds((prev) => prev + 1)
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [isFocusMode])
+
+  const completedTasks = tasks.filter((task) => task.completed).length
+  const activeTasks = tasks.filter((task) => !task.completed).length
+  const highPriorityTasks = tasks.filter(
+    (task) => task.priority === "HIGH" && !task.completed
+  ).length
+
+  const completionRate =
+    tasks.length > 0
+      ? Math.round((completedTasks / tasks.length) * 100)
+      : 0
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const secs = seconds % 60
+
+    return `${String(hours).padStart(2, "0")}:${String(
+      minutes
+    ).padStart(2, "0")}:${String(secs).padStart(2, "0")}`
+  }
+
+  const toggleTask = (id: number) => {
+    setTasks((current) =>
+      current.map((task) =>
+        task.id === id
+          ? { ...task, completed: !task.completed }
+          : task
+      )
+    )
+  }
+
+  const addTask = () => {
+    const title = window.prompt("Enter a task")
+
+    if (!title?.trim()) return
+
+    const newTask: Task = {
+      id: Date.now(),
+      title: title.trim(),
+      priority: "MEDIUM",
+      completed: false,
+    }
+
+    setTasks((current) => [...current, newTask])
+  }
+
+  const openAI = () => {
+    if (!command.trim()) return
+
+    setIsThinking(true)
+
+    window.location.href = `/ai-assistant?prompt=${encodeURIComponent(
+      command.trim()
+    )}`
+  }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#070707] px-5 py-10 font-sans text-white antialiased sm:px-6">
+    <>
+      {/* Sidebar */}
+      <FloatingSidebar />
 
-      {/* =========================================
-          AMBIENT BACKGROUND
-      ========================================= */}
+      {/* Main dashboard */}
+      <main className="min-h-screen pl-20 sm:pl-24 bg-[#05030d] text-white">
+        <div className="mx-auto max-w-[1600px] px-5 py-6 sm:px-8 lg:px-10">
 
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-
-        <div
-          className="
-            absolute
-            left-[5%]
-            top-[10%]
-            h-72
-            w-72
-            rounded-full
-            bg-purple-500/[0.07]
-            blur-[130px]
-          "
-        />
-
-        <div
-          className="
-            absolute
-            bottom-[5%]
-            right-[5%]
-            h-96
-            w-96
-            rounded-full
-            bg-violet-500/[0.06]
-            blur-[150px]
-          "
-        />
-
-        <div
-          className="
-            absolute
-            left-1/2
-            top-1/2
-            h-72
-            w-72
-            -translate-x-1/2
-            -translate-y-1/2
-            rounded-full
-            bg-purple-500/[0.035]
-            blur-[140px]
-          "
-        />
-
-      </div>
-
-      {/* =========================================
-          SIGNUP CONTAINER
-      ========================================= */}
-
-      <div className="relative z-10 w-full max-w-[460px]">
-
-        {/* LOGO */}
-
-        <div className="mb-7 flex flex-col items-center">
-
-          <div
-            className="
-              flex
-              h-16
-              w-16
-              items-center
-              justify-center
-              rounded-2xl
-              border
-              border-purple-400/20
-              bg-purple-500/[0.12]
-              shadow-[0_0_40px_rgba(168,85,247,0.12)]
-            "
-          >
-            <Sparkles
-              size={27}
-              className="text-purple-300"
-            />
-          </div>
-
-          <h1 className="mt-4 text-2xl font-bold tracking-tight">
-            Monobloc
-          </h1>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Your AI Operating System
-          </p>
-
-        </div>
-
-        {/* =========================================
-            CARD
-        ========================================= */}
-
-        <div
-          className="
-            rounded-[28px]
-            border
-            border-white/10
-            bg-[#101010]/95
-            p-7
-            shadow-[0_25px_80px_rgba(0,0,0,0.45)]
-            backdrop-blur-2xl
-            sm:p-9
-          "
-        >
-
-          {/* HEADING */}
-
-          <div className="mb-7">
-
-            <div className="mb-3 flex items-center gap-2">
-
-              <span className="h-1.5 w-1.5 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
-
-              <span className="text-[10px] font-semibold uppercase tracking-[0.25em] text-purple-400">
-                Monobloc / ACCOUNT
-              </span>
-
-            </div>
-
-            <h2 className="text-3xl font-bold tracking-tight">
-              Create your account.
-            </h2>
-
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              Your workspace is waiting. Let's build something.
-            </p>
-
-          </div>
-
-          {/* ERROR */}
-
-          {error && (
-            <div
-              className="
-                mb-5
-                rounded-xl
-                border
-                border-red-400/20
-                bg-red-400/[0.07]
-                px-4
-                py-3
-                text-sm
-                leading-5
-                text-red-300
-              "
-            >
-              {error}
-            </div>
-          )}
-
-          {/* SUCCESS */}
-
-          {success && (
-            <div
-              className="
-                mb-5
-                rounded-xl
-                border
-                border-purple-400/20
-                bg-purple-400/[0.06]
-                px-4
-                py-3
-                text-sm
-                leading-5
-                text-purple-300
-              "
-            >
-              {success}
-            </div>
-          )}
-
-          {/* GOOGLE */}
-
-          <button
-            type="button"
-            onClick={handleGoogleSignup}
-            disabled={loading}
-            className="
-              flex
-              h-12
-              w-full
-              items-center
-              justify-center
-              gap-3
-              rounded-xl
-              border
-              border-white/10
-              bg-white/[0.035]
-              text-sm
-              font-semibold
-              text-white
-              transition
-              hover:border-white/20
-              hover:bg-white/[0.06]
-              disabled:cursor-not-allowed
-              disabled:opacity-50
-            "
-          >
-
-            {loading ? (
-              <>
-                <span
-                  className="
-                    h-4
-                    w-4
-                    animate-spin
-                    rounded-full
-                    border-2
-                    border-white/30
-                    border-t-white
-                  "
-                />
-
-                Connecting...
-              </>
-            ) : (
-              <>
-                <span
-                  className="
-                    flex
-                    h-6
-                    w-6
-                    items-center
-                    justify-center
-                    rounded-full
-                    bg-white
-                    text-xs
-                    font-bold
-                    text-slate-900
-                  "
-                >
-                  G
-                </span>
-
-                Continue with Google
-              </>
-            )}
-
-          </button>
-
-          {/* DIVIDER */}
-
-          <div className="my-6 flex items-center gap-4">
-
-            <div className="h-px flex-1 bg-white/[0.08]" />
-
-            <span className="text-[10px] font-medium tracking-widest text-slate-700">
-              OR
-            </span>
-
-            <div className="h-px flex-1 bg-white/[0.08]" />
-
-          </div>
-
-          {/* FORM */}
-
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-4"
-          >
-
-            {/* NAME */}
-
+          {/* Header */}
+          <header className="mb-8 flex items-center justify-between gap-4">
             <div>
-
-              <label
-                htmlFor="name"
-                className="
-                  mb-2
-                  block
-                  text-[11px]
-                  font-semibold
-                  uppercase
-                  tracking-[0.08em]
-                  text-slate-400
-                "
-              >
-                Your name
-              </label>
-
-              <div
-                className="
-                  flex
-                  h-12
-                  items-center
-                  rounded-xl
-                  border
-                  border-white/10
-                  bg-white/[0.025]
-                  px-4
-                  transition
-                  focus-within:border-purple-400/40
-                  focus-within:bg-purple-400/[0.025]
-                "
-              >
-
-                <User
-                  size={17}
-                  className="mr-3 shrink-0 text-slate-600"
-                />
-
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  required
-                  autoComplete="name"
-                  placeholder="What should we call you?"
-                  value={name}
-                  onChange={(e) =>
-                    setName(e.target.value)
-                  }
-                  className="
-                    w-full
-                    bg-transparent
-                    text-sm
-                    font-medium
-                    text-white
-                    outline-none
-                    placeholder:text-slate-700
-                  "
-                />
-
-              </div>
-
-            </div>
-
-            {/* EMAIL */}
-
-            <div>
-
-              <label
-                htmlFor="email"
-                className="
-                  mb-2
-                  block
-                  text-[11px]
-                  font-semibold
-                  uppercase
-                  tracking-[0.08em]
-                  text-slate-400
-                "
-              >
-                Email
-              </label>
-
-              <div
-                className="
-                  flex
-                  h-12
-                  items-center
-                  rounded-xl
-                  border
-                  border-white/10
-                  bg-white/[0.025]
-                  px-4
-                  transition
-                  focus-within:border-purple-400/40
-                  focus-within:bg-purple-400/[0.025]
-                "
-              >
-
-                <Mail
-                  size={17}
-                  className="mr-3 shrink-0 text-slate-600"
-                />
-
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) =>
-                    setEmail(e.target.value)
-                  }
-                  className="
-                    w-full
-                    bg-transparent
-                    text-sm
-                    font-medium
-                    text-white
-                    outline-none
-                    placeholder:text-slate-700
-                  "
-                />
-
-              </div>
-
-            </div>
-
-            {/* PASSWORD */}
-
-            <div>
-
-              <label
-                htmlFor="password"
-                className="
-                  mb-2
-                  block
-                  text-[11px]
-                  font-semibold
-                  uppercase
-                  tracking-[0.08em]
-                  text-slate-400
-                "
-              >
-                Password
-              </label>
-
-              <div
-                className="
-                  flex
-                  h-12
-                  items-center
-                  rounded-xl
-                  border
-                  border-white/10
-                  bg-white/[0.025]
-                  px-4
-                  transition
-                  focus-within:border-purple-400/40
-                  focus-within:bg-purple-400/[0.025]
-                "
-              >
-
-                <Lock
-                  size={17}
-                  className="mr-3 shrink-0 text-slate-600"
-                />
-
-                <input
-                  id="password"
-                  name="password"
-                  type={
-                    showPassword
-                      ? "text"
-                      : "password"
-                  }
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                  placeholder="Create a password"
-                  value={password}
-                  onChange={(e) =>
-                    setPassword(e.target.value)
-                  }
-                  className="
-                    w-full
-                    bg-transparent
-                    text-sm
-                    font-medium
-                    text-white
-                    outline-none
-                    placeholder:text-slate-700
-                  "
-                />
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowPassword(
-                      (value) => !value
-                    )
-                  }
-                  className="
-                    ml-2
-                    shrink-0
-                    text-slate-600
-                    transition
-                    hover:text-purple-300
-                  "
-                  aria-label={
-                    showPassword
-                      ? "Hide password"
-                      : "Show password"
-                  }
-                >
-                  {showPassword ? (
-                    <EyeOff size={17} />
-                  ) : (
-                    <Eye size={17} />
-                  )}
-                </button>
-
-              </div>
-
-              <p className="mt-1.5 text-[10px] text-slate-700">
-                Use at least 8 characters.
+              <p className="mb-1 text-xs font-medium uppercase tracking-[0.25em] text-purple-400">
+                MONOBLOC OS
               </p>
 
+              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                The stage is yours.
+              </h1>
+
+              <p className="mt-2 text-sm text-white/45">
+                Your workspace, intelligence and execution layer.
+              </p>
             </div>
 
-            {/* CONFIRM PASSWORD */}
-
-            <div>
-
-              <label
-                htmlFor="confirmPassword"
-                className="
-                  mb-2
-                  block
-                  text-[11px]
-                  font-semibold
-                  uppercase
-                  tracking-[0.08em]
-                  text-slate-400
-                "
+            <div className="flex items-center gap-2">
+              <Link
+                href="/inbox"
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] transition hover:bg-white/[0.08]"
               >
-                Confirm password
-              </label>
+                <Inbox className="h-5 w-5 text-white/70" />
+              </Link>
 
-              <div
-                className="
-                  flex
-                  h-12
-                  items-center
-                  rounded-xl
-                  border
-                  border-white/10
-                  bg-white/[0.025]
-                  px-4
-                  transition
-                  focus-within:border-purple-400/40
-                  focus-within:bg-purple-400/[0.025]
-                "
-              >
+              <button className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] transition hover:bg-white/[0.08]">
+                <Bell className="h-5 w-5 text-white/70" />
+              </button>
 
-                <Lock
-                  size={17}
-                  className="mr-3 shrink-0 text-slate-600"
-                />
+              <div className="ml-1 flex h-11 items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-cyan-400 text-xs font-bold">
+                  M
+                </div>
 
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={
-                    showConfirmPassword
-                      ? "text"
-                      : "password"
-                  }
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                  placeholder="Enter it again"
-                  value={confirmPassword}
-                  onChange={(e) =>
-                    setConfirmPassword(
-                      e.target.value
-                    )
-                  }
-                  className="
-                    w-full
-                    bg-transparent
-                    text-sm
-                    font-medium
-                    text-white
-                    outline-none
-                    placeholder:text-slate-700
-                  "
-                />
+                <span className="hidden text-sm text-white/70 sm:block">
+                  Monobloc
+                </span>
+              </div>
+            </div>
+          </header>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowConfirmPassword(
-                      (value) => !value
-                    )
-                  }
-                  className="
-                    ml-2
-                    shrink-0
-                    text-slate-600
-                    transition
-                    hover:text-purple-300
-                  "
-                  aria-label={
-                    showConfirmPassword
-                      ? "Hide password"
-                      : "Show password"
-                  }
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff size={17} />
-                  ) : (
-                    <Eye size={17} />
-                  )}
-                </button>
+          {/* Quick controls */}
+          <section className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
 
+            {/* Workspace */}
+            <Link
+              href="/tasks"
+              className="group rounded-2xl border border-white/10 bg-white/[0.035] p-5 backdrop-blur-xl transition hover:border-purple-400/30 hover:bg-white/[0.055]"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10">
+                  <Target className="h-5 w-5 text-purple-400" />
+                </div>
+
+                <ChevronRight className="h-4 w-4 text-white/25 transition group-hover:translate-x-1 group-hover:text-white/60" />
               </div>
 
-            </div>
+              <p className="text-sm font-medium">Workspace</p>
+              <p className="mt-1 text-xs text-white/40">
+                Manage your missions and tasks
+              </p>
+            </Link>
 
-            {/* TERMS */}
-
-            <label className="flex cursor-pointer items-start gap-3 pt-1">
-
-              <input
-                type="checkbox"
-                required
-                checked={agree}
-                onChange={(e) =>
-                  setAgree(e.target.checked)
-                }
-                className="
-                  mt-0.5
-                  h-4
-                  w-4
-                  shrink-0
-                  rounded
-                  border-white/20
-                  bg-white/5
-                  accent-purple-500
-                "
-              />
-
-              <span className="text-xs leading-5 text-slate-600">
-
-                I agree to Monobloc's{" "}
-
-                <Link
-                  href="/terms"
-                  className="
-                    font-medium
-                    text-purple-400
-                    transition
-                    hover:text-purple-300
-                  "
-                >
-                  Terms of Service
-                </Link>{" "}
-
-                and{" "}
-
-                <Link
-                  href="/privacy"
-                  className="
-                    font-medium
-                    text-purple-400
-                    transition
-                    hover:text-purple-300
-                  "
-                >
-                  Privacy Policy
-                </Link>
-                .
-
-              </span>
-
-            </label>
-
-            {/* CREATE ACCOUNT */}
-
+            {/* Focus */}
             <button
-              type="submit"
-              disabled={loading}
-              className="
-                group
-                flex
-                h-13
-                w-full
-                items-center
-                justify-center
-                gap-2
-                rounded-xl
-                bg-purple-500
-                px-5
-                text-sm
-                font-bold
-                text-white
-                shadow-[0_0_25px_rgba(168,85,247,0.14)]
-                transition-all
-                duration-300
-                hover:bg-purple-400
-                hover:shadow-[0_0_35px_rgba(168,85,247,0.22)]
-                disabled:cursor-not-allowed
-                disabled:opacity-60
-              "
+              onClick={() => setIsFocusMode((current) => !current)}
+              className={`group rounded-2xl border p-5 text-left backdrop-blur-xl transition ${
+                isFocusMode
+                  ? "border-cyan-400/30 bg-cyan-400/[0.06]"
+                  : "border-white/10 bg-white/[0.035] hover:border-cyan-400/20 hover:bg-white/[0.055]"
+              }`}
             >
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-400/10">
+                  {isFocusMode ? (
+                    <Clock3 className="h-5 w-5 text-cyan-400" />
+                  ) : (
+                    <Play className="h-5 w-5 text-cyan-400" />
+                  )}
+                </div>
 
-              {loading ? (
-                <>
-                  <span
-                    className="
-                      h-4
-                      w-4
-                      animate-spin
-                      rounded-full
-                      border-2
-                      border-white/30
-                      border-t-white
-                    "
-                  />
+                <span
+                  className={`text-xs ${
+                    isFocusMode
+                      ? "text-cyan-400"
+                      : "text-white/30"
+                  }`}
+                >
+                  {isFocusMode ? "ACTIVE" : "START"}
+                </span>
+              </div>
 
-                  Creating account...
-                </>
-              ) : (
-                <>
-                  Create account
+              <p className="text-sm font-medium">Focus Mode</p>
 
-                  <ArrowRight
-                    size={17}
-                    className="
-                      transition-transform
-                      duration-300
-                      group-hover:translate-x-1
-                    "
-                  />
-                </>
-              )}
-
+              <p className="mt-1 font-mono text-xs text-white/40">
+                {formatTime(focusSeconds)}
+              </p>
             </button>
 
-          </form>
+            {/* Analytics */}
+            <Link
+              href="/goals"
+              className="group rounded-2xl border border-white/10 bg-white/[0.035] p-5 backdrop-blur-xl transition hover:border-pink-400/20 hover:bg-white/[0.055]"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-pink-500/10">
+                  <TrendingUp className="h-5 w-5 text-pink-400" />
+                </div>
 
-          {/* SECURITY */}
+                <ChevronRight className="h-4 w-4 text-white/25 transition group-hover:translate-x-1 group-hover:text-white/60" />
+              </div>
 
-          <div
-            className="
-              mt-5
-              flex
-              items-center
-              justify-center
-              gap-2
-              text-xs
-              text-slate-700
-            "
-          >
-            <ShieldCheck size={14} />
+              <p className="text-sm font-medium">Analytics</p>
 
-            Your data stays secure
-          </div>
+              <p className="mt-1 text-xs text-white/40">
+                Track goals and performance
+              </p>
+            </Link>
+          </section>
+
+          {/* AI command center */}
+          <section className="mb-6 overflow-hidden rounded-3xl border border-purple-400/15 bg-gradient-to-br from-purple-500/[0.08] via-white/[0.025] to-cyan-400/[0.05] p-6 shadow-2xl shadow-purple-950/20">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500/20 to-cyan-400/20">
+                <Sparkles className="h-5 w-5 text-purple-300" />
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold">
+                  Ask Monobloc
+                </p>
+
+                <p className="text-xs text-white/40">
+                  Tell your AI OS what you want to accomplish.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <input
+                value={command}
+                onChange={(e) => setCommand(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    openAI()
+                  }
+                }}
+                placeholder="Ask Monobloc anything..."
+                className="h-12 flex-1 rounded-xl border border-white/10 bg-black/20 px-4 text-sm text-white outline-none placeholder:text-white/25 transition focus:border-purple-400/40"
+              />
+
+              <button
+                onClick={openAI}
+                disabled={!command.trim() || isThinking}
+                className="flex h-12 items-center justify-center gap-2 rounded-xl bg-white px-5 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Zap className="h-4 w-4" />
+
+                {isThinking ? "Opening..." : "Ask Zora"}
+              </button>
+            </div>
+          </section>
+
+          {/* Focus + AI Decisions */}
+          <section className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+
+            {/* Focus Time */}
+            <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-6 backdrop-blur-xl">
+              <div className="mb-6 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">
+                    Focus Time
+                  </p>
+
+                  <p className="mt-1 text-xs text-white/35">
+                    Your accumulated focus session
+                  </p>
+                </div>
+
+                <Clock3 className="h-5 w-5 text-cyan-400" />
+              </div>
+
+              <div className="flex items-end justify-between">
+                <div>
+                  <p className="font-mono text-4xl font-semibold tracking-tight">
+                    {formatTime(focusSeconds)}
+                  </p>
+
+                  <p className="mt-2 text-xs text-white/35">
+                    {isFocusMode
+                      ? "Focus session running"
+                      : "Start Focus Mode to begin"}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() =>
+                    setIsFocusMode((current) => !current)
+                  }
+                  className="rounded-xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-xs font-medium text-cyan-300 transition hover:bg-cyan-400/15"
+                >
+                  {isFocusMode ? "Pause" : "Start"}
+                </button>
+              </div>
+            </div>
+
+            {/* AI Decisions */}
+            <div className="rounded-3xl border border-purple-400/15 bg-purple-500/[0.045] p-6 backdrop-blur-xl">
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">
+                    AI Decisions
+                  </p>
+
+                  <p className="mt-1 text-xs text-white/35">
+                    Monobloc intelligence layer
+                  </p>
+                </div>
+
+                <Sparkles className="h-5 w-5 text-purple-400" />
+              </div>
+
+              <div className="rounded-2xl border border-white/5 bg-black/15 p-4">
+                <div className="flex gap-3">
+                  <div className="mt-0.5 h-2 w-2 rounded-full bg-purple-400 shadow-lg shadow-purple-500/50" />
+
+                  <div>
+                    <p className="text-sm text-white/75">
+                      No new AI decisions yet.
+                    </p>
+
+                    <p className="mt-1 text-xs leading-5 text-white/35">
+                      Ask Monobloc to analyze your tasks,
+                      schedule or workspace.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Tasks */}
+          <section className="mb-6 rounded-3xl border border-white/10 bg-white/[0.035] p-6 backdrop-blur-xl">
+
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">
+                  Task List
+                </p>
+
+                <p className="mt-1 text-xs text-white/35">
+                  Your active workspace missions
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/tasks"
+                  className="hidden rounded-lg border border-white/10 px-3 py-2 text-xs text-white/50 transition hover:bg-white/[0.05] hover:text-white sm:block"
+                >
+                  View all
+                </Link>
+
+                <button
+                  onClick={addTask}
+                  className="flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-black transition hover:bg-white/90"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add Task
+                </button>
+              </div>
+            </div>
+
+            {tasks.length === 0 ? (
+              <div className="flex min-h-[180px] flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-black/10 text-center">
+                <CheckCircle2 className="mb-3 h-8 w-8 text-white/15" />
+
+                <p className="text-sm text-white/45">
+                  No tasks yet
+                </p>
+
+                <p className="mt-1 text-xs text-white/25">
+                  Add your first task to start building your workspace.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {tasks.slice(0, 5).map((task) => (
+                  <button
+                    key={task.id}
+                    onClick={() => toggleTask(task.id)}
+                    className="flex w-full items-center gap-3 rounded-xl border border-white/5 bg-black/10 p-4 text-left transition hover:bg-white/[0.04]"
+                  >
+                    <div
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                        task.completed
+                          ? "border-cyan-400 bg-cyan-400"
+                          : "border-white/20"
+                      }`}
+                    >
+                      {task.completed && (
+                        <CheckCircle2 className="h-4 w-4 text-black" />
+                      )}
+                    </div>
+
+                    <span
+                      className={`flex-1 text-sm ${
+                        task.completed
+                          ? "text-white/25 line-through"
+                          : "text-white/70"
+                      }`}
+                    >
+                      {task.title}
+                    </span>
+
+                    <span
+                      className={`rounded-md px-2 py-1 text-[10px] font-medium ${
+                        task.priority === "HIGH"
+                          ? "bg-red-400/10 text-red-300"
+                          : task.priority === "MEDIUM"
+                          ? "bg-yellow-400/10 text-yellow-300"
+                          : "bg-green-400/10 text-green-300"
+                      }`}
+                    >
+                      {task.priority}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Workspace metrics */}
+          <section className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+
+            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-xs text-white/35">
+                  Active Tasks
+                </p>
+
+                <Target className="h-4 w-4 text-purple-400" />
+              </div>
+
+              <p className="text-2xl font-semibold">
+                {activeTasks}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-xs text-white/35">
+                  Completed
+                </p>
+
+                <CheckCircle2 className="h-4 w-4 text-cyan-400" />
+              </div>
+
+              <p className="text-2xl font-semibold">
+                {completedTasks}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-xs text-white/35">
+                  High Priority
+                </p>
+
+                <Zap className="h-4 w-4 text-red-400" />
+              </div>
+
+              <p className="text-2xl font-semibold">
+                {highPriorityTasks}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-xs text-white/35">
+                  Completion
+                </p>
+
+                <TrendingUp className="h-4 w-4 text-pink-400" />
+              </div>
+
+              <p className="text-2xl font-semibold">
+                {completionRate}%
+              </p>
+            </div>
+          </section>
+
+          {/* Productivity performance */}
+          <section className="rounded-3xl border border-white/10 bg-white/[0.035] p-6 backdrop-blur-xl">
+
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">
+                  Productivity Performance
+                </p>
+
+                <p className="mt-1 text-xs text-white/35">
+                  Based on your current workspace activity
+                </p>
+              </div>
+
+              <button className="rounded-lg p-2 text-white/30 transition hover:bg-white/[0.05] hover:text-white/60">
+                <MoreHorizontal className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex h-48 items-end gap-2">
+              {[18, 28, 22, 36, 30, 48, 42, 55, 44, 64, 52, 72, 61, 78].map(
+                (height, index) => (
+                  <div
+                    key={index}
+                    className="group flex flex-1 flex-col justify-end"
+                  >
+                    <div
+                      className="w-full rounded-t-md bg-gradient-to-t from-purple-500/20 to-cyan-400/50 transition group-hover:from-purple-500/40 group-hover:to-cyan-400/80"
+                      style={{ height: `${height}%` }}
+                    />
+                  </div>
+                )
+              )}
+            </div>
+
+            <div className="mt-4 flex justify-between text-[10px] text-white/20">
+              <span>Start</span>
+              <span>Current</span>
+            </div>
+          </section>
+
+          {/* Bottom navigation shortcuts */}
+          <section className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+
+            <Link
+              href="/calendar"
+              className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.025] p-4 transition hover:bg-white/[0.05]"
+            >
+              <CalendarDays className="h-4 w-4 text-purple-400" />
+              <span className="text-xs text-white/50">
+                Calendar
+              </span>
+            </Link>
+
+            <Link
+              href="/notes"
+              className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.025] p-4 transition hover:bg-white/[0.05]"
+            >
+              <MessageSquare className="h-4 w-4 text-cyan-400" />
+              <span className="text-xs text-white/50">
+                Notes
+              </span>
+            </Link>
+
+            <Link
+              href="/documents"
+              className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.025] p-4 transition hover:bg-white/[0.05]"
+            >
+              <Inbox className="h-4 w-4 text-pink-400" />
+              <span className="text-xs text-white/50">
+                Documents
+              </span>
+            </Link>
+
+            <Link
+              href="/connect"
+              className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.025] p-4 transition hover:bg-white/[0.05]"
+            >
+              <Sparkles className="h-4 w-4 text-yellow-400" />
+              <span className="text-xs text-white/50">
+                Connect
+              </span>
+            </Link>
+
+          </section>
 
         </div>
-
-        {/* LOGIN LINK */}
-
-        <p className="mt-6 text-center text-sm text-slate-500">
-
-          Already have a Monobloc account?{" "}
-
-          <Link
-            href="/login"
-            className="
-              font-semibold
-              text-purple-400
-              transition
-              hover:text-purple-300
-            "
-          >
-            Sign in
-          </Link>
-
-        </p>
-
-        <p
-          className="
-            mt-7
-            text-center
-            text-[10px]
-            font-medium
-            uppercase
-            tracking-[0.25em]
-            text-slate-700
-          "
-        >
-          Monobloc · Built for what comes next
-        </p>
-
-      </div>
-
-    </main>
-  );
+      </main>
+    </>
+  )
 }

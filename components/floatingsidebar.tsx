@@ -29,7 +29,7 @@ type NavItem = {
 
 const mainItems: NavItem[] = [
   {
-    href: "/dashboard",
+    href: "/",
     label: "Dashboard",
     icon: Home,
   },
@@ -134,7 +134,7 @@ export default function FloatingSidebar() {
         </Link>
       </div>
 
-      {/* =========================================
+      {/* =========================================z
           NAVIGATION
       ========================================= */}
       <nav className="flex-1 overflow-y-auto px-2 py-4">
@@ -161,7 +161,7 @@ export default function FloatingSidebar() {
       </nav>
 
       {/* =========================================
-          BOTTOM
+          SETTINGS
       ========================================= */}
       <div className="shrink-0 border-t border-white/[0.07] p-2">
         <Link
