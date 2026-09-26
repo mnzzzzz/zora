@@ -193,9 +193,7 @@ export default function ConnectPage() {
     };
   }, []);
 
-  /* =====================================================
-     AUTO SCROLL
-  ===================================================== */
+
 
   useEffect(() => {
     if (!selectedUserId) return;
@@ -211,9 +209,6 @@ export default function ConnectPage() {
     conversations,
   ]);
 
-  /* =====================================================
-     LOAD USER
-  ===================================================== */
 
   useEffect(() => {
     let mounted = true;
@@ -288,10 +283,6 @@ export default function ConnectPage() {
 
     setCurrentProfile(profile);
   };
-
-  /* =====================================================
-     LOAD CONNECTIONS
-  ===================================================== */
 
   const loadConnections = async (
     userId: string

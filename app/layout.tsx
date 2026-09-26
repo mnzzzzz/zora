@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import MonoblocBackground from "@/components/MonoblocBackground";
 import "./globals.css";
 
@@ -22,7 +23,7 @@ export default function RootLayout({
 
         {/* Actual application */}
         <div className="relative z-10 min-h-screen">
-          {children}
+         {children}
         </div>
       </body>
     </html>

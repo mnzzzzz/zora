@@ -1,1071 +1,1069 @@
 "use client";
 
 import {
-  useEffect,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from "react";
-import Link from "next/link";
+  ArrowUp,
+  Check,
+  ChevronDown,
+  Copy,
+  Loader2,
+  Mic,
+  Paperclip,
+  Plus,
+  Sparkles,
+  Users,
+  X,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
-  ArrowLeft,
-  ArrowUp,
-  Sparkles,
-  Plus,
-  Mic,
-  Paperclip,
-  Brain,
-  CalendarDays,
-  CheckCircle2,
-  FileText,
-  Command,
-  Loader2,
-  Bot,
-  User,
-  RotateCcw,
-  Copy,
-  Check,
-  Cpu,
-  Activity,
-  Radio,
-  ScanLine,
-  Terminal,
-  Zap,
-  ShieldCheck,
-  X,
-  Bell,
-  Clock3,
-  Target,
-  ChevronRight,
-} from "lucide-react";
+  ChangeEvent,
+  KeyboardEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
-type ChatMessage = {
+import FloatingSidebar from "@/components/floatingsidebar";
+
+type Message = {
   id: string;
-  role: "user" | "assistant";
+  authorId: string;
+  authorName: string;
+  authorType: "human" | "agent";
   content: string;
+  timestamp: number;
 };
 
-type DetectedAction = {
-  type: "calendar" | "task" | "plan" | "thinking";
-  label: string;
-  description: string;
-  icon: React.ReactNode;
+type Participant = {
+  id: string;
+  name: string;
+  type: "human" | "agent";
+  role?: string;
+  online?: boolean;
 };
 
-const suggestions = [
-  {
-    icon: <CalendarDays size={18} />,
-    title: "Plan my day",
-    text: "Create a productive schedule for me",
-  },
-  {
-    icon: <CheckCircle2 size={18} />,
-    title: "Manage my tasks",
-    text: "Help me organize what I need to do",
-  },
-  {
-    icon: <FileText size={18} />,
-    title: "Summarize something",
-    text: "Turn my notes into something useful",
-  },
-  {
-    icon: <Brain size={18} />,
-    title: "Think with me",
-    text: "Help me solve a problem",
-  },
-];
+const WORKSPACE_ID = "current-workspace";
 
-const processingStates = [
-  "INITIALIZING Monobloc CORE...",
-  "ANALYZING REQUEST...",
-  "SCANNING CONTEXT...",
-  "SYNTHESIZING RESPONSE...",
-  "OPTIMIZING OUTPUT...",
-  "FINALIZING INTELLIGENCE...",
-];
+/* ─────────────────────────────────────────────
+   SCI-FI BOOT SCREEN
+───────────────────────────────────────────── */
 
-function detectAction(text: string): DetectedAction | null {
-  const lower = text.toLowerCase();
+function AIBootScreen() {
+  const [progress, setProgress] = useState(0);
+  const [statusIndex, setStatusIndex] = useState(0);
 
-  if (
-    lower.includes("calendar") ||
-    lower.includes("schedule") ||
-    lower.includes("meeting") ||
-    lower.includes("appointment") ||
-    lower.includes("tomorrow at") ||
-    lower.includes("today at")
-  ) {
-    return {
-      type: "calendar",
-      label: "CALENDAR INTENT DETECTED",
-      description:
-        "Monobloc detected scheduling-related context in your request.",
-      icon: <CalendarDays size={18} />,
-    };
-  }
-
-  if (
-    lower.includes("task") ||
-    lower.includes("todo") ||
-    lower.includes("to-do") ||
-    lower.includes("remind me") ||
-    lower.includes("need to do")
-  ) {
-    return {
-      type: "task",
-      label: "TASK INTENT DETECTED",
-      description:
-        "Monobloc identified actionable items that may belong in your task system.",
-      icon: <CheckCircle2 size={18} />,
-    };
-  }
-
-  if (
-    lower.includes("plan") ||
-    lower.includes("organize") ||
-    lower.includes("routine") ||
-    lower.includes("productive")
-  ) {
-    return {
-      type: "plan",
-      label: "PLANNING MODE ENGAGED",
-      description:
-        "Monobloc is structuring your request into a more organized approach.",
-      icon: <Target size={18} />,
-    };
-  }
-
-  if (
-    lower.includes("think") ||
-    lower.includes("solve") ||
-    lower.includes("analyze") ||
-    lower.includes("problem")
-  ) {
-    return {
-      type: "thinking",
-      label: "DEEP ANALYSIS MODE",
-      description:
-        "Monobloc detected a reasoning-heavy request.",
-      icon: <Brain size={18} />,
-    };
-  }
-
-  return null;
-}
-
-function getRandomProcessingState(index: number) {
-  return processingStates[index % processingStates.length];
-}
-
-export default function AIPage() {
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [processingIndex, setProcessingIndex] = useState(0);
-  const [showTransmission, setShowTransmission] = useState(false);
-  const [transmissionText, setTransmissionText] = useState("");
-  const [lastUserMessage, setLastUserMessage] = useState("");
-  const [corePulse, setCorePulse] = useState(false);
-
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const promptSentRef = useRef(false);
-
-  const hasMessages = messages.length > 0;
+  const statuses = [
+    "ESTABLISHING NEURAL LINK",
+    "LOADING WORKSPACE CONTEXT",
+    "SYNCING MEMORY",
+    "INITIALIZING MODEL",
+    "PREPARING INTELLIGENCE",
+  ];
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({
-      behavior: "smooth",
-    });
-  }, [messages, isLoading]);
+    const start = performance.now();
+    const duration = 1700;
 
-  useEffect(() => {
-    if (!isLoading) {
-      setProcessingIndex(0);
-      return;
-    }
+    let animationFrame: number;
 
-    const interval = window.setInterval(() => {
-      setProcessingIndex((current) => current + 1);
-    }, 1050);
+    const animate = (now: number) => {
+      const elapsed = now - start;
+      const percentage = Math.min(
+        100,
+        Math.round((elapsed / duration) * 100)
+      );
 
-    return () => window.clearInterval(interval);
-  }, [isLoading]);
+      setProgress(percentage);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const prompt = params.get("prompt");
+      const nextStatus = Math.min(
+        statuses.length - 1,
+        Math.floor((percentage / 100) * statuses.length)
+      );
 
-    if (prompt && !promptSentRef.current) {
-      promptSentRef.current = true;
+      setStatusIndex(nextStatus);
 
-      window.history.replaceState({}, "", "/ai-assistant");
+      if (percentage < 100) {
+        animationFrame = requestAnimationFrame(animate);
+      }
+    };
 
-      window.setTimeout(() => {
-        sendMessage(prompt);
-      }, 350);
-    }
+    animationFrame = requestAnimationFrame(animate);
+
+    return () => cancelAnimationFrame(animationFrame);
   }, []);
 
-  const sendMessage = async (text?: string) => {
-    const textToSend = (text ?? message).trim();
+  return (
+    <div className="fixed inset-0 z-[9999] overflow-hidden bg-[#030308] text-white">
+      {/* Ambient purple glow */}
+      <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-700/[0.08] blur-[120px]" />
 
-    if (!textToSend || isLoading) return;
+      <div className="absolute inset-0 opacity-[0.035] [background-image:linear-gradient(rgba(255,255,255,.4)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.4)_1px,transparent_1px)] [background-size:50px_50px]" />
 
-    const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: textToSend,
+      {/* Scanline */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px animate-[scan_2.5s_linear_infinite] bg-gradient-to-r from-transparent via-purple-400/70 to-transparent" />
+
+      {/* Top branding */}
+      <div className="absolute left-1/2 top-10 -translate-x-1/2 text-center">
+        <div className="mb-3 flex items-center justify-center gap-2">
+          <Sparkles
+            size={13}
+            className="text-purple-300"
+          />
+
+          <span className="text-[11px] font-medium tracking-[0.45em] text-purple-200">
+            MONOBLOC AI
+          </span>
+        </div>
+
+        <p className="text-[8px] tracking-[0.5em] text-slate-600">
+          THINKING&nbsp;&nbsp;•&nbsp;&nbsp;ANALYZING&nbsp;&nbsp;•&nbsp;&nbsp;PREPARING
+        </p>
+      </div>
+
+      {/* Left system diagnostics */}
+      <div className="absolute left-8 top-1/2 hidden -translate-y-1/2 lg:block">
+        <div className="border-l border-purple-400/20 pl-5">
+          {[
+            "CONTEXT LOADED",
+            "MEMORY SYNCED",
+            "MODEL ONLINE",
+            statuses[statusIndex],
+          ].map((item, index) => (
+            <div
+              key={`${item}-${index}`}
+              className="mb-5 flex items-center gap-3"
+            >
+              <span
+                className={[
+                  "h-1 w-1 rounded-full",
+                  index === 3
+                    ? "bg-purple-300 shadow-[0_0_10px_rgba(168,85,247,.9)]"
+                    : "bg-purple-500/40",
+                ].join(" ")}
+              />
+
+              <span
+                className={[
+                  "text-[8px] tracking-[0.35em]",
+                  index === 3
+                    ? "text-purple-300"
+                    : "text-slate-700",
+                ].join(" ")}
+              >
+                {item}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right diagnostic */}
+      <div className="absolute right-8 top-1/2 hidden -translate-y-1/2 lg:block">
+        <div className="flex items-center gap-4">
+          <div className="h-px w-24 bg-gradient-to-r from-transparent to-purple-500/30" />
+
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-purple-300 shadow-[0_0_12px_rgba(168,85,247,.9)]" />
+
+              <span className="text-[8px] tracking-[0.3em] text-purple-300">
+                MULTI-AGENT
+              </span>
+            </div>
+
+            <span className="text-[8px] tracking-[0.3em] text-slate-700">
+              COLLABORATION
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Central reactor */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+        {/* Outer rings */}
+        <div className="absolute left-1/2 top-1/2 h-[360px] w-[360px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-purple-500/[0.08]" />
+
+        <div className="absolute left-1/2 top-1/2 h-[290px] w-[290px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-purple-400/[0.12] border-dashed" />
+
+        <div className="absolute left-1/2 top-1/2 h-[220px] w-[220px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-purple-300/[0.12]" />
+
+        {/* Orbit 1 */}
+        <div className="absolute left-1/2 top-1/2 h-[240px] w-[110px] -translate-x-1/2 -translate-y-1/2 animate-[orbit_4s_linear_infinite] rounded-[50%] border border-purple-400/60 shadow-[0_0_20px_rgba(168,85,247,.12)]" />
+
+        {/* Orbit 2 */}
+        <div className="absolute left-1/2 top-1/2 h-[110px] w-[250px] -translate-x-1/2 -translate-y-1/2 rotate-45 animate-[orbitReverse_5s_linear_infinite] rounded-[50%] border border-purple-300/50" />
+
+        {/* Orbit 3 */}
+        <div className="absolute left-1/2 top-1/2 h-[250px] w-[100px] -translate-x-1/2 -translate-y-1/2 -rotate-45 animate-[orbit_6s_linear_infinite] rounded-[50%] border border-purple-500/30" />
+
+        {/* Orbit particles */}
+        <div className="absolute left-1/2 top-1/2 h-[250px] w-[100px] -translate-x-1/2 -translate-y-1/2 -rotate-45 animate-[orbit_6s_linear_infinite]">
+          <span className="absolute -right-1 top-1/2 h-2 w-2 rounded-full bg-purple-300 shadow-[0_0_15px_4px_rgba(168,85,247,.7)]" />
+        </div>
+
+        {/* Central glow */}
+        <div className="absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-600/10 blur-2xl" />
+
+        <div className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-purple-300/30 bg-purple-500/[0.06] shadow-[0_0_60px_rgba(168,85,247,.35)]" />
+
+        {/* Core */}
+        <div className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 animate-pulse rounded-full bg-white shadow-[0_0_15px_5px_rgba(192,132,252,.9)]" />
+
+        {/* Crosshair */}
+        <div className="absolute left-1/2 top-[-70px] h-[140px] w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-purple-400/30 to-transparent" />
+
+        <div className="absolute left-[-70px] top-1/2 h-px w-[140px] -translate-y-1/2 bg-gradient-to-r from-transparent via-purple-400/30 to-transparent" />
+      </div>
+
+      {/* Bottom status */}
+      <div className="absolute bottom-14 left-1/2 w-[280px] -translate-x-1/2 text-center">
+        <p className="mb-4 text-[9px] tracking-[0.45em] text-purple-200/80">
+          {statuses[statusIndex]}
+          <span className="animate-pulse">...</span>
+        </p>
+
+        <div className="relative h-[2px] overflow-hidden rounded-full bg-purple-950">
+          <div
+            className="h-full bg-gradient-to-r from-purple-700 via-purple-300 to-white shadow-[0_0_12px_rgba(168,85,247,.9)] transition-[width] duration-100"
+            style={{
+              width: `${progress}%`,
+            }}
+          />
+        </div>
+
+        <div className="mt-3 flex items-center justify-between">
+          <span className="text-[7px] tracking-[0.3em] text-slate-700">
+            SYSTEM INITIALIZATION
+          </span>
+
+          <span className="font-mono text-[9px] text-purple-300">
+            {String(progress).padStart(3, "0")}%
+          </span>
+        </div>
+      </div>
+
+      {/* Bottom branding */}
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 text-center">
+        <p className="text-[7px] tracking-[0.45em] text-slate-800">
+          MORE THAN AN AI · YOUR INTELLIGENCE PARTNER
+        </p>
+      </div>
+
+      <style jsx>{`
+        @keyframes orbit {
+          from {
+            transform: translate(-50%, -50%) rotate(0deg);
+          }
+          to {
+            transform: translate(-50%, -50%) rotate(360deg);
+          }
+        }
+
+        @keyframes orbitReverse {
+          from {
+            transform: translate(-50%, -50%) rotate(45deg);
+          }
+          to {
+            transform: translate(-50%, -50%) rotate(-315deg);
+          }
+        }
+
+        @keyframes scan {
+          0% {
+            transform: translateY(-20px);
+            opacity: 0;
+          }
+
+          20% {
+            opacity: 1;
+          }
+
+          80% {
+            opacity: 1;
+          }
+
+          100% {
+            transform: translateY(100vh);
+            opacity: 0;
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   AI PAGE
+───────────────────────────────────────────── */
+
+export default function AIPage() {
+  const [booting, setBooting] = useState(true);
+
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [participants, setParticipants] = useState<Participant[]>(
+    []
+  );
+
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const [copied, setCopied] = useState<string | null>(null);
+  const [showMembers, setShowMembers] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [listening, setListening] = useState(false);
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
+
+  const channelRef = useRef<BroadcastChannel | null>(null);
+
+  /* Boot screen */
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setBooting(false);
+
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+      });
+    }, 1850);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  /* Local multiplayer channel */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const channel = new BroadcastChannel(
+      `monobloc-ai-${WORKSPACE_ID}`
+    );
+
+    channelRef.current = channel;
+
+    channel.onmessage = (event) => {
+      const data = event.data;
+
+      if (data?.type === "message") {
+        setMessages((current) => {
+          if (
+            current.some(
+              (message) => message.id === data.message.id
+            )
+          ) {
+            return current;
+          }
+
+          return [...current, data.message];
+        });
+      }
+
+      if (data?.type === "participants") {
+        setParticipants(data.participants || []);
+      }
     };
 
-    setLastUserMessage(textToSend);
-    setMessages((current) => [...current, userMessage]);
-    setMessage("");
-    setIsLoading(true);
-    setCorePulse(true);
-    setShowTransmission(false);
+    return () => {
+      channel.close();
+      channelRef.current = null;
+    };
+  }, []);
 
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop?.();
+    };
+  }, []);
+
+  function broadcastMessage(message: Message) {
+    channelRef.current?.postMessage({
+      type: "message",
+      message,
+    });
+  }
+
+  function createMessage(
+    authorId: string,
+    authorName: string,
+    authorType: "human" | "agent",
+    content: string
+  ): Message {
+    return {
+      id: `${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2)}`,
+      authorId,
+      authorName,
+      authorType,
+      content,
+      timestamp: Date.now(),
+    };
+  }
+
+  async function askAI(
+    userMessage: string,
+    history: Message[]
+  ) {
     try {
+      setLoading(true);
+
       const response = await fetch("/api/ai", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message: textToSend,
-          history: messages.map((msg) => ({
-            role: msg.role,
-            content: msg.content,
-          })),
+          message: userMessage,
+          history,
+          workspaceId: WORKSPACE_ID,
+          participants,
         }),
       });
 
-      const rawText = await response.text();
-
-      let data: {
-        response?: string;
-        text?: string;
-        message?: string;
-        content?: string;
-        error?: string;
-      };
-
-      try {
-        data = JSON.parse(rawText);
-      } catch {
-        console.error("Monobloc API returned non-JSON:", rawText);
-
-        throw new Error(
-          `The Monobloc API returned HTML instead of JSON. HTTP status: ${response.status}. Check that app/api/ai/route.ts exists and your /api/ai endpoint is working.`
-        );
-      }
-
       if (!response.ok) {
-        throw new Error(
-          data?.error ||
-            data?.message ||
-            `Monobloc API request failed with status ${response.status}.`
-        );
+        throw new Error("AI request failed.");
       }
+
+      const data = await response.json();
 
       const aiText =
-        data.response ||
-        data.text ||
-        data.content ||
-        data.message;
+        data?.response ||
+        data?.text ||
+        data?.content ||
+        data?.message;
 
       if (!aiText) {
-        throw new Error("Monobloc received an empty response from the AI.");
+        throw new Error("No response received from AI.");
       }
 
-      setTransmissionText("INTELLIGENCE SYNTHESIS COMPLETE");
-      setShowTransmission(true);
+      const aiMessage = createMessage(
+        "monobloc",
+        "Monobloc",
+        "agent",
+        aiText
+      );
 
-      window.setTimeout(() => {
-        setShowTransmission(false);
-      }, 2600);
-
-      window.setTimeout(() => {
-        const assistantMessage: ChatMessage = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: aiText,
-        };
-
-        setMessages((current) => [...current, assistantMessage]);
-      }, 450);
+      setMessages((current) => [...current, aiMessage]);
+      broadcastMessage(aiMessage);
     } catch (error) {
-      console.error("Monobloc AI error:", error);
+      console.error(error);
 
-      const errorText =
-        error instanceof Error
-          ? error.message
-          : "An unknown error occurred.";
-
-      setTransmissionText("CONNECTION INTERRUPTED");
-      setShowTransmission(true);
-
-      const errorMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: `## Connection error
-
-**Monobloc couldn't complete that request.**
-
-${errorText}`,
-      };
+      const errorMessage = createMessage(
+        "monobloc",
+        "Monobloc",
+        "agent",
+        "I couldn't complete that request. Please try again."
+      );
 
       setMessages((current) => [...current, errorMessage]);
+      broadcastMessage(errorMessage);
     } finally {
-      window.setTimeout(() => {
-        setIsLoading(false);
-        setCorePulse(false);
-      }, 600);
+      setLoading(false);
     }
-  };
+  }
 
-  const handleSubmit = () => {
-    sendMessage();
-  };
+  async function sendMessage() {
+    const trimmed = input.trim();
 
-  const handleKeyDown = (
-    e: KeyboardEvent<HTMLTextAreaElement>
-  ) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
+    if (!trimmed || loading) return;
+
+    const userMessage = createMessage(
+      "local-user",
+      "You",
+      "human",
+      trimmed
+    );
+
+    const nextMessages = [...messages, userMessage];
+
+    setMessages(nextMessages);
+    setInput("");
+
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
     }
-  };
 
-  const selectSuggestion = (text: string) => {
-    if (isLoading) return;
-    sendMessage(text);
-  };
+    broadcastMessage(userMessage);
 
-  const clearChat = () => {
-    if (isLoading) return;
+    const shouldAskAI =
+      /@monobloc\b/i.test(trimmed) ||
+      /@ai\b/i.test(trimmed);
 
+    if (shouldAskAI) {
+      await askAI(trimmed, nextMessages);
+    }
+
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
+  }
+
+  function handleKeyDown(
+    event: KeyboardEvent<HTMLTextAreaElement>
+  ) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      void sendMessage();
+    }
+  }
+
+  function handleInput(
+    event: ChangeEvent<HTMLTextAreaElement>
+  ) {
+    setInput(event.target.value);
+
+    event.target.style.height = "auto";
+    event.target.style.height = `${Math.min(
+      event.target.scrollHeight,
+      180
+    )}px`;
+  }
+
+  function newChat() {
     setMessages([]);
-    setMessage("");
-    setShowTransmission(false);
+    setInput("");
+    setSelectedFiles([]);
 
-    window.history.replaceState({}, "", "/ai-assistant");
-  };
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
 
-  const copyMessage = async (
-    content: string,
-    id: string
-  ) => {
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
+  }
+
+  async function copyMessage(
+    messageId: string,
+    content: string
+  ) {
     try {
       await navigator.clipboard.writeText(content);
 
-      setCopiedId(id);
+      setCopied(messageId);
 
       window.setTimeout(() => {
-        setCopiedId(null);
-      }, 1800);
+        setCopied(null);
+      }, 1500);
     } catch (error) {
       console.error("Copy failed:", error);
     }
-  };
+  }
 
-  const detectedAction = detectAction(lastUserMessage);
+  async function invitePeople() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+
+      setInviteCopied(true);
+
+      window.setTimeout(() => {
+        setInviteCopied(false);
+      }, 1800);
+    } catch (error) {
+      console.error("Invite copy failed:", error);
+    }
+  }
+
+  function handleFiles(files: FileList | null) {
+    if (!files) return;
+
+    setSelectedFiles((current) => [
+      ...current,
+      ...Array.from(files),
+    ]);
+  }
+
+  function removeFile(index: number) {
+    setSelectedFiles((current) =>
+      current.filter((_, fileIndex) => fileIndex !== index)
+    );
+  }
+
+  function toggleVoiceInput() {
+    if (typeof window === "undefined") return;
+
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      window.alert(
+        "Voice input isn't supported by this browser."
+      );
+      return;
+    }
+
+    if (listening) {
+      recognitionRef.current?.stop?.();
+      setListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.continuous = false;
+
+    recognition.onresult = (event: any) => {
+      const transcript =
+        event.results?.[0]?.[0]?.transcript || "";
+
+      if (!transcript) return;
+
+      setInput((current) =>
+        current ? `${current} ${transcript}` : transcript
+      );
+
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+      });
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error:", event);
+      setListening(false);
+    };
+
+    recognition.onend = () => {
+      setListening(false);
+    };
+
+    recognitionRef.current = recognition;
+
+    try {
+      recognition.start();
+      setListening(true);
+    } catch (error) {
+      console.error(error);
+      setListening(false);
+    }
+  }
+
+  function formatTime(timestamp: number) {
+    return new Date(timestamp).toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
+
+  const hasMessages = messages.length > 0;
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#09060f] text-white">
-      {/* BACKGROUND */}
+    <>
+      {/* SCI-FI BOOT */}
+      {booting && <AIBootScreen />}
 
-      <div className="pointer-events-none fixed inset-0">
-        <div className="absolute left-[10%] top-[-20%] h-[650px] w-[650px] rounded-full bg-purple-500/[0.08] blur-[160px]" />
+      <div
+        className={[
+          "min-h-screen bg-[#070B14] text-white transition-opacity duration-500",
+          booting
+            ? "pointer-events-none opacity-0"
+            : "opacity-100",
+        ].join(" ")}
+      >
+        <FloatingSidebar />
 
-        <div className="absolute right-[-15%] top-[15%] h-[600px] w-[600px] rounded-full bg-violet-600/[0.08] blur-[170px]" />
-
-        <div className="absolute bottom-[-25%] left-[30%] h-[650px] w-[650px] rounded-full bg-fuchsia-600/[0.06] blur-[180px]" />
-
-        <div
-          className="absolute inset-0 opacity-[0.025]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(168,85,247,0.9) 1px, transparent 1px), linear-gradient(90deg, rgba(168,85,247,0.9) 1px, transparent 1px)",
-            backgroundSize: "52px 52px",
-          }}
-        />
-
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-purple-400/30 to-transparent" />
-      </div>
-
-      {/* TRANSMISSION POPUP */}
-
-      {showTransmission && (
-        <div className="pointer-events-none fixed left-1/2 top-24 z-[100] w-[calc(100%-40px)] max-w-md -translate-x-1/2 animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="relative overflow-hidden rounded-2xl border border-purple-400/30 bg-[#100a1b]/95 px-5 py-4 shadow-[0_0_70px_rgba(168,85,247,0.18)] backdrop-blur-2xl">
-            <div className="absolute inset-y-0 left-0 w-1 bg-purple-400" />
-
-            <div className="absolute left-0 top-0 h-px w-full bg-gradient-to-r from-transparent via-purple-300 to-transparent" />
-
-            <div className="flex items-center gap-3">
-              <div className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-purple-400/30 bg-purple-400/10">
-                <Radio
-                  size={17}
-                  className="animate-pulse text-purple-300"
-                />
-
-                <span className="absolute -right-1 -top-1 h-2 w-2 animate-ping rounded-full bg-purple-300" />
-              </div>
-
-              <div>
-                <p className="text-[9px] font-bold tracking-[0.25em] text-purple-400">
-                  Monobloc SYSTEM
-                </p>
-
-                <p className="mt-1 text-xs font-semibold tracking-wide text-white">
-                  {transmissionText}
-                </p>
-              </div>
-
-              <Check
-                size={18}
-                className="ml-auto text-emerald-400"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* HEADER */}
-
-      <header className="relative z-30 flex h-20 items-center justify-between border-b border-white/[0.06] bg-[#09060f]/60 px-5 backdrop-blur-xl sm:px-6 lg:px-10">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <Link
-            href="/"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.035] transition hover:border-purple-400/30 hover:bg-purple-400/10"
-          >
-            <ArrowLeft size={18} />
-          </Link>
-
-          <div className="hidden h-7 w-px bg-white/10 sm:block" />
-
-          <div className="flex items-center gap-3">
-            <div
-              className={`relative flex h-11 w-11 items-center justify-center rounded-xl border transition-all duration-500 ${
-                isLoading
-                  ? "scale-110 border-purple-300/50 bg-purple-400/20 shadow-[0_0_35px_rgba(168,85,247,0.35)]"
-                  : "border-purple-400/20 bg-purple-400/10"
-              }`}
-            >
-              <Sparkles
-                size={19}
-                className={
-                  isLoading
-                    ? "animate-pulse text-purple-100"
-                    : "text-purple-300"
-                }
-              />
-
-              <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-[#09060f]" />
-            </div>
-
-            <div>
+        <div className="min-h-screen">
+          {/* Top bar */}
+          <header className="fixed left-0 right-0 top-0 z-40">
+            <div className="flex h-16 items-center justify-between px-4">
               <div className="flex items-center gap-2">
-                <p className="font-semibold tracking-tight">
-                  Monobloc AI
-                </p>
-
-                <span className="rounded border border-purple-400/20 bg-purple-400/[0.06] px-1.5 py-0.5 font-mono text-[7px] tracking-widest text-purple-400">
-                  v1.0
-                </span>
-              </div>
-
-              <p className="hidden text-[10px] uppercase tracking-[0.18em] text-slate-600 sm:block">
-                Intelligence interface
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {hasMessages && (
-            <button
-              type="button"
-              onClick={clearChat}
-              disabled={isLoading}
-              className="flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 text-xs text-gray-400 transition hover:border-purple-400/20 hover:bg-purple-400/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <RotateCcw size={14} />
-
-              <span className="hidden sm:inline">
-                Reset
-              </span>
-            </button>
-          )}
-
-          <div className="hidden items-center gap-2 rounded-full border border-emerald-400/10 bg-emerald-400/[0.04] px-4 py-2 text-[10px] font-medium tracking-wide text-emerald-300 md:flex">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-            </span>
-
-            CORE ONLINE
-          </div>
-        </div>
-      </header>
-
-      {/* MAIN */}
-
-      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-80px)] max-w-6xl flex-col px-4 sm:px-5">
-        {!hasMessages ? (
-          <section className="flex flex-1 flex-col items-center justify-center pb-12 pt-16">
-            {/* Monobloc CORE */}
-
-            <div className="relative mb-10">
-              <div
-                className={`absolute inset-[-45px] rounded-full bg-purple-400/[0.08] blur-3xl transition-all duration-500 ${
-                  corePulse ? "scale-125 opacity-100" : ""
-                }`}
-              />
-
-              <div className="absolute inset-[-28px] animate-[spin_16s_linear_infinite] rounded-full border border-dashed border-purple-400/20" />
-
-              <div className="absolute inset-[-15px] animate-[spin_10s_linear_infinite_reverse] rounded-full border border-purple-400/10" />
-
-              <div
-                className={`relative flex h-28 w-28 items-center justify-center rounded-[36px] border border-purple-300/20 bg-purple-400/10 shadow-[0_0_90px_rgba(168,85,247,0.16)] backdrop-blur-xl transition duration-500 ${
-                  corePulse
-                    ? "scale-110 shadow-[0_0_120px_rgba(168,85,247,0.32)]"
-                    : ""
-                }`}
-              >
-                <Cpu
-                  size={42}
-                  className="text-purple-200"
-                />
-
-                <div className="absolute bottom-3 flex gap-1">
-                  <span className="h-1 w-1 animate-pulse rounded-full bg-purple-300" />
-                  <span className="h-1 w-1 animate-pulse rounded-full bg-purple-300 [animation-delay:150ms]" />
-                  <span className="h-1 w-1 animate-pulse rounded-full bg-purple-300 [animation-delay:300ms]" />
-                </div>
-              </div>
-            </div>
-
-            <div className="text-center">
-              <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-purple-400/15 bg-purple-400/[0.04] px-3 py-1.5">
-                <Activity
-                  size={11}
-                  className="text-purple-400"
-                />
-
-                <span className="text-[9px] font-bold tracking-[0.25em] text-purple-400">
-                  Monobloc NEURAL SYSTEM ONLINE
-                </span>
-              </div>
-
-              <h1 className="text-4xl font-bold tracking-[-0.05em] sm:text-5xl lg:text-6xl">
-                What are we
-                <span className="block text-purple-400">
-                  accomplishing today?
-                </span>
-              </h1>
-
-              <p className="mx-auto mt-5 max-w-xl text-base leading-7 text-slate-500">
-                Think of me as your command center. Give me
-                the objective and we'll figure out the rest.
-              </p>
-            </div>
-
-            {/* SYSTEM BAR */}
-
-            <div className="mt-8 flex items-center gap-5 rounded-full border border-white/[0.07] bg-white/[0.025] px-5 py-2.5 font-mono text-[8px] tracking-[0.15em] text-slate-600">
-              <span className="flex items-center gap-2">
-                <ShieldCheck
-                  size={11}
-                  className="text-purple-500"
-                />
-                SECURE
-              </span>
-
-              <span className="h-3 w-px bg-white/10" />
-
-              <span className="flex items-center gap-2">
-                <Zap
-                  size={11}
-                  className="text-purple-500"
-                />
-                READY
-              </span>
-
-              <span className="h-3 w-px bg-white/10" />
-
-              <span className="hidden sm:inline">
-                AWAITING COMMAND
-              </span>
-            </div>
-
-            {/* SUGGESTIONS */}
-
-            <div className="mt-10 grid w-full max-w-4xl gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {suggestions.map((item, index) => (
                 <button
-                  key={item.title}
                   type="button"
-                  onClick={() => selectSuggestion(item.text)}
-                  disabled={isLoading}
-                  className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 text-left backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-purple-400/30 hover:bg-purple-400/[0.045] disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => {
+                    window.location.href = "/";
+                  }}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white/[0.04] hover:text-white"
+                  aria-label="Go to dashboard"
                 >
-                  <div className="absolute right-3 top-3 font-mono text-[8px] text-slate-800">
-                    0{index + 1}
-                  </div>
-
-                  <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-xl border border-purple-400/10 bg-purple-400/[0.08] text-purple-300 transition group-hover:scale-110 group-hover:bg-purple-400/20">
-                    {item.icon}
-                  </div>
-
-                  <p className="text-sm font-semibold">
-                    {item.title}
-                  </p>
-
-                  <p className="mt-1 text-xs leading-5 text-slate-600">
-                    {item.text}
-                  </p>
-                </button>
-              ))}
-            </div>
-
-            <ChatInput
-              message={message}
-              setMessage={setMessage}
-              onSubmit={handleSubmit}
-              onKeyDown={handleKeyDown}
-              isLoading={isLoading}
-            />
-          </section>
-        ) : (
-          <section className="flex flex-1 flex-col py-6 sm:py-8">
-            <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col">
-              {/* LIVE SYSTEM STRIP */}
-
-              <div className="mb-6 flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-2">
-                <div className="flex items-center gap-2">
-                  <Terminal
-                    size={13}
-                    className="text-purple-400"
+                  <Plus
+                    size={17}
+                    className="rotate-45"
                   />
+                </button>
 
-                  <span className="font-mono text-[9px] tracking-[0.15em] text-slate-500">
-                    Monobloc COMMAND INTERFACE
-                  </span>
-                </div>
+                <div className="h-5 w-px bg-white/[0.08]" />
 
-                <div className="flex items-center gap-2 font-mono text-[8px] text-slate-600">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-purple-400" />
-                  LIVE
-                </div>
+                <button
+                  type="button"
+                  onClick={newChat}
+                  className="group flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm text-slate-300 transition hover:bg-white/[0.04] hover:text-white"
+                >
+                  New chat
+                  <ChevronDown
+                    size={14}
+                    className="text-slate-600"
+                  />
+                </button>
               </div>
 
-              {/* DETECTED ACTION */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowMembers(true)}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-white"
+                >
+                  <Users size={15} />
 
-              {detectedAction && (
-                <div className="mb-6 overflow-hidden rounded-2xl border border-purple-400/20 bg-purple-400/[0.035] animate-in fade-in slide-in-from-top-3 duration-500">
-                  <div className="flex items-center gap-4 p-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-purple-400/20 bg-purple-400/10 text-purple-300">
-                      {detectedAction.icon}
-                    </div>
+                  <span className="hidden sm:inline">
+                    Members
+                  </span>
+                </button>
 
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[9px] font-bold tracking-[0.2em] text-purple-400">
-                        {detectedAction.label}
-                      </p>
+                <button
+                  type="button"
+                  onClick={invitePeople}
+                  className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-sm text-slate-300 transition hover:border-purple-400/30 hover:bg-purple-500/[0.06] hover:text-white"
+                >
+                  {inviteCopied ? "Copied" : "Invite"}
+                </button>
+              </div>
+            </div>
+          </header>
 
-                      <p className="mt-1 text-xs text-slate-500">
-                        {detectedAction.description}
-                      </p>
-                    </div>
-
-                    <ChevronRight
-                      size={16}
-                      className="text-purple-500"
+          {/* Conversation */}
+          <main className="min-h-screen pb-40 pt-20">
+            {!hasMessages ? (
+              <div className="flex min-h-[calc(100vh-180px)] items-center justify-center px-6">
+                <div className="w-full max-w-2xl text-center">
+                  <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-2xl border border-purple-400/10 bg-purple-500/[0.07]">
+                    <Sparkles
+                      size={22}
+                      className="text-purple-300"
                     />
                   </div>
 
-                  <div className="h-px bg-gradient-to-r from-purple-400/30 via-purple-400/5 to-transparent" />
+                  <h1 className="text-2xl font-medium tracking-tight">
+                    How can I help?
+                  </h1>
+
+                  <p className="mt-2 text-sm text-slate-500">
+                    Ask anything, or bring your team into the
+                    conversation.
+                  </p>
                 </div>
-              )}
+              </div>
+            ) : (
+              <div className="mx-auto w-full max-w-3xl px-5">
+                <div className="space-y-8">
+                  {messages.map((message) => {
+                    const isAgent =
+                      message.authorType === "agent";
 
-              {/* CHAT */}
-
-              <div className="flex-1 space-y-8 pb-8">
-                {messages.map((chatMessage, messageIndex) => {
-                  const isUser = chatMessage.role === "user";
-
-                  return (
-                    <div
-                      key={chatMessage.id}
-                      className={`animate-in fade-in slide-in-from-bottom-2 duration-500 flex gap-3 sm:gap-4 ${
-                        isUser
-                          ? "justify-end"
-                          : "justify-start"
-                      }`}
-                    >
-                      {!isUser && (
-                        <div className="relative mt-1">
-                          <div className="absolute inset-[-7px] rounded-xl bg-purple-400/10 blur-md" />
-
-                          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-purple-400/20 bg-[#110b1c] text-purple-300">
-                            <Cpu size={18} />
-                          </div>
-                        </div>
-                      )}
-
-                      <div
-                        className={`group relative max-w-[90%] sm:max-w-[80%] ${
-                          isUser
-                            ? "rounded-[24px] rounded-tr-md border border-purple-300/20 bg-purple-600/90 px-5 py-4 shadow-[0_0_35px_rgba(168,85,247,0.08)]"
-                            : "overflow-visible rounded-[24px] rounded-tl-md border border-white/[0.08] bg-[#110b1c]/90 px-5 py-5 shadow-[0_20px_60px_rgba(0,0,0,0.22)] backdrop-blur-2xl"
-                        }`}
+                    return (
+                      <article
+                        key={message.id}
+                        className="group"
                       >
-                        {!isUser && (
-                          <div className="mb-4 flex items-center gap-2 border-b border-white/[0.06] pb-3">
-                            <span className="flex h-5 w-5 items-center justify-center rounded-md bg-purple-400/10">
-                              <Bot
-                                size={11}
-                                className="text-purple-300"
-                              />
-                            </span>
-
-                            <span className="font-mono text-[8px] font-bold tracking-[0.2em] text-purple-500">
-                              Monobloc RESPONSE
-                            </span>
-
-                            <span className="ml-auto font-mono text-[8px] text-slate-700">
-                              {String(messageIndex + 1).padStart(
-                                2,
-                                "0"
-                              )}
-                            </span>
+                        <div className="mb-2 flex items-center gap-2">
+                          <div
+                            className={[
+                              "flex h-6 w-6 items-center justify-center rounded-full",
+                              isAgent
+                                ? "bg-purple-500/[0.10] text-purple-300"
+                                : "bg-white/[0.06] text-slate-400",
+                            ].join(" ")}
+                          >
+                            {isAgent ? (
+                              <Sparkles size={12} />
+                            ) : (
+                              <span className="text-[10px]">
+                                Y
+                              </span>
+                            )}
                           </div>
-                        )}
 
-                        {isUser ? (
-                          <p className="whitespace-pre-wrap text-sm leading-7 text-white">
-                            {chatMessage.content}
-                          </p>
-                        ) : (
-                          <div className="text-sm leading-7 text-slate-300">
-                            <ReactMarkdown
-                              remarkPlugins={[remarkGfm]}
-                              components={{
-                                h1: ({ children }) => (
-                                  <h1 className="mb-4 mt-2 text-2xl font-bold tracking-tight text-white">
-                                    {children}
-                                  </h1>
-                                ),
+                          <span
+                            className={
+                              isAgent
+                                ? "text-xs font-medium text-purple-200"
+                                : "text-xs font-medium text-slate-400"
+                            }
+                          >
+                            {message.authorName}
+                          </span>
 
-                                h2: ({ children }) => (
-                                  <h2 className="mb-3 mt-5 flex items-center gap-2 text-xl font-bold text-white">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />
-                                    {children}
-                                  </h2>
-                                ),
-
-                                h3: ({ children }) => (
-                                  <h3 className="mb-2 mt-4 text-base font-bold text-purple-300">
-                                    {children}
-                                  </h3>
-                                ),
-
-                                p: ({ children }) => (
-                                  <p className="mb-3 last:mb-0">
-                                    {children}
-                                  </p>
-                                ),
-
-                                strong: ({ children }) => (
-                                  <strong className="font-bold text-white">
-                                    {children}
-                                  </strong>
-                                ),
-
-                                em: ({ children }) => (
-                                  <em className="italic text-slate-200">
-                                    {children}
-                                  </em>
-                                ),
-
-                                ul: ({ children }) => (
-                                  <ul className="mb-3 ml-5 list-disc space-y-2 last:mb-0 marker:text-purple-400">
-                                    {children}
-                                  </ul>
-                                ),
-
-                                ol: ({ children }) => (
-                                  <ol className="mb-3 ml-5 list-decimal space-y-2 last:mb-0 marker:text-purple-400">
-                                    {children}
-                                  </ol>
-                                ),
-
-                                li: ({ children }) => (
-                                  <li className="pl-1">
-                                    {children}
-                                  </li>
-                                ),
-
-                                blockquote: ({
-                                  children,
-                                }) => (
-                                  <blockquote className="my-4 rounded-r-xl border-l-2 border-purple-400 bg-purple-400/[0.04] py-2 pl-4 pr-3 italic text-slate-400">
-                                    {children}
-                                  </blockquote>
-                                ),
-
-                                code: ({
-                                  children,
-                                  className,
-                                }) => {
-                                  const isBlock =
-                                    className?.includes(
-                                      "language-"
-                                    );
-
-                                  if (isBlock) {
-                                    return (
-                                      <code className="text-xs leading-6 text-purple-200">
-                                        {children}
-                                      </code>
-                                    );
-                                  }
-
-                                  return (
-                                    <code className="rounded-md border border-purple-400/10 bg-purple-400/[0.08] px-1.5 py-0.5 font-mono text-[0.85em] text-purple-300">
-                                      {children}
-                                    </code>
-                                  );
-                                },
-
-                                pre: ({ children }) => (
-                                  <pre className="my-4 overflow-x-auto rounded-xl border border-white/[0.08] bg-[#07050d] p-4 font-mono text-xs">
-                                    {children}
-                                  </pre>
-                                ),
-
-                                hr: () => (
-                                  <hr className="my-5 border-white/10" />
-                                ),
-                              }}
-                            >
-                              {chatMessage.content}
-                            </ReactMarkdown>
-                          </div>
-                        )}
-
-                        {!isUser && (
-                          <div className="mt-4 flex items-center justify-between border-t border-white/[0.05] pt-3">
-                            <span className="font-mono text-[8px] tracking-[0.16em] text-slate-700">
-                              ANALYSIS COMPLETE
-                            </span>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                copyMessage(
-                                  chatMessage.content,
-                                  chatMessage.id
-                                )
-                              }
-                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/[0.07] bg-white/[0.02] text-slate-600 transition hover:border-purple-400/20 hover:text-purple-300"
-                              title="Copy response"
-                            >
-                              {copiedId ===
-                              chatMessage.id ? (
-                                <Check
-                                  size={13}
-                                  className="text-emerald-400"
-                                />
-                              ) : (
-                                <Copy size={13} />
-                              )}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-
-                      {isUser && (
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-purple-400/20 bg-purple-500/10 text-purple-300">
-                          <User size={18} />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {/* JARVIS THINKING SEQUENCE */}
-
-                {isLoading && (
-                  <div className="animate-in fade-in slide-in-from-bottom-3 duration-500 flex gap-3 sm:gap-4">
-                    <div className="relative">
-                      <div className="absolute inset-[-8px] animate-pulse rounded-xl bg-purple-400/10 blur-lg" />
-
-                      <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-purple-400/30 bg-purple-400/10 text-purple-300">
-                        <ScanLine
-                          size={18}
-                          className="animate-pulse"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="min-w-[280px] rounded-[24px] rounded-tl-md border border-purple-400/15 bg-[#110b1c]/95 px-5 py-4 shadow-[0_0_40px_rgba(168,85,247,0.05)] backdrop-blur-xl">
-                      <div className="mb-3 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Loader2
-                            size={14}
-                            className="animate-spin text-purple-400"
-                          />
-
-                          <span className="font-mono text-[9px] font-bold tracking-[0.2em] text-purple-400">
-                            Monobloc PROCESSING
+                          <span className="text-[10px] text-slate-700">
+                            {formatTime(message.timestamp)}
                           </span>
                         </div>
 
-                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-purple-400" />
-                      </div>
+                        <div className="pl-8 text-[15px] leading-7 text-slate-300">
+                          <div className="prose prose-invert max-w-none prose-p:my-2 prose-headings:text-white prose-a:text-purple-300 prose-strong:text-white prose-code:text-purple-200 prose-pre:border prose-pre:border-white/[0.06] prose-pre:bg-black/30">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                            >
+                              {message.content}
+                            </ReactMarkdown>
+                          </div>
 
-                      <p className="font-mono text-xs tracking-wide text-slate-400">
-                        {getRandomProcessingState(
-                          processingIndex
-                        )}
-                      </p>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void copyMessage(
+                                message.id,
+                                message.content
+                              )
+                            }
+                            className="mt-2 flex items-center gap-1.5 text-xs text-slate-700 opacity-0 transition hover:text-slate-400 group-hover:opacity-100"
+                          >
+                            {copied === message.id ? (
+                              <>
+                                <Check size={12} />
+                                Copied
+                              </>
+                            ) : (
+                              <>
+                                <Copy size={12} />
+                                Copy
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
 
-                      <div className="mt-4 flex gap-1">
-                        {processingStates.map((_, index) => (
-                          <div
-                            key={index}
-                            className={`h-1 flex-1 rounded-full transition-all duration-500 ${
-                              index <=
-                              processingIndex %
-                                processingStates.length
-                                ? "bg-purple-400/80 shadow-[0_0_8px_rgba(168,85,247,0.5)]"
-                                : "bg-white/[0.06]"
-                            }`}
-                          />
-                        ))}
-                      </div>
-
-                      <div className="mt-3 flex items-center gap-2 font-mono text-[8px] tracking-[0.14em] text-slate-700">
-                        <Activity size={10} />
-                        NEURAL PIPELINE ACTIVE
-                      </div>
+                  {loading && (
+                    <div className="flex items-center gap-3 pl-8 text-sm text-slate-500">
+                      <Loader2
+                        size={15}
+                        className="animate-spin text-purple-300"
+                      />
+                      Monobloc is thinking...
                     </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </main>
+
+          {/* Composer */}
+          <div className="fixed bottom-0 left-0 right-0 z-30">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#070B14] via-[#070B14]/95 to-transparent" />
+
+            <div className="relative mx-auto w-full max-w-3xl px-5 pb-5">
+              <div className="rounded-2xl border border-white/[0.10] bg-[#101218] shadow-2xl shadow-black/30">
+                {selectedFiles.length > 0 && (
+                  <div className="flex flex-wrap gap-2 border-b border-white/[0.06] px-4 py-3">
+                    {selectedFiles.map((file, index) => (
+                      <div
+                        key={`${file.name}-${index}`}
+                        className="flex max-w-full items-center gap-2 rounded-lg border border-white/[0.07] bg-white/[0.03] px-2.5 py-1.5"
+                      >
+                        <Paperclip
+                          size={12}
+                          className="text-slate-500"
+                        />
+
+                        <span className="max-w-[180px] truncate text-xs text-slate-400">
+                          {file.name}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            removeFile(index)
+                          }
+                          className="text-slate-600 hover:text-white"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
 
-                <div ref={bottomRef} />
+                <div className="flex items-end gap-2 px-3 py-3">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={(event) => {
+                      handleFiles(event.target.files);
+
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                      }
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      fileInputRef.current?.click()
+                    }
+                    className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-white/[0.05] hover:text-white"
+                    aria-label="Attach files"
+                  >
+                    <Paperclip size={17} />
+                  </button>
+
+                  <textarea
+                    ref={textareaRef}
+                    value={input}
+                    onChange={handleInput}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Message Monobloc..."
+                    rows={1}
+                    disabled={loading}
+                    className="max-h-[180px] min-h-[36px] flex-1 resize-none bg-transparent px-1 py-2 text-[15px] leading-5 text-white outline-none placeholder:text-slate-600"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={toggleVoiceInput}
+                    className={[
+                      "mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                      listening
+                        ? "bg-purple-500/10 text-purple-300"
+                        : "text-slate-500 hover:bg-white/[0.05] hover:text-white",
+                    ].join(" ")}
+                    aria-label="Voice input"
+                  >
+                    <Mic
+                      size={17}
+                      className={
+                        listening ? "animate-pulse" : ""
+                      }
+                    />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => void sendMessage()}
+                    disabled={!input.trim() || loading}
+                    className={[
+                      "mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+                      input.trim() && !loading
+                        ? "bg-purple-500 text-white hover:bg-purple-400"
+                        : "bg-white/[0.05] text-slate-700",
+                    ].join(" ")}
+                    aria-label="Send message"
+                  >
+                    {loading ? (
+                      <Loader2
+                        size={16}
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <ArrowUp size={17} />
+                    )}
+                  </button>
+                </div>
               </div>
 
-              <ChatInput
-                message={message}
-                setMessage={setMessage}
-                onSubmit={handleSubmit}
-                onKeyDown={handleKeyDown}
-                isLoading={isLoading}
-              />
+              <p className="mt-2 text-center text-[10px] text-slate-700">
+                Monobloc can make mistakes. Check important
+                information.
+              </p>
             </div>
-          </section>
+          </div>
+        </div>
+
+        {/* Members */}
+        {showMembers && (
+          <div className="fixed inset-0 z-[200]">
+            <button
+              type="button"
+              onClick={() => setShowMembers(false)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+              aria-label="Close members"
+            />
+
+            <aside className="absolute right-0 top-0 flex h-full w-full max-w-sm flex-col border-l border-white/[0.08] bg-[#0b0d12] shadow-2xl">
+              <div className="flex h-16 items-center justify-between border-b border-white/[0.06] px-5">
+                <div>
+                  <h2 className="text-sm font-medium text-white">
+                    Members
+                  </h2>
+
+                  <p className="mt-0.5 text-xs text-slate-600">
+                    People and agents in this conversation
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowMembers(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-white/[0.05] hover:text-white"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-5">
+                {participants.length === 0 ? (
+                  <div className="flex min-h-[240px] items-center justify-center text-center">
+                    <div>
+                      <Users
+                        size={20}
+                        className="mx-auto mb-3 text-slate-700"
+                      />
+
+                      <p className="text-sm text-slate-400">
+                        No other participants yet.
+                      </p>
+
+                      <p className="mt-1 text-xs text-slate-600">
+                        Invite someone to collaborate in this
+                        conversation.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {participants.map((participant) => (
+                      <div
+                        key={participant.id}
+                        className="flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-white/[0.03]"
+                      >
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.05] text-xs text-slate-400">
+                          {participant.type === "agent" ? (
+                            <Sparkles size={14} />
+                          ) : (
+                            participant.name
+                              .slice(0, 1)
+                              .toUpperCase()
+                          )}
+                        </div>
+
+                        <div>
+                          <p className="text-sm text-slate-300">
+                            {participant.name}
+                          </p>
+
+                          {participant.role && (
+                            <p className="text-xs text-slate-600">
+                              {participant.role}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-white/[0.06] p-5">
+                <button
+                  type="button"
+                  onClick={invitePeople}
+                  className="w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-sm text-slate-300 hover:border-purple-400/30 hover:bg-purple-500/[0.06] hover:text-white"
+                >
+                  {inviteCopied
+                    ? "Invite link copied"
+                    : "Invite people"}
+                </button>
+              </div>
+            </aside>
+          </div>
         )}
       </div>
-    </main>
-  );
-}
-
-/* =========================================================
-   CHAT INPUT
-========================================================= */
-
-function ChatInput({
-  message,
-  setMessage,
-  onSubmit,
-  onKeyDown,
-  isLoading,
-}: {
-  message: string;
-  setMessage: (value: string) => void;
-  onSubmit: () => void;
-  onKeyDown: (
-    e: KeyboardEvent<HTMLTextAreaElement>
-  ) => void;
-  isLoading: boolean;
-}) {
-  return (
-    <div className="mt-8 w-full max-w-4xl self-center">
-      <div className="relative overflow-hidden rounded-[26px] border border-white/10 bg-[#110b1c]/90 p-2 shadow-[0_25px_80px_rgba(0,0,0,0.4)] backdrop-blur-2xl transition duration-300 focus-within:border-purple-400/40 focus-within:shadow-[0_0_70px_rgba(168,85,247,0.09)]">
-        <div className="pointer-events-none absolute -top-20 left-1/2 h-32 w-80 -translate-x-1/2 rounded-full bg-purple-400/[0.09] blur-3xl" />
-
-        <div className="relative flex items-end gap-1 sm:gap-2">
-          <button
-            type="button"
-            className="mb-1 hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-600 transition hover:bg-purple-400/[0.06] hover:text-purple-300 sm:flex"
-          >
-            <Plus size={20} />
-          </button>
-
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={onKeyDown}
-            disabled={isLoading}
-            placeholder={
-              isLoading
-                ? "Monobloc is processing..."
-                : "Enter a command for Monobloc..."
-            }
-            rows={1}
-            className="max-h-40 min-h-[52px] flex-1 resize-none bg-transparent px-2 py-4 text-sm leading-6 text-white outline-none placeholder:text-slate-700 disabled:opacity-60"
-          />
-
-          <button
-            type="button"
-            className="mb-1 hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-600 transition hover:bg-white/5 hover:text-purple-300 md:flex"
-          >
-            <Paperclip size={18} />
-          </button>
-
-          <button
-            type="button"
-            className="mb-1 hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-600 transition hover:bg-white/5 hover:text-purple-300 sm:flex"
-          >
-            <Mic size={18} />
-          </button>
-
-          <button
-            type="button"
-            onClick={onSubmit}
-            disabled={!message.trim() || isLoading}
-            className="relative mb-1 flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-purple-600 text-white shadow-[0_0_25px_rgba(168,85,247,0.18)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-purple-500 hover:shadow-[0_0_35px_rgba(168,85,247,0.35)] disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {isLoading ? (
-              <Loader2
-                size={18}
-                className="animate-spin"
-              />
-            ) : (
-              <ArrowUp size={19} />
-            )}
-          </button>
-        </div>
-      </div>
-
-      <div className="mt-3 flex items-center justify-between px-2">
-        <span className="flex items-center gap-2 font-mono text-[8px] tracking-[0.12em] text-slate-700">
-          <ShieldCheck size={10} />
-          Monobloc INTELLIGENCE INTERFACE
-        </span>
-
-        <div className="hidden items-center gap-2 font-mono text-[9px] text-slate-700 sm:flex">
-          <Command size={11} />
-          <span>ENTER TO TRANSMIT</span>
-        </div>
-      </div>
-    </div>
+    </>
   );
 }

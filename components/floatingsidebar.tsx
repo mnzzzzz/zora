@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   Brain,
@@ -87,12 +87,51 @@ export default function FloatingSidebar() {
   const pathname = usePathname();
   const [expanded, setExpanded] = useState(false);
 
+  /*
+   * ========================================================
+   * OPEN SIDEBAR FROM OTHER PAGES
+   *
+   * The AI page can now trigger:
+   *
+   * window.dispatchEvent(
+   *   new Event("monobloc:open-sidebar")
+   * );
+   * ========================================================
+   */
+
+  useEffect(() => {
+    const handleOpenSidebar = () => {
+      setExpanded(true);
+    };
+
+    window.addEventListener(
+      "monobloc:open-sidebar",
+      handleOpenSidebar
+    );
+
+    return () => {
+      window.removeEventListener(
+        "monobloc:open-sidebar",
+        handleOpenSidebar
+      );
+    };
+  }, []);
+
+  /*
+   * ========================================================
+   * ACTIVE ROUTE
+   * ========================================================
+   */
+
   const isActive = (href: string) => {
-    if (href === "/dashboard") {
-      return pathname === "/dashboard";
+    if (href === "/") {
+      return pathname === "/";
     }
 
-    return pathname === href || pathname.startsWith(`${href}/`);
+    return (
+      pathname === href ||
+      pathname.startsWith(`${href}/`)
+    );
   };
 
   return (
@@ -101,12 +140,13 @@ export default function FloatingSidebar() {
         expanded ? "w-[230px]" : "w-[68px]"
       }`}
     >
-      {/* =========================================
+      {/* ===================================================
           LOGO
-      ========================================= */}
+      =================================================== */}
+
       <div className="flex h-[72px] shrink-0 items-center border-b border-white/[0.07] px-3">
         <Link
-          href="/dashboard"
+          href="/"
           className="group flex min-w-0 flex-1 items-center gap-3"
         >
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/[0.1] bg-white/[0.05] transition group-hover:bg-white/[0.1]">
@@ -134,35 +174,32 @@ export default function FloatingSidebar() {
         </Link>
       </div>
 
-      {/* =========================================z
+      {/* ===================================================
           NAVIGATION
-      ========================================= */}
+      =================================================== */}
+
       <nav className="flex-1 overflow-y-auto px-2 py-4">
-        {/* MAIN */}
         <SidebarSection
           title="Workspace"
           expanded={expanded}
           items={mainItems}
-          pathname={pathname}
           isActive={isActive}
         />
 
-        {/* DIVIDER */}
         <div className="my-4 border-t border-white/[0.06]" />
 
-        {/* Monobloc */}
         <SidebarSection
           title="Intelligence"
           expanded={expanded}
           items={Monoblocs}
-          pathname={pathname}
           isActive={isActive}
         />
       </nav>
 
-      {/* =========================================
-          SETTINGS
-      ========================================= */}
+      {/* ===================================================
+          SETTINGS + EXPAND
+      =================================================== */}
+
       <div className="shrink-0 border-t border-white/[0.07] p-2">
         <Link
           href="/settings"
@@ -170,7 +207,11 @@ export default function FloatingSidebar() {
             isActive("/settings")
               ? "bg-white/[0.1] text-white"
               : "text-slate-500 hover:bg-white/[0.06] hover:text-white"
-          } ${expanded ? "gap-3 px-3" : "justify-center"}`}
+          } ${
+            expanded
+              ? "gap-3 px-3"
+              : "justify-center"
+          }`}
         >
           <Settings
             size={18}
@@ -192,12 +233,17 @@ export default function FloatingSidebar() {
           )}
         </Link>
 
-        {/* EXPAND BUTTON */}
         <button
           type="button"
-          onClick={() => setExpanded((current) => !current)}
+          onClick={() =>
+            setExpanded((current) => !current)
+          }
           className="group relative mt-2 flex h-11 w-full items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.025] text-slate-500 transition hover:border-white/[0.13] hover:bg-white/[0.06] hover:text-white"
-          aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
+          aria-label={
+            expanded
+              ? "Collapse sidebar"
+              : "Expand sidebar"
+          }
         >
           {expanded ? (
             <ChevronLeft
@@ -233,12 +279,10 @@ function SidebarSection({
   title: string;
   expanded: boolean;
   items: NavItem[];
-  pathname: string;
   isActive: (href: string) => boolean;
 }) {
   return (
     <div>
-      {/* SECTION LABEL */}
       <div
         className={`mb-2 px-3 transition-all duration-300 ${
           expanded
@@ -264,9 +308,12 @@ function SidebarSection({
                 active
                   ? "bg-white/[0.1] text-white"
                   : "text-slate-500 hover:bg-white/[0.06] hover:text-white"
-              } ${expanded ? "gap-3 px-3" : "justify-center"}`}
+              } ${
+                expanded
+                  ? "gap-3 px-3"
+                  : "justify-center"
+              }`}
             >
-              {/* ACTIVE INDICATOR */}
               {active && (
                 <span className="absolute left-0 h-5 w-[2px] rounded-r-full bg-white" />
               )}
@@ -274,7 +321,9 @@ function SidebarSection({
               <Icon
                 size={18}
                 className={`shrink-0 transition-transform duration-200 ${
-                  active ? "scale-105" : "group-hover:scale-105"
+                  active
+                    ? "scale-105"
+                    : "group-hover:scale-105"
                 }`}
               />
 
