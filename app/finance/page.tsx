@@ -406,11 +406,11 @@ export default function FinancePage() {
   ===================================================== */
 
   return (
-    <div className="relative min-h-screen bg-[#070707] p-4 font-sans text-white antialiased">
+    <div className="relative min-h-screen bg-black p-4 font-sans text-white antialiased">
 
       <FloatingSidebar />
 
-      <div className="mx-auto max-w-[1600px] overflow-hidden rounded-[32px] border border-white/10 bg-[#14131a] p-8 pl-20 shadow-2xl sm:pl-24">
+      <div className="mx-auto max-w-[1600px] overflow-hidden rounded-[32px] border border-white/[0.08] bg-[#050505] p-8 pl-20 shadow-2xl sm:pl-24">
 
         {/* =================================================
             HEADER
@@ -421,16 +421,16 @@ export default function FinancePage() {
           <div>
             <div className="flex items-center gap-3">
 
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-purple-500/20 bg-purple-500/10 text-purple-400">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/[0.12] bg-white/[0.04] text-white">
                 <Wallet size={19} />
               </div>
 
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-purple-400">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white">
                   Monobloc / FINANCE
                 </p>
 
-                <p className="mt-0.5 text-[10px] text-slate-500">
+                <p className="mt-0.5 text-[10px] text-neutral-500">
                   Personal financial command center
                 </p>
               </div>
@@ -441,7 +441,7 @@ export default function FinancePage() {
               Finance
             </h1>
 
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1 text-xs text-neutral-400">
               Understand where your money is going.
             </p>
           </div>
@@ -450,7 +450,7 @@ export default function FinancePage() {
 
             <button
               type="button"
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.04] text-neutral-400 transition hover:bg-white/[0.08] hover:text-white"
               aria-label="Notifications"
             >
               <Bell size={17} />
@@ -461,16 +461,16 @@ export default function FinancePage() {
               onClick={() =>
                 setShowTransactionModal(true)
               }
-              className="flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:opacity-90"
+              className="flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-xs font-semibold text-white shadow-lg transition hover:opacity-90"
             >
               <Plus size={16} />
               New Transaction
             </button>
 
-            <div className="ml-1 flex items-center gap-3 rounded-full border border-white/10 bg-white/5 p-1.5 pr-4">
+            <div className="ml-1 flex items-center gap-3 rounded-full border border-white/[0.08] bg-white/[0.04] p-1.5 pr-4">
 
-              <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-purple-400 to-pink-400 p-0.5">
-                <div className="flex h-full w-full items-center justify-center rounded-full bg-[#17151f] text-[11px] font-semibold">
+              <div className="h-8 w-8 rounded-full bg-white p-0.5">
+                <div className="flex h-full w-full items-center justify-center rounded-full bg-[#050505] text-[11px] font-semibold">
                   Z
                 </div>
               </div>
@@ -480,7 +480,7 @@ export default function FinancePage() {
                   Monobloc User
                 </p>
 
-                <p className="text-[10px] text-slate-500">
+                <p className="text-[10px] text-neutral-500">
                   user@Monobloc.app
                 </p>
               </div>
@@ -509,8 +509,8 @@ export default function FinancePage() {
             label="Income"
             value={formatMoney(totalIncome)}
             subtext="Total money received"
-            valueClass="text-emerald-400"
-            iconClass="bg-emerald-500/10 text-emerald-400"
+            valueClass="text-white"
+            iconClass="bg-white/[0.04] text-white"
           />
 
           <MetricCard
@@ -518,8 +518,8 @@ export default function FinancePage() {
             label="Expenses"
             value={formatMoney(totalExpenses)}
             subtext="Total money spent"
-            valueClass="text-red-400"
-            iconClass="bg-red-500/10 text-red-400"
+            valueClass="text-neutral-300"
+            iconClass="bg-white/[0.04] text-neutral-300"
           />
 
           <MetricCard
@@ -547,7 +547,7 @@ export default function FinancePage() {
             FINANCIAL PROGRESS HERO
         ================================================= */}
 
-        <section className="relative mb-6 overflow-hidden rounded-3xl border border-white/5 bg-gradient-to-r from-[#251f33] via-[#1b1924] to-[#181622] p-7">
+        <section className="relative mb-6 overflow-hidden rounded-3xl border border-white/[0.07] bg-[#080808] p-7">
 
           <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-center">
 
@@ -555,11 +555,11 @@ export default function FinancePage() {
 
               <div className="flex items-center gap-2">
 
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-500/10 text-purple-400">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.04] text-white">
                   <Sparkles size={17} />
                 </div>
 
-                <span className="text-xs font-semibold uppercase tracking-wider text-purple-400">
+                <span className="text-xs font-semibold uppercase tracking-wider text-white">
                   FINANCIAL OVERVIEW
                 </span>
 
@@ -573,7 +573,7 @@ export default function FinancePage() {
                   : "Let's get spending under control."}
               </h2>
 
-              <p className="mt-1 text-xs leading-5 text-slate-400">
+              <p className="mt-1 text-xs leading-5 text-neutral-400">
                 {transactions.length === 0
                   ? "Add your first transaction and Monobloc will start tracking your finances."
                   : `${transactions.length} transaction${
@@ -587,7 +587,7 @@ export default function FinancePage() {
 
                 <div className="mb-2 flex items-center justify-between text-xs">
 
-                  <span className="font-medium text-slate-400">
+                  <span className="font-medium text-neutral-400">
                     Monthly Budget
                   </span>
 
@@ -601,13 +601,13 @@ export default function FinancePage() {
 
                 </div>
 
-                <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                <div className="h-2 overflow-hidden rounded-full bg-white/[0.04]">
 
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${
                       budgetUsed >= 90
                         ? "bg-red-400"
-                        : "bg-gradient-to-r from-purple-500 to-pink-500"
+                        : "bg-white"
                     }`}
                     style={{
                       width:
@@ -625,7 +625,7 @@ export default function FinancePage() {
 
             <div className="flex shrink-0 items-center justify-center lg:pr-8">
 
-              <div className="flex h-32 w-32 items-center justify-center rounded-full border border-purple-500/30 bg-purple-500/[0.04] shadow-[0_0_35px_rgba(168,85,247,0.12)]">
+              <div className="flex h-32 w-32 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.03] ">
 
                 <div className="text-center">
 
@@ -633,13 +633,13 @@ export default function FinancePage() {
                     className={`text-2xl font-bold ${
                       balance >= 0
                         ? "text-white"
-                        : "text-red-400"
+                        : "text-neutral-300"
                     }`}
                   >
                     {formatMoney(balance)}
                   </p>
 
-                  <p className="mt-1 text-[9px] uppercase tracking-wider text-slate-400">
+                  <p className="mt-1 text-[9px] uppercase tracking-wider text-neutral-400">
                     balance
                   </p>
 
@@ -663,29 +663,29 @@ export default function FinancePage() {
               TRANSACTIONS
           ================================================= */}
 
-          <section className="min-h-[560px] rounded-3xl border border-white/5 bg-[#1b1924] xl:col-span-8">
+          <section className="min-h-[560px] rounded-3xl border border-white/[0.07] bg-[#080808] xl:col-span-8">
 
-            <div className="flex items-center justify-between border-b border-white/5 p-5">
+            <div className="flex items-center justify-between border-b border-white/[0.07] p-5">
 
               <div>
                 <div className="flex items-center gap-2">
 
                   <CircleDollarSign
                     size={16}
-                    className="text-purple-400"
+                    className="text-white"
                   />
 
                   <h2 className="text-sm font-semibold text-white">
                     Transactions
                   </h2>
 
-                  <span className="rounded-full bg-white/5 px-2 py-0.5 text-[9px] text-slate-500">
+                  <span className="rounded-full bg-white/[0.04] px-2 py-0.5 text-[9px] text-neutral-500">
                     {transactions.length}
                   </span>
 
                 </div>
 
-                <p className="mt-1 text-[10px] text-slate-600">
+                <p className="mt-1 text-[10px] text-neutral-600">
                   Your recent financial activity
                 </p>
               </div>
@@ -697,7 +697,7 @@ export default function FinancePage() {
                     true
                   )
                 }
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-500/10 text-purple-400 transition hover:bg-purple-500/20"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.04] text-white transition hover:bg-white/[0.08]"
                 aria-label="Add transaction"
               >
                 <Plus size={15} />
@@ -710,15 +710,15 @@ export default function FinancePage() {
               {transactions.length === 0 ? (
                 <div className="flex min-h-[460px] flex-col items-center justify-center px-8 text-center">
 
-                  <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-white/5 bg-white/[0.03] text-slate-600">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-white/[0.07] bg-white/[0.03] text-neutral-600">
                     <Wallet size={28} />
                   </div>
 
-                  <h3 className="mt-5 text-sm font-semibold text-slate-300">
+                  <h3 className="mt-5 text-sm font-semibold text-neutral-300">
                     No transactions yet
                   </h3>
 
-                  <p className="mt-2 max-w-xs text-xs leading-5 text-slate-600">
+                  <p className="mt-2 max-w-xs text-xs leading-5 text-neutral-600">
                     Add your first income or expense to start building your financial overview.
                   </p>
 
@@ -729,7 +729,7 @@ export default function FinancePage() {
                         true
                       )
                     }
-                    className="mt-5 flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-5 py-2.5 text-xs font-semibold text-white transition hover:opacity-90"
+                    className="mt-5 flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-xs font-semibold text-white transition hover:opacity-90"
                   >
                     <Plus size={14} />
                     Add Transaction
@@ -750,14 +750,14 @@ export default function FinancePage() {
                       return (
                         <div
                           key={transaction.id}
-                          className="group mb-3 flex items-center gap-4 rounded-2xl border border-white/5 bg-white/[0.015] p-4 transition hover:bg-white/[0.03]"
+                          className="group mb-3 flex items-center gap-4 rounded-2xl border border-white/[0.07] bg-white/[0.015] p-4 transition hover:bg-white/[0.03]"
                         >
 
                           <div
                             className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
                               isIncome
-                                ? "bg-emerald-500/10 text-emerald-400"
-                                : "bg-red-500/10 text-red-400"
+                                ? "bg-white/[0.04] text-white"
+                                : "bg-white/[0.04] text-neutral-300"
                             }`}
                           >
                             {isIncome ? (
@@ -779,11 +779,11 @@ export default function FinancePage() {
 
                             <div className="mt-1 flex items-center gap-2">
 
-                              <span className="rounded-full bg-white/5 px-2 py-0.5 text-[8px] uppercase tracking-wider text-slate-500">
+                              <span className="rounded-full bg-white/[0.04] px-2 py-0.5 text-[8px] uppercase tracking-wider text-neutral-500">
                                 {transaction.category}
                               </span>
 
-                              <span className="text-[9px] text-slate-700">
+                              <span className="text-[9px] text-neutral-700">
                                 {new Date(
                                   transaction.date
                                 ).toLocaleDateString(
@@ -802,8 +802,8 @@ export default function FinancePage() {
                           <p
                             className={`text-sm font-bold ${
                               isIncome
-                                ? "text-emerald-400"
-                                : "text-red-400"
+                                ? "text-white"
+                                : "text-neutral-300"
                             }`}
                           >
                             {isIncome
@@ -821,7 +821,7 @@ export default function FinancePage() {
                                 transaction.id
                               )
                             }
-                            className="rounded-lg p-2 text-slate-700 opacity-0 transition hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                            className="rounded-lg p-2 text-neutral-700 opacity-0 transition hover:bg-white/[0.04] hover:text-neutral-300 group-hover:opacity-100"
                             aria-label={`Delete ${transaction.title}`}
                           >
                             <Trash2
@@ -848,13 +848,13 @@ export default function FinancePage() {
 
             {/* BUDGET */}
 
-            <section className="rounded-3xl border border-white/5 bg-[#1b1924]">
+            <section className="rounded-3xl border border-white/[0.07] bg-[#080808]">
 
-              <div className="border-b border-white/5 p-5">
+              <div className="border-b border-white/[0.07] p-5">
 
                 <div className="flex items-center gap-3">
 
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.04] text-white">
                     <TrendingUp size={16} />
                   </div>
 
@@ -863,7 +863,7 @@ export default function FinancePage() {
                       Monthly Budget
                     </p>
 
-                    <p className="mt-0.5 text-[10px] text-slate-600">
+                    <p className="mt-0.5 text-[10px] text-neutral-600">
                       Spending control
                     </p>
                   </div>
@@ -876,7 +876,7 @@ export default function FinancePage() {
 
                 {budget === 0 ? (
                   <>
-                    <p className="text-xs leading-5 text-slate-500">
+                    <p className="text-xs leading-5 text-neutral-500">
                       Set a monthly spending limit to let Monobloc track how much you've used.
                     </p>
 
@@ -892,13 +892,13 @@ export default function FinancePage() {
                           )
                         }
                         placeholder="₹ Monthly budget"
-                        className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs text-white outline-none placeholder:text-slate-700 focus:border-purple-500/40"
+                        className="min-w-0 flex-1 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-xs text-white outline-none placeholder:text-neutral-700 focus:border-white/[0.2]"
                       />
 
                       <button
                         type="button"
                         onClick={saveBudget}
-                        className="rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 text-xs font-semibold text-white"
+                        className="rounded-xl bg-white px-4 text-xs font-semibold text-white"
                       >
                         Set
                       </button>
@@ -911,7 +911,7 @@ export default function FinancePage() {
                     <div className="flex items-end justify-between">
 
                       <div>
-                        <p className="text-[9px] uppercase tracking-wider text-slate-600">
+                        <p className="text-[9px] uppercase tracking-wider text-neutral-600">
                           Spent
                         </p>
 
@@ -922,7 +922,7 @@ export default function FinancePage() {
                         </p>
                       </div>
 
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-neutral-500">
                         of{" "}
                         {formatMoney(
                           budget
@@ -931,13 +931,13 @@ export default function FinancePage() {
 
                     </div>
 
-                    <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/5">
+                    <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/[0.04]">
 
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
                           budgetUsed >= 90
                             ? "bg-red-400"
-                            : "bg-gradient-to-r from-purple-500 to-pink-500"
+                            : "bg-white"
                         }`}
                         style={{
                           width: `${budgetUsed}%`,
@@ -948,7 +948,7 @@ export default function FinancePage() {
 
                     <div className="mt-3 flex items-center justify-between">
 
-                      <span className="text-[9px] text-slate-600">
+                      <span className="text-[9px] text-neutral-600">
                         {Math.round(
                           budgetUsed
                         )}
@@ -958,8 +958,8 @@ export default function FinancePage() {
                       <span
                         className={`text-[10px] font-medium ${
                           budgetUsed >= 90
-                            ? "text-red-400"
-                            : "text-purple-400"
+                            ? "text-neutral-300"
+                            : "text-white"
                         }`}
                       >
                         {formatMoney(
@@ -973,7 +973,7 @@ export default function FinancePage() {
                     <button
                       type="button"
                       onClick={resetBudget}
-                      className="mt-5 text-[9px] text-slate-700 transition hover:text-red-400"
+                      className="mt-5 text-[9px] text-neutral-700 transition hover:text-neutral-300"
                     >
                       Reset budget
                     </button>
@@ -987,11 +987,11 @@ export default function FinancePage() {
 
             {/* Monobloc ASSISTANT */}
 
-            <section className="rounded-3xl border border-white/5 bg-[#1b1924] p-5">
+            <section className="rounded-3xl border border-white/[0.07] bg-[#080808] p-5">
 
               <div className="mb-5 flex items-center gap-3">
 
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.04] text-white">
                   <Sparkles size={16} />
                 </div>
 
@@ -1000,7 +1000,7 @@ export default function FinancePage() {
                     Monobloc Assistant
                   </p>
 
-                  <p className="mt-0.5 text-[10px] text-slate-600">
+                  <p className="mt-0.5 text-[10px] text-neutral-600">
                     Financial intelligence
                   </p>
                 </div>
@@ -1043,7 +1043,7 @@ export default function FinancePage() {
 
               <Link
                 href="/ai-assistant"
-                className="mt-5 flex items-center justify-between rounded-xl border border-purple-500/10 bg-purple-500/[0.04] px-4 py-3 text-[10px] font-semibold text-purple-400 transition hover:bg-purple-500/[0.08]"
+                className="mt-5 flex items-center justify-between rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-[10px] font-semibold text-white transition hover:bg-white/[0.08]"
               >
                 <span className="flex items-center gap-2">
                   <Sparkles size={13} />
@@ -1063,9 +1063,9 @@ export default function FinancePage() {
             SAVINGS GOALS
         ================================================= */}
 
-        <section className="mt-6 rounded-3xl border border-white/5 bg-[#1b1924]">
+        <section className="mt-6 rounded-3xl border border-white/[0.07] bg-[#080808]">
 
-          <div className="flex items-center justify-between border-b border-white/5 p-5">
+          <div className="flex items-center justify-between border-b border-white/[0.07] p-5">
 
             <div>
 
@@ -1073,20 +1073,20 @@ export default function FinancePage() {
 
                 <Target
                   size={16}
-                  className="text-purple-400"
+                  className="text-white"
                 />
 
                 <h2 className="text-sm font-semibold text-white">
                   Savings Goals
                 </h2>
 
-                <span className="rounded-full bg-white/5 px-2 py-0.5 text-[9px] text-slate-500">
+                <span className="rounded-full bg-white/[0.04] px-2 py-0.5 text-[9px] text-neutral-500">
                   {goals.length}
                 </span>
 
               </div>
 
-              <p className="mt-1 text-[10px] text-slate-600">
+              <p className="mt-1 text-[10px] text-neutral-600">
                 Build toward the things that matter
               </p>
 
@@ -1097,7 +1097,7 @@ export default function FinancePage() {
               onClick={() =>
                 setShowGoalModal(true)
               }
-              className="flex items-center gap-2 rounded-xl bg-purple-500/10 px-4 py-2.5 text-[10px] font-semibold text-purple-400 transition hover:bg-purple-500/20"
+              className="flex items-center gap-2 rounded-xl bg-white/[0.04] px-4 py-2.5 text-[10px] font-semibold text-white transition hover:bg-white/[0.08]"
             >
               <Plus size={14} />
               Add Goal
@@ -1108,15 +1108,15 @@ export default function FinancePage() {
           {goals.length === 0 ? (
             <div className="flex min-h-[250px] flex-col items-center justify-center px-8 text-center">
 
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.03] text-slate-700">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/[0.03] text-neutral-700">
                 <Target size={24} />
               </div>
 
-              <p className="mt-4 text-xs font-medium text-slate-500">
+              <p className="mt-4 text-xs font-medium text-neutral-500">
                 No savings goals yet
               </p>
 
-              <p className="mt-1 max-w-xs text-[10px] leading-5 text-slate-700">
+              <p className="mt-1 max-w-xs text-[10px] leading-5 text-neutral-700">
                 Create a savings goal and track how close you are to reaching it.
               </p>
 
@@ -1153,13 +1153,13 @@ export default function FinancePage() {
                     }
                     className={`group relative rounded-2xl border p-5 text-left transition ${
                       isSelected
-                        ? "border-purple-500/20 bg-purple-500/[0.05]"
-                        : "border-white/5 bg-white/[0.015] hover:bg-white/[0.03]"
+                        ? "border-white/[0.12] bg-white/[0.045]"
+                        : "border-white/[0.07] bg-white/[0.015] hover:bg-white/[0.03]"
                     }`}
                   >
 
                     {isSelected && (
-                      <span className="absolute bottom-4 left-0 top-4 w-[3px] rounded-r-full bg-purple-500" />
+                      <span className="absolute bottom-4 left-0 top-4 w-[3px] rounded-r-full bg-white" />
                     )}
 
                     <div className="flex items-start justify-between gap-3">
@@ -1169,8 +1169,8 @@ export default function FinancePage() {
                         <div
                           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
                             isComplete
-                              ? "bg-emerald-500/10 text-emerald-400"
-                              : "bg-purple-500/10 text-purple-400"
+                              ? "bg-white/[0.04] text-white"
+                              : "bg-white/[0.04] text-white"
                           }`}
                         >
                           {isComplete ? (
@@ -1190,7 +1190,7 @@ export default function FinancePage() {
                             {goal.name}
                           </p>
 
-                          <p className="mt-1 text-[9px] text-slate-600">
+                          <p className="mt-1 text-[9px] text-neutral-600">
                             {formatMoney(
                               goal.saved
                             )}{" "}
@@ -1206,18 +1206,18 @@ export default function FinancePage() {
 
                       <ChevronRight
                         size={14}
-                        className="shrink-0 text-slate-700 transition group-hover:text-slate-400"
+                        className="shrink-0 text-neutral-700 transition group-hover:text-neutral-400"
                       />
 
                     </div>
 
-                    <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/5">
+                    <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/[0.04]">
 
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
                           isComplete
-                            ? "bg-emerald-400"
-                            : "bg-gradient-to-r from-purple-500 to-pink-500"
+                            ? "bg-white"
+                            : "bg-white"
                         }`}
                         style={{
                           width: `${progress}%`,
@@ -1228,7 +1228,7 @@ export default function FinancePage() {
 
                     <div className="mt-3 flex items-center justify-between">
 
-                      <span className="text-[9px] text-slate-600">
+                      <span className="text-[9px] text-neutral-600">
                         {Math.round(
                           progress
                         )}
@@ -1236,11 +1236,11 @@ export default function FinancePage() {
                       </span>
 
                       {isComplete ? (
-                        <span className="text-[9px] font-semibold text-emerald-400">
+                        <span className="text-[9px] font-semibold text-white">
                           Goal reached
                         </span>
                       ) : (
-                        <span className="text-[9px] text-purple-400">
+                        <span className="text-[9px] text-white">
                           Click to manage
                         </span>
                       )}
@@ -1261,13 +1261,13 @@ export default function FinancePage() {
         ================================================= */}
 
         {selectedGoal && (
-          <section className="mt-4 rounded-3xl border border-purple-500/10 bg-purple-500/[0.025] p-5">
+          <section className="mt-4 rounded-3xl border border-white/[0.08] bg-white/[0.02] p-5">
 
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
               <div>
 
-                <p className="text-[9px] uppercase tracking-[0.2em] text-purple-400">
+                <p className="text-[9px] uppercase tracking-[0.2em] text-white">
                   Selected Goal
                 </p>
 
@@ -1275,7 +1275,7 @@ export default function FinancePage() {
                   {selectedGoal.name}
                 </p>
 
-                <p className="mt-1 text-[10px] text-slate-600">
+                <p className="mt-1 text-[10px] text-neutral-600">
                   {formatMoney(
                     selectedGoal.saved
                   )}{" "}
@@ -1301,7 +1301,7 @@ export default function FinancePage() {
                     selectedGoal.saved >=
                     selectedGoal.target
                   }
-                  className="rounded-xl border border-white/5 bg-white/[0.03] px-4 py-2.5 text-[10px] font-semibold text-purple-400 transition hover:bg-purple-500/10 disabled:cursor-not-allowed disabled:opacity-30"
+                  className="rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-2.5 text-[10px] font-semibold text-white transition hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   + ₹100
                 </button>
@@ -1318,7 +1318,7 @@ export default function FinancePage() {
                     selectedGoal.saved >=
                     selectedGoal.target
                   }
-                  className="rounded-xl border border-white/5 bg-white/[0.03] px-4 py-2.5 text-[10px] font-semibold text-purple-400 transition hover:bg-purple-500/10 disabled:cursor-not-allowed disabled:opacity-30"
+                  className="rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-2.5 text-[10px] font-semibold text-white transition hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   + ₹500
                 </button>
@@ -1335,7 +1335,7 @@ export default function FinancePage() {
                     selectedGoal.saved >=
                     selectedGoal.target
                   }
-                  className="rounded-xl border border-white/5 bg-white/[0.03] px-4 py-2.5 text-[10px] font-semibold text-purple-400 transition hover:bg-purple-500/10 disabled:cursor-not-allowed disabled:opacity-30"
+                  className="rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-2.5 text-[10px] font-semibold text-white transition hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   + ₹1,000
                 </button>
@@ -1347,7 +1347,7 @@ export default function FinancePage() {
                       selectedGoal.id
                     )
                   }
-                  className="rounded-xl border border-red-500/10 bg-red-500/[0.04] px-4 py-2.5 text-[10px] font-semibold text-red-400 transition hover:bg-red-500/10"
+                  className="rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-2.5 text-[10px] font-semibold text-neutral-300 transition hover:bg-white/[0.04]"
                 >
                   <Trash2
                     size={13}
@@ -1365,13 +1365,13 @@ export default function FinancePage() {
             SYSTEM BAR
         ================================================= */}
 
-        <section className="mt-6 rounded-3xl border border-white/5 bg-[#1b1924] p-5">
+        <section className="mt-6 rounded-3xl border border-white/[0.07] bg-[#080808] p-5">
 
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
             <div className="flex items-center gap-3">
 
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.04] text-white">
                 <Zap size={16} />
               </div>
 
@@ -1380,7 +1380,7 @@ export default function FinancePage() {
                   Finance System
                 </p>
 
-                <p className="mt-0.5 text-[10px] text-slate-600">
+                <p className="mt-0.5 text-[10px] text-neutral-600">
                   Your financial workspace is running locally.
                 </p>
               </div>
@@ -1438,7 +1438,7 @@ export default function FinancePage() {
             }}
           >
 
-            <div className="w-full max-w-[480px] rounded-3xl border border-white/10 bg-[#17151f] p-6 shadow-2xl">
+            <div className="w-full max-w-[480px] rounded-3xl border border-white/[0.08] bg-[#050505] p-6 shadow-2xl">
 
               <div className="mb-6 flex items-center justify-between">
 
@@ -1446,11 +1446,11 @@ export default function FinancePage() {
 
                   <div className="flex items-center gap-2">
 
-                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.04] text-white">
                       <Wallet size={15} />
                     </div>
 
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-purple-400">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white">
                       Finance
                     </p>
 
@@ -1460,7 +1460,7 @@ export default function FinancePage() {
                     Add transaction
                   </h2>
 
-                  <p className="mt-1 text-[10px] text-slate-600">
+                  <p className="mt-1 text-[10px] text-neutral-600">
                     Record income or an expense.
                   </p>
 
@@ -1471,7 +1471,7 @@ export default function FinancePage() {
                   onClick={
                     closeTransactionModal
                   }
-                  className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.04] text-slate-600 transition hover:bg-white/10 hover:text-white"
+                  className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.04] text-neutral-600 transition hover:bg-white/[0.08] hover:text-white"
                 >
                   <X size={16} />
                 </button>
@@ -1494,8 +1494,8 @@ export default function FinancePage() {
                     className={`rounded-xl border py-3 text-xs font-semibold transition ${
                       transactionType ===
                       "expense"
-                        ? "border-red-400/30 bg-red-400/10 text-red-400"
-                        : "border-white/10 bg-white/[0.03] text-slate-500"
+                        ? "border-white/[0.15] bg-white/[0.05] text-neutral-300"
+                        : "border-white/[0.08] bg-white/[0.03] text-neutral-500"
                     }`}
                   >
                     Expense
@@ -1511,8 +1511,8 @@ export default function FinancePage() {
                     className={`rounded-xl border py-3 text-xs font-semibold transition ${
                       transactionType ===
                       "income"
-                        ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-400"
-                        : "border-white/10 bg-white/[0.03] text-slate-500"
+                        ? "border-white/[0.15] bg-white/[0.05] text-white"
+                        : "border-white/[0.08] bg-white/[0.03] text-neutral-500"
                     }`}
                   >
                     Income
@@ -1524,7 +1524,7 @@ export default function FinancePage() {
 
                 <div>
 
-                  <label className="mb-2 block text-[10px] font-medium text-slate-500">
+                  <label className="mb-2 block text-[10px] font-medium text-neutral-500">
                     Name
                   </label>
 
@@ -1538,7 +1538,7 @@ export default function FinancePage() {
                       )
                     }
                     placeholder="What was this for?"
-                    className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-xs text-white outline-none placeholder:text-slate-700 focus:border-purple-500/40"
+                    className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 text-xs text-white outline-none placeholder:text-neutral-700 focus:border-white/[0.2]"
                     autoFocus
                   />
 
@@ -1548,7 +1548,7 @@ export default function FinancePage() {
 
                 <div>
 
-                  <label className="mb-2 block text-[10px] font-medium text-slate-500">
+                  <label className="mb-2 block text-[10px] font-medium text-neutral-500">
                     Amount
                   </label>
 
@@ -1564,7 +1564,7 @@ export default function FinancePage() {
                       )
                     }
                     placeholder="₹0"
-                    className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-xs text-white outline-none placeholder:text-slate-700 focus:border-purple-500/40"
+                    className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 text-xs text-white outline-none placeholder:text-neutral-700 focus:border-white/[0.2]"
                   />
 
                 </div>
@@ -1573,7 +1573,7 @@ export default function FinancePage() {
 
                 <div>
 
-                  <label className="mb-2 block text-[10px] font-medium text-slate-500">
+                  <label className="mb-2 block text-[10px] font-medium text-neutral-500">
                     Category
                   </label>
 
@@ -1587,7 +1587,7 @@ export default function FinancePage() {
                       )
                     }
                     placeholder="Food, travel, salary..."
-                    className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-xs text-white outline-none placeholder:text-slate-700 focus:border-purple-500/40"
+                    className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 text-xs text-white outline-none placeholder:text-neutral-700 focus:border-white/[0.2]"
                   />
 
                 </div>
@@ -1601,7 +1601,7 @@ export default function FinancePage() {
                     onClick={
                       closeTransactionModal
                     }
-                    className="flex-1 rounded-xl border border-white/10 bg-white/[0.03] py-3 text-xs font-semibold text-slate-500 transition hover:bg-white/10 hover:text-white"
+                    className="flex-1 rounded-xl border border-white/[0.08] bg-white/[0.03] py-3 text-xs font-semibold text-neutral-500 transition hover:bg-white/[0.08] hover:text-white"
                   >
                     Cancel
                   </button>
@@ -1615,7 +1615,7 @@ export default function FinancePage() {
                         transactionAmount
                       )
                     }
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 py-3 text-xs font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-white py-3 text-xs font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
                   >
                     <Plus size={14} />
                     Add Transaction
@@ -1647,7 +1647,7 @@ export default function FinancePage() {
             }}
           >
 
-            <div className="w-full max-w-[480px] rounded-3xl border border-white/10 bg-[#17151f] p-6 shadow-2xl">
+            <div className="w-full max-w-[480px] rounded-3xl border border-white/[0.08] bg-[#050505] p-6 shadow-2xl">
 
               <div className="mb-6 flex items-center justify-between">
 
@@ -1655,11 +1655,11 @@ export default function FinancePage() {
 
                   <div className="flex items-center gap-2">
 
-                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.04] text-white">
                       <Target size={15} />
                     </div>
 
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-purple-400">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white">
                       Savings
                     </p>
 
@@ -1669,7 +1669,7 @@ export default function FinancePage() {
                     Create a savings goal
                   </h2>
 
-                  <p className="mt-1 text-[10px] text-slate-600">
+                  <p className="mt-1 text-[10px] text-neutral-600">
                     Decide what you're saving toward.
                   </p>
 
@@ -1678,7 +1678,7 @@ export default function FinancePage() {
                 <button
                   type="button"
                   onClick={closeGoalModal}
-                  className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.04] text-slate-600 transition hover:bg-white/10 hover:text-white"
+                  className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.04] text-neutral-600 transition hover:bg-white/[0.08] hover:text-white"
                 >
                   <X size={16} />
                 </button>
@@ -1689,7 +1689,7 @@ export default function FinancePage() {
 
                 <div>
 
-                  <label className="mb-2 block text-[10px] font-medium text-slate-500">
+                  <label className="mb-2 block text-[10px] font-medium text-neutral-500">
                     Goal name
                   </label>
 
@@ -1701,7 +1701,7 @@ export default function FinancePage() {
                       )
                     }
                     placeholder="What are you saving for?"
-                    className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-xs text-white outline-none placeholder:text-slate-700 focus:border-purple-500/40"
+                    className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 text-xs text-white outline-none placeholder:text-neutral-700 focus:border-white/[0.2]"
                     autoFocus
                   />
 
@@ -1709,7 +1709,7 @@ export default function FinancePage() {
 
                 <div>
 
-                  <label className="mb-2 block text-[10px] font-medium text-slate-500">
+                  <label className="mb-2 block text-[10px] font-medium text-neutral-500">
                     Target amount
                   </label>
 
@@ -1723,14 +1723,14 @@ export default function FinancePage() {
                       )
                     }
                     placeholder="₹0"
-                    className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-xs text-white outline-none placeholder:text-slate-700 focus:border-purple-500/40"
+                    className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 text-xs text-white outline-none placeholder:text-neutral-700 focus:border-white/[0.2]"
                   />
 
                 </div>
 
                 <div>
 
-                  <label className="mb-2 block text-[10px] font-medium text-slate-500">
+                  <label className="mb-2 block text-[10px] font-medium text-neutral-500">
                     Already saved
                   </label>
 
@@ -1744,7 +1744,7 @@ export default function FinancePage() {
                       )
                     }
                     placeholder="₹0"
-                    className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 text-xs text-white outline-none placeholder:text-slate-700 focus:border-purple-500/40"
+                    className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 text-xs text-white outline-none placeholder:text-neutral-700 focus:border-white/[0.2]"
                   />
 
                 </div>
@@ -1756,7 +1756,7 @@ export default function FinancePage() {
                     onClick={
                       closeGoalModal
                     }
-                    className="flex-1 rounded-xl border border-white/10 bg-white/[0.03] py-3 text-xs font-semibold text-slate-500 transition hover:bg-white/10 hover:text-white"
+                    className="flex-1 rounded-xl border border-white/[0.08] bg-white/[0.03] py-3 text-xs font-semibold text-neutral-500 transition hover:bg-white/[0.08] hover:text-white"
                   >
                     Cancel
                   </button>
@@ -1768,7 +1768,7 @@ export default function FinancePage() {
                       !goalName.trim() ||
                       !Number(goalTarget)
                     }
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 py-3 text-xs font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-white py-3 text-xs font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
                   >
                     <Plus size={14} />
                     Create Goal
@@ -1798,7 +1798,7 @@ function MetricCard({
   value,
   subtext,
   valueClass = "text-white",
-  iconClass = "bg-purple-500/10 text-purple-400",
+  iconClass = "bg-white/[0.04] text-white",
 }: {
   icon: React.ReactNode;
   label: string;
@@ -1808,7 +1808,7 @@ function MetricCard({
   iconClass?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/5 bg-[#1b1924] p-4 transition hover:bg-white/5">
+    <div className="rounded-2xl border border-white/[0.07] bg-[#080808] p-4 transition hover:bg-white/[0.04]">
 
       <div className="flex items-center justify-between">
 
@@ -1818,7 +1818,7 @@ function MetricCard({
           {icon}
         </div>
 
-        <span className="text-[10px] text-slate-500">
+        <span className="text-[10px] text-neutral-500">
           {label}
         </span>
 
@@ -1830,7 +1830,7 @@ function MetricCard({
         {value}
       </p>
 
-      <p className="mt-0.5 text-[10px] text-slate-400">
+      <p className="mt-0.5 text-[10px] text-neutral-400">
         {subtext}
       </p>
 
@@ -1852,21 +1852,21 @@ function StatusRow({
   active?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3">
+    <div className="flex items-center justify-between rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-3">
 
-      <span className="text-[10px] text-slate-500">
+      <span className="text-[10px] text-neutral-500">
         {label}
       </span>
 
       <span
         className={`flex items-center gap-1.5 text-[10px] font-medium ${
           active
-            ? "text-purple-400"
-            : "text-slate-500"
+            ? "text-white"
+            : "text-neutral-500"
         }`}
       >
         {active && (
-          <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />
+          <span className="h-1.5 w-1.5 rounded-full bg-white" />
         )}
 
         {value}
@@ -1888,13 +1888,13 @@ function SystemBadge({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border border-white/5 bg-white/[0.02] px-4 py-2">
+    <div className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-4 py-2">
 
-      <p className="text-[8px] uppercase tracking-[0.15em] text-slate-600">
+      <p className="text-[8px] uppercase tracking-[0.15em] text-neutral-600">
         {label}
       </p>
 
-      <p className="mt-0.5 font-mono text-[10px] font-semibold text-purple-400">
+      <p className="mt-0.5 font-mono text-[10px] font-semibold text-white">
         {value}
       </p>
 

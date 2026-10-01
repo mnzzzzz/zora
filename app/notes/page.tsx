@@ -494,7 +494,7 @@ export default function NotesPage() {
       It prevents a parent layout/flex container from pushing the entire
       Notes page hundreds of pixels down.
     */
-    <main className="fixed inset-0 z-0 overflow-y-auto overflow-x-hidden bg-[#070707] text-white">
+    <main className="fixed inset-0 z-0 overflow-y-auto overflow-x-hidden bg-black text-white">
       <FloatingSidebar />
 
       <div className="min-h-screen w-full pl-20 sm:pl-24">
@@ -502,12 +502,12 @@ export default function NotesPage() {
         {/* HEADER                                                               */}
         {/* ------------------------------------------------------------------ */}
 
-        <header className="w-full border-b border-white/[0.07] bg-[#070707]">
+        <header className="w-full border-b border-white/[0.07] bg-black">
           <div className="px-6 py-5 lg:px-10">
             <div className="flex items-center justify-between gap-6">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-purple-400/15 bg-purple-500/[0.09]">
-                  <FileText className="h-5 w-5 text-purple-300" />
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.04]">
+                  <FileText className="h-5 w-5 text-neutral-300" />
                 </div>
 
                 <div>
@@ -516,7 +516,7 @@ export default function NotesPage() {
                       Notes
                     </h1>
 
-                    <span className="rounded-full border border-purple-400/20 bg-purple-500/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-purple-300">
+                    <span className="rounded-full border border-white/[0.10] bg-white/[0.05] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-neutral-300">
                       Workspace
                     </span>
                   </div>
@@ -532,8 +532,8 @@ export default function NotesPage() {
                   <span
                     className={`h-1.5 w-1.5 rounded-full ${
                       saveState === "saved"
-                        ? "bg-emerald-400"
-                        : "animate-pulse bg-purple-400"
+                        ? "bg-white"
+                        : "animate-pulse bg-white"
                     }`}
                   />
 
@@ -546,7 +546,7 @@ export default function NotesPage() {
 
                 <button
                   onClick={() => createNote()}
-                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-500 to-fuchsia-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-purple-500/10 transition hover:from-purple-400 hover:to-fuchsia-400"
+                  className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-white/5 transition hover:from-neutral-200 hover:to-white"
                 >
                   <Plus className="h-4 w-4" />
                   New note
@@ -566,13 +566,13 @@ export default function NotesPage() {
           {/* ---------------------------------------------------------------- */}
 
           <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-            <div className="rounded-2xl border border-white/[0.07] bg-[#14131a] p-4">
+            <div className="rounded-2xl border border-white/[0.07] bg-[#050505] p-4">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/30">
                   Total Notes
                 </span>
 
-                <FileText className="h-4 w-4 text-purple-400/70" />
+                <FileText className="h-4 w-4 text-neutral-400" />
               </div>
 
               <p className="mt-3 text-2xl font-semibold text-white">
@@ -580,13 +580,13 @@ export default function NotesPage() {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-white/[0.07] bg-[#14131a] p-4">
+            <div className="rounded-2xl border border-white/[0.07] bg-[#050505] p-4">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/30">
                   Folders
                 </span>
 
-                <Folder className="h-4 w-4 text-fuchsia-400/70" />
+                <Folder className="h-4 w-4 text-neutral-400" />
               </div>
 
               <p className="mt-3 text-2xl font-semibold text-white">
@@ -594,13 +594,13 @@ export default function NotesPage() {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-white/[0.07] bg-[#14131a] p-4">
+            <div className="rounded-2xl border border-white/[0.07] bg-[#050505] p-4">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/30">
                   This Week
                 </span>
 
-                <Clock3 className="h-4 w-4 text-purple-400/70" />
+                <Clock3 className="h-4 w-4 text-neutral-400" />
               </div>
 
               <p className="mt-3 text-2xl font-semibold text-white">
@@ -608,13 +608,13 @@ export default function NotesPage() {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-white/[0.07] bg-[#14131a] p-4">
+            <div className="rounded-2xl border border-white/[0.07] bg-[#050505] p-4">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/30">
                   Words
                 </span>
 
-                <Type className="h-4 w-4 text-fuchsia-400/70" />
+                <Type className="h-4 w-4 text-neutral-400" />
               </div>
 
               <p className="mt-3 text-2xl font-semibold text-white">
@@ -627,10 +627,10 @@ export default function NotesPage() {
           {/* INTELLIGENCE                                                       */}
           {/* ---------------------------------------------------------------- */}
 
-          <div className="mt-4 overflow-hidden rounded-2xl border border-purple-400/15 bg-gradient-to-r from-purple-500/[0.09] via-fuchsia-500/[0.04] to-transparent">
+          <div className="mt-4 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#080808] from-white/[0.09]  ">
             <div className="flex items-center gap-4 px-5 py-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-purple-400/15 bg-purple-500/[0.08]">
-                <Sparkles className="h-5 w-5 text-purple-300" />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.04]">
+                <Sparkles className="h-5 w-5 text-neutral-300" />
               </div>
 
               <div>
@@ -650,12 +650,12 @@ export default function NotesPage() {
           {/* NOTES WORKSPACE                                                    */}
           {/* ---------------------------------------------------------------- */}
 
-          <div className="mt-4 grid min-h-[650px] overflow-hidden rounded-3xl border border-white/[0.07] bg-[#14131a] lg:grid-cols-[220px_300px_minmax(0,1fr)]">
+          <div className="mt-4 grid min-h-[650px] overflow-hidden rounded-3xl border border-white/[0.07] bg-[#050505] lg:grid-cols-[220px_300px_minmax(0,1fr)]">
             {/* ============================================================= */}
             {/* FOLDERS                                                         */}
             {/* ============================================================= */}
 
-            <aside className="border-b border-white/[0.07] bg-[#100f15] p-3 lg:border-b-0 lg:border-r">
+            <aside className="border-b border-white/[0.07] bg-[#050505] p-3 lg:border-b-0 lg:border-r">
               <div className="flex items-center justify-between px-2 py-2">
                 <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/25">
                   Knowledge Base
@@ -663,7 +663,7 @@ export default function NotesPage() {
 
                 <button
                   onClick={() => setShowFolderModal(true)}
-                  className="rounded-lg p-1.5 text-white/25 transition hover:bg-purple-500/10 hover:text-purple-300"
+                  className="rounded-lg p-1.5 text-white/25 transition hover:bg-white/[0.05] hover:text-neutral-300"
                   title="Create folder"
                 >
                   <FolderPlus className="h-4 w-4" />
@@ -683,11 +683,11 @@ export default function NotesPage() {
                   onClick={() => setSelectedFolderId(null)}
                   className={`flex cursor-pointer items-center justify-between rounded-xl px-3 py-2.5 transition ${
                     selectedFolderId === null
-                      ? "bg-purple-500/10 text-purple-300"
+                      ? "bg-white/[0.05] text-neutral-300"
                       : "text-white/40 hover:bg-white/[0.04] hover:text-white/70"
                   } ${
                     dragOverFolderId === "all"
-                      ? "ring-1 ring-purple-400/40"
+                      ? "ring-1 ring-white/[0.20]"
                       : ""
                   }`}
                 >
@@ -746,12 +746,12 @@ export default function NotesPage() {
                               setEditingFolderId(null);
                             }
                           }}
-                          className="min-w-0 flex-1 rounded-lg border border-purple-400/20 bg-black/20 px-2 py-1.5 text-xs text-white outline-none"
+                          className="min-w-0 flex-1 rounded-lg border border-white/[0.10] bg-black/20 px-2 py-1.5 text-xs text-white outline-none"
                         />
 
                         <button
                           onClick={saveFolderRename}
-                          className="rounded-lg p-1.5 text-emerald-300 hover:bg-white/10"
+                          className="rounded-lg p-1.5 text-neutral-300 hover:bg-white/10"
                         >
                           <Check className="h-3.5 w-3.5" />
                         </button>
@@ -783,7 +783,7 @@ export default function NotesPage() {
                       }
                       className={`group relative rounded-xl transition ${
                         dragOver
-                          ? "bg-purple-500/10 ring-1 ring-purple-400/40"
+                          ? "bg-white/[0.05] ring-1 ring-white/[0.20]"
                           : ""
                       }`}
                     >
@@ -793,7 +793,7 @@ export default function NotesPage() {
                         }
                         className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left transition ${
                           selected
-                            ? "bg-purple-500/10 text-purple-300"
+                            ? "bg-white/[0.05] text-neutral-300"
                             : "text-white/40 hover:bg-white/[0.04] hover:text-white/70"
                         }`}
                       >
@@ -830,7 +830,7 @@ export default function NotesPage() {
                       </button>
 
                       {openFolderMenu === folder.id && (
-                        <div className="absolute right-1 top-10 z-50 w-32 overflow-hidden rounded-xl border border-white/10 bg-[#1b1924] p-1 shadow-2xl">
+                        <div className="absolute right-1 top-10 z-50 w-32 overflow-hidden rounded-xl border border-white/10 bg-[#0A0A0A] p-1 shadow-2xl">
                           <button
                             onClick={() => beginRename(folder)}
                             className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-white/60 hover:bg-white/[0.06] hover:text-white"
@@ -857,7 +857,7 @@ export default function NotesPage() {
                 {folders.length === 0 && (
                   <button
                     onClick={() => setShowFolderModal(true)}
-                    className="mt-2 flex w-full items-center gap-2 rounded-xl border border-dashed border-white/[0.08] px-3 py-3 text-left text-xs text-white/25 transition hover:border-purple-400/20 hover:text-purple-300"
+                    className="mt-2 flex w-full items-center gap-2 rounded-xl border border-dashed border-white/[0.08] px-3 py-3 text-left text-xs text-white/25 transition hover:border-white/[0.10] hover:text-neutral-300"
                   >
                     <FolderPlus className="h-4 w-4" />
                     Create a folder
@@ -870,7 +870,7 @@ export default function NotesPage() {
             {/* NOTE LIST                                                       */}
             {/* ============================================================= */}
 
-            <section className="min-w-0 border-b border-white/[0.07] bg-[#17161e] lg:border-b-0 lg:border-r">
+            <section className="min-w-0 border-b border-white/[0.07] bg-[#080808] lg:border-b-0 lg:border-r">
               <div className="border-b border-white/[0.07] p-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/20" />
@@ -881,7 +881,7 @@ export default function NotesPage() {
                       setSearch(event.target.value)
                     }
                     placeholder="Search your notes..."
-                    className="w-full rounded-xl border border-white/[0.07] bg-black/20 py-2.5 pl-9 pr-3 text-xs text-white outline-none placeholder:text-white/20 focus:border-purple-400/25"
+                    className="w-full rounded-xl border border-white/[0.07] bg-black/20 py-2.5 pl-9 pr-3 text-xs text-white outline-none placeholder:text-white/20 focus:border-white/[0.16]"
                   />
                 </div>
 
@@ -916,7 +916,7 @@ export default function NotesPage() {
                       onClick={() =>
                         createNote(selectedFolderId)
                       }
-                      className="mt-4 flex items-center gap-2 rounded-xl bg-purple-500/10 px-3 py-2 text-xs text-purple-300 ring-1 ring-purple-400/10 transition hover:bg-purple-500/15"
+                      className="mt-4 flex items-center gap-2 rounded-xl bg-white/[0.05] px-3 py-2 text-xs text-neutral-300 ring-1 ring-white/[0.10] transition hover:bg-white/[0.09]"
                     >
                       <Plus className="h-3.5 w-3.5" />
                       Create note
@@ -936,7 +936,7 @@ export default function NotesPage() {
                       }
                       className={`group mb-1 cursor-grab rounded-2xl border p-3 transition active:cursor-grabbing ${
                         selectedNoteId === note.id
-                          ? "border-purple-400/15 bg-purple-500/[0.07]"
+                          ? "border-white/[0.08] bg-white/[0.04]"
                           : "border-transparent hover:border-white/[0.06] hover:bg-white/[0.025]"
                       } ${
                         draggedNoteId === note.id
@@ -973,7 +973,7 @@ export default function NotesPage() {
                         </span>
 
                         <span
-                          className="max-w-[110px] truncate text-[9px] text-purple-300/35"
+                          className="max-w-[110px] truncate text-[9px] text-neutral-300/35"
                           style={{
                             fontFamily: note.fontFamily,
                           }}
@@ -991,12 +991,12 @@ export default function NotesPage() {
             {/* EDITOR                                                           */}
             {/* ============================================================= */}
 
-            <section className="flex min-h-[650px] min-w-0 flex-col bg-[#14131a]">
+            <section className="flex min-h-[650px] min-w-0 flex-col bg-[#050505]">
               {selectedNote ? (
                 <>
                   {/* TOOLBAR */}
 
-                  <div className="flex flex-wrap items-center gap-1.5 border-b border-white/[0.07] bg-[#17161e] px-4 py-3">
+                  <div className="flex flex-wrap items-center gap-1.5 border-b border-white/[0.07] bg-[#080808] px-4 py-3">
                     {/* FONT */}
 
                     <div className="relative">
@@ -1008,13 +1008,13 @@ export default function NotesPage() {
                               event.target.value as FontFamily,
                           })
                         }
-                        className="appearance-none rounded-lg border border-white/[0.07] bg-white/[0.025] py-2 pl-3 pr-8 text-[11px] text-white/55 outline-none transition hover:bg-white/[0.05] focus:border-purple-400/25"
+                        className="appearance-none rounded-lg border border-white/[0.07] bg-white/[0.025] py-2 pl-3 pr-8 text-[11px] text-white/55 outline-none transition hover:bg-white/[0.05] focus:border-white/[0.16]"
                       >
                         {FONT_OPTIONS.map((font) => (
                           <option
                             key={font}
                             value={font}
-                            className="bg-[#1b1924] text-white"
+                            className="bg-[#0A0A0A] text-white"
                           >
                             {font}
                           </option>
@@ -1036,13 +1036,13 @@ export default function NotesPage() {
                             ),
                           })
                         }
-                        className="appearance-none rounded-lg border border-white/[0.07] bg-white/[0.025] py-2 pl-3 pr-7 text-[11px] text-white/55 outline-none focus:border-purple-400/25"
+                        className="appearance-none rounded-lg border border-white/[0.07] bg-white/[0.025] py-2 pl-3 pr-7 text-[11px] text-white/55 outline-none focus:border-white/[0.16]"
                       >
                         {FONT_SIZES.map((size) => (
                           <option
                             key={size}
                             value={size}
-                            className="bg-[#1b1924] text-white"
+                            className="bg-[#0A0A0A] text-white"
                           >
                             {size}px
                           </option>
@@ -1064,7 +1064,7 @@ export default function NotesPage() {
                       }
                       className={`rounded-lg p-2 transition ${
                         selectedNote.bold
-                          ? "bg-purple-500/15 text-purple-300"
+                          ? "bg-white/[0.09] text-neutral-300"
                           : "text-white/30 hover:bg-white/[0.05] hover:text-white/70"
                       }`}
                       title="Bold"
@@ -1082,7 +1082,7 @@ export default function NotesPage() {
                       }
                       className={`rounded-lg p-2 transition ${
                         selectedNote.italic
-                          ? "bg-purple-500/15 text-purple-300"
+                          ? "bg-white/[0.09] text-neutral-300"
                           : "text-white/30 hover:bg-white/[0.05] hover:text-white/70"
                       }`}
                       title="Italic"
@@ -1100,7 +1100,7 @@ export default function NotesPage() {
                       }
                       className={`rounded-lg p-2 transition ${
                         selectedNote.underline
-                          ? "bg-purple-500/15 text-purple-300"
+                          ? "bg-white/[0.09] text-neutral-300"
                           : "text-white/30 hover:bg-white/[0.05] hover:text-white/70"
                       }`}
                       title="Underline"
@@ -1188,7 +1188,7 @@ export default function NotesPage() {
 
                   {/* EDITOR FOOTER */}
 
-                  <div className="flex items-center justify-between border-t border-white/[0.07] bg-[#17161e] px-4 py-2.5 text-[9px] text-white/15">
+                  <div className="flex items-center justify-between border-t border-white/[0.07] bg-[#080808] px-4 py-2.5 text-[9px] text-white/15">
                     <span>
                       {selectedNote.content.length} characters
                     </span>
@@ -1208,8 +1208,8 @@ export default function NotesPage() {
                 </>
               ) : (
                 <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-purple-400/10 bg-purple-500/[0.05]">
-                    <FileText className="h-7 w-7 text-purple-300/50" />
+                  <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-white/[0.08] bg-white/[0.03]">
+                    <FileText className="h-7 w-7 text-neutral-300/50" />
                   </div>
 
                   <h2 className="mt-5 text-base font-medium text-white/55">
@@ -1225,7 +1225,7 @@ export default function NotesPage() {
                     onClick={() =>
                       createNote(selectedFolderId)
                     }
-                    className="mt-5 flex items-center gap-2 rounded-xl bg-purple-500/10 px-4 py-2.5 text-xs font-medium text-purple-300 ring-1 ring-purple-400/10 transition hover:bg-purple-500/15"
+                    className="mt-5 flex items-center gap-2 rounded-xl bg-white/[0.05] px-4 py-2.5 text-xs font-medium text-neutral-300 ring-1 ring-white/[0.10] transition hover:bg-white/[0.09]"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     New note
@@ -1239,10 +1239,10 @@ export default function NotesPage() {
           {/* BOTTOM SYSTEM BAR                                                 */}
           {/* ---------------------------------------------------------------- */}
 
-          <div className="mt-3 flex items-center justify-between rounded-2xl border border-white/[0.06] bg-[#0e0e12] px-4 py-3">
+          <div className="mt-3 flex items-center justify-between rounded-2xl border border-white/[0.06] bg-[#050505] px-4 py-3">
             <div className="flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-purple-500/10">
-                <Sparkles className="h-3 w-3 text-purple-300" />
+              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/[0.05]">
+                <Sparkles className="h-3 w-3 text-neutral-300" />
               </div>
 
               <span className="text-[10px] font-medium uppercase tracking-[0.16em] text-white/20">
@@ -1278,13 +1278,13 @@ export default function NotesPage() {
             onMouseDown={(event) =>
               event.stopPropagation()
             }
-            className="w-full max-w-md rounded-3xl border border-white/10 bg-[#17161e] p-6 shadow-2xl shadow-black/50"
+            className="w-full max-w-md rounded-3xl border border-white/10 bg-[#080808] p-6 shadow-2xl shadow-black/50"
           >
             <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/10">
-                    <FolderPlus className="h-4 w-4 text-purple-300" />
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.05]">
+                    <FolderPlus className="h-4 w-4 text-neutral-300" />
                   </div>
 
                   <h2 className="text-base font-semibold text-white/85">
@@ -1324,7 +1324,7 @@ export default function NotesPage() {
                 }
               }}
               placeholder="e.g. Startup Ideas"
-              className="mt-6 w-full rounded-xl border border-white/[0.08] bg-black/20 px-4 py-3 text-sm text-white outline-none placeholder:text-white/15 focus:border-purple-400/30"
+              className="mt-6 w-full rounded-xl border border-white/[0.08] bg-black/20 px-4 py-3 text-sm text-white outline-none placeholder:text-white/15 focus:border-white/[0.16]"
             />
 
             <div className="mt-5 flex justify-end gap-2">
@@ -1340,7 +1340,7 @@ export default function NotesPage() {
               <button
                 onClick={createFolder}
                 disabled={!folderName.trim()}
-                className="rounded-xl bg-gradient-to-r from-purple-500 to-fuchsia-500 px-4 py-2.5 text-xs font-semibold text-white transition hover:from-purple-400 hover:to-fuchsia-400 disabled:cursor-not-allowed disabled:opacity-30"
+                className="rounded-xl bg-white px-4 py-2.5 text-xs font-semibold text-white transition hover:from-neutral-200 hover:to-white disabled:cursor-not-allowed disabled:opacity-30"
               >
                 Create folder
               </button>

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  Activity,
+  ArrowLeft,
   ArrowRight,
   Bell,
   CalendarDays,
@@ -14,11 +14,9 @@ import {
   Plus,
   Send,
   Sparkles,
-  Target,
   Trash2,
   X,
   Zap,
-  Bot,
 } from "lucide-react";
 import FloatingSidebar from "@/components/floatingsidebar";
 
@@ -32,140 +30,107 @@ type CalendarEvent = {
 
 type MonoblocCalendarAction =
   | {
-      action: "create";
+      type: "create";
       title: string;
       date: string;
       time: string;
       description?: string;
-      reply: string;
     }
   | {
-      action: "delete";
-      eventTitle?: string;
+      type: "delete";
+      title: string;
       date?: string;
-      reply: string;
     }
   | {
-      action: "list";
-      reply: string;
+      type: "list";
     }
   | {
-      action: "none";
-      reply: string;
+      type: "none";
     };
 
-const getDateKey = (date: Date) => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
+function getDateKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(date.getDate()).padStart(2, "0")}`;
+}
 
-  return `${y}-${m}-${d}`;
-};
-
-const cleanJson = (text: string) => {
+function cleanJson(text: string) {
   return text
-    .trim()
-    .replace(/^```json/i, "")
-    .replace(/^```/i, "")
-    .replace(/```$/i, "")
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
     .trim();
-};
+}
 
 export default function CalendarPage() {
-  const [currentDate, setCurrentDate] = useState(
-    () => new Date(2000, 0, 1)
-  );
-
+  const [currentDate, setCurrentDate] = useState(new Date(2000, 0, 1));
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [showCreate, setShowCreate] = useState(false);
 
-  const [selectedDate, setSelectedDate] = useState(
-    () => new Date(2000, 0, 1)
-  );
+  const [showCreate, setShowCreate] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date(2000, 0, 1));
 
   const [title, setTitle] = useState("");
-  const [time, setTime] = useState("");
+  const [time, setTime] = useState("09:00");
   const [description, setDescription] = useState("");
 
-  const [now, setNow] = useState<Date | null>(null);
+  const [now, setNow] = useState(new Date());
 
   const [monoblocPrompt, setMonoblocPrompt] = useState("");
-  const [MonoblocReply, setMonoblocReply] = useState("");
+  const [monoblocReply, setMonoblocReply] = useState("");
   const [isThinking, setIsThinking] = useState(false);
+
   const [pendingAction, setPendingAction] =
     useState<MonoblocCalendarAction | null>(null);
 
-  /*
-   * HYDRATION-SAFE CLOCK
-   */
   useEffect(() => {
-    const today = new Date();
+    const current = new Date();
 
-    setCurrentDate(today);
-    setSelectedDate(today);
-    setNow(today);
+    setCurrentDate(current);
+    setSelectedDate(current);
+    setNow(current);
 
-    const interval = setInterval(() => {
-      setNow(new Date());
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  /*
-   * LOAD EVENTS
-   */
-  useEffect(() => {
     try {
-      const saved =
+      const stored =
         localStorage.getItem("Monobloc-calendar-events") ||
         localStorage.getItem("calendar-events");
 
-      if (saved) {
-        const parsed = JSON.parse(saved);
+      if (stored) {
+        const parsed = JSON.parse(stored);
 
         if (Array.isArray(parsed)) {
           setEvents(parsed);
         }
       }
     } catch {
-      setEvents([]);
+      console.error("Failed to load calendar events");
     }
+
+    const interval = window.setInterval(() => {
+      setNow(new Date());
+    }, 1000);
+
+    return () => window.clearInterval(interval);
   }, []);
 
-  /*
-   * SAVE EVENTS
-   */
   useEffect(() => {
-    localStorage.setItem(
-      "Monobloc-calendar-events",
-      JSON.stringify(events)
-    );
-
-    localStorage.setItem(
-      "calendar-events",
-      JSON.stringify(events)
-    );
+    try {
+      localStorage.setItem("Monobloc-calendar-events", JSON.stringify(events));
+      localStorage.setItem("calendar-events", JSON.stringify(events));
+    } catch {
+      console.error("Failed to save calendar events");
+    }
   }, [events]);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  const monthName = currentDate.toLocaleDateString("en-US", {
+  const monthName = currentDate.toLocaleString("en-US", {
     month: "long",
   });
 
-  const daysInMonth = new Date(
-    year,
-    month + 1,
-    0
-  ).getDate();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  const firstDay = new Date(
-    year,
-    month,
-    1
-  ).getDay();
+  const firstDay = new Date(year, month, 1).getDay();
 
   const calendarDays = useMemo(() => {
     const days: (number | null)[] = [];
@@ -176,6 +141,10 @@ export default function CalendarPage() {
 
     for (let day = 1; day <= daysInMonth; day++) {
       days.push(day);
+    }
+
+    while (days.length % 7 !== 0) {
+      days.push(null);
     }
 
     return days;
@@ -197,30 +166,32 @@ export default function CalendarPage() {
   };
 
   const selectedDateKey = getDateKey(selectedDate);
+  const todayKey = getDateKey(now);
 
-  const todayKey = now
-    ? getDateKey(now)
-    : getDateKey(currentDate);
+  const selectedEvents = useMemo(() => {
+    return events
+      .filter((event) => event.date === selectedDateKey)
+      .sort((a, b) => a.time.localeCompare(b.time));
+  }, [events, selectedDateKey]);
 
-  const selectedEvents = events
-    .filter((event) => event.date === selectedDateKey)
-    .sort((a, b) => a.time.localeCompare(b.time));
+  const upcomingEvents = useMemo(() => {
+    return [...events]
+      .filter((event) => {
+        return event.date >= todayKey;
+      })
+      .sort((a, b) => {
+        const first = `${a.date} ${a.time}`;
+        const second = `${b.date} ${b.time}`;
 
-  const upcomingEvents = [...events]
-    .filter((event) => event.date >= todayKey)
-    .sort((a, b) => {
-      const dateCompare = a.date.localeCompare(b.date);
-
-      if (dateCompare !== 0) return dateCompare;
-
-      return a.time.localeCompare(b.time);
-    })
-    .slice(0, 3);
+        return first.localeCompare(second);
+      })
+      .slice(0, 3);
+  }, [events, todayKey]);
 
   const createEvent = () => {
-    if (!title.trim() || !time) return;
+    if (!title.trim()) return;
 
-    const newEvent: CalendarEvent = {
+    const event: CalendarEvent = {
       id:
         typeof crypto !== "undefined" && crypto.randomUUID
           ? crypto.randomUUID()
@@ -231,111 +202,92 @@ export default function CalendarPage() {
       description: description.trim() || undefined,
     };
 
-    setEvents((current) => [...current, newEvent]);
+    setEvents((prev) => [...prev, event]);
 
     setTitle("");
-    setTime("");
+    setTime("09:00");
     setDescription("");
     setShowCreate(false);
   };
 
   const deleteEvent = (id: string) => {
-    setEvents((current) =>
-      current.filter((event) => event.id !== id)
-    );
+    setEvents((prev) => prev.filter((event) => event.id !== id));
   };
 
   const sendToMonobloc = async () => {
-    const userMessage = monoblocPrompt.trim();
+    const prompt = monoblocPrompt.trim();
 
-    if (!userMessage || isThinking) return;
+    if (!prompt || isThinking) return;
 
     setIsThinking(true);
     setMonoblocReply("");
     setPendingAction(null);
 
-    const today = new Date();
+    const calendarContext = {
+      today: getDateKey(now),
+      currentTime: now.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      events: events.map((event) => ({
+        title: event.title,
+        date: event.date,
+        time: event.time,
+        description: event.description || "",
+      })),
+    };
 
-    const calendarContext =
-      events.length > 0
-        ? events
-            .sort((a, b) => {
-              const dateCompare = a.date.localeCompare(b.date);
+    const systemInstruction = `
+You are Monobloc Calendar Intelligence.
 
-              if (dateCompare !== 0) return dateCompare;
+You help the user manage their calendar.
 
-              return a.time.localeCompare(b.time);
-            })
-            .map(
-              (event) =>
-                `- "${event.title}" on ${event.date} at ${event.time}${
-                  event.description
-                    ? ` — ${event.description}`
-                    : ""
-                }`
-            )
-            .join("\n")
-        : "No events currently exist.";
-
-    const aiMessage = `You are Monobloc Calendar AI.
-
-IMPORTANT:
-Today is ${getDateKey(today)}.
-Current local time is ${today.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    })}.
+Today's date is ${calendarContext.today}.
+Current time is ${calendarContext.currentTime}.
 
 Existing calendar events:
-${calendarContext}
+${JSON.stringify(calendarContext.events, null, 2)}
 
-Return ONLY valid JSON.
-Do not use Markdown.
-Do not wrap the JSON in \`\`\`.
+The user request is:
+"${prompt}"
 
-Use EXACTLY one of these formats:
+Return ONLY valid JSON using exactly this structure:
 
-For creating an event:
 {
-  "action": "create",
-  "title": "Event title",
-  "date": "YYYY-MM-DD",
-  "time": "HH:MM",
-  "description": "Optional description",
-  "reply": "A short natural confirmation"
+  "reply": "short natural-language response",
+  "action": {
+    "type": "create" | "delete" | "list" | "none",
+    "title": "",
+    "date": "",
+    "time": "",
+    "description": ""
+  }
 }
 
-For deleting an event:
-{
-  "action": "delete",
-  "eventTitle": "Name of event to delete",
-  "date": "YYYY-MM-DD or empty string if unknown",
-  "reply": "A short explanation"
-}
+Rules:
 
-For answering questions about the calendar:
-{
-  "action": "list",
-  "reply": "Helpful answer based ONLY on the existing events"
-}
+1. For creating an event:
+- type must be "create"
+- provide title
+- provide date as YYYY-MM-DD
+- provide time as HH:MM
+- description can be empty
 
-If no calendar action should happen:
-{
-  "action": "none",
-  "reply": "Helpful conversational response"
-}
+2. For deleting an event:
+- type must be "delete"
+- title should identify the event
+- date can be provided if known
 
-RULES:
-- Interpret relative dates such as tomorrow, next Monday, this Friday using today's date.
-- Dates MUST use YYYY-MM-DD.
-- Times MUST use 24-hour HH:MM format.
-- If the user does not specify a time when creating an event, use "09:00".
-- Never invent existing events.
-- Keep reply short and natural.
-- Do not include any text outside JSON.
+3. For listing calendar information:
+- type must be "list"
 
-User request:
-${userMessage}`;
+4. For normal conversation:
+- type must be "none"
+
+Never invent existing events.
+If the user asks for a date relative to today, calculate it correctly.
+Keep reply concise.
+`;
 
     try {
       const response = await fetch("/api/ai", {
@@ -344,104 +296,41 @@ ${userMessage}`;
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message: aiMessage,
+          prompt: systemInstruction,
         }),
       });
 
-      const rawText = await response.text();
+      if (!response.ok) {
+        throw new Error("AI request failed");
+      }
 
-      let apiData: {
-        response?: string;
-        error?: string;
+      const data = await response.json();
+
+      const raw =
+        data?.text ||
+        data?.response ||
+        data?.content ||
+        data?.message ||
+        "";
+
+      const parsed = JSON.parse(cleanJson(raw));
+
+      const action: MonoblocCalendarAction = parsed.action || {
+        type: "none",
       };
 
-      try {
-        apiData = JSON.parse(rawText);
-      } catch {
-        console.error(
-          "Monobloc API returned non-JSON:",
-          rawText
-        );
+      setMonoblocReply(
+        parsed.reply || "I processed your calendar request."
+      );
 
-        setMonoblocReply(
-          "Monobloc couldn't reach the AI system correctly. The API returned an invalid response."
-        );
-
-        return;
-      }
-
-      if (!response.ok) {
-        setMonoblocReply(
-          apiData.error ||
-            "Monobloc couldn't complete that request."
-        );
-
-        return;
-      }
-
-      if (!apiData.response) {
-        setMonoblocReply(
-          "Monobloc received an empty response."
-        );
-
-        return;
-      }
-
-      let action: MonoblocCalendarAction;
-
-      try {
-        action = JSON.parse(
-          cleanJson(apiData.response)
-        ) as MonoblocCalendarAction;
-      } catch {
-        console.error(
-          "Could not parse Monobloc calendar response:",
-          apiData.response
-        );
-
-        setMonoblocReply(apiData.response);
-
-        return;
-      }
-
-      setMonoblocReply(action.reply || "Done.");
-
-      if (action.action === "create") {
-        if (
-          !action.title ||
-          !action.date ||
-          !action.time
-        ) {
-          setMonoblocReply(
-            "I understood that you want to create an event, but some details were missing."
-          );
-
-          return;
-        }
-
-        setPendingAction(action);
-
-        const eventDate = new Date(
-          `${action.date}T12:00:00`
-        );
-
-        if (!Number.isNaN(eventDate.getTime())) {
-          setSelectedDate(eventDate);
-          setCurrentDate(eventDate);
-        }
-      }
-
-      if (action.action === "delete") {
+      if (action.type === "create" || action.type === "delete") {
         setPendingAction(action);
       }
     } catch (error) {
-      console.error(
-        "Monobloc calendar error:",
-        error
-      );
+      console.error(error);
 
       setMonoblocReply(
-        "Connection error. Monobloc couldn't complete that request."
+        "I couldn't process that request right now. Try again."
       );
     } finally {
       setIsThinking(false);
@@ -451,361 +340,281 @@ ${userMessage}`;
   const confirmMonoblocAction = () => {
     if (!pendingAction) return;
 
-    if (pendingAction.action === "create") {
+    if (pendingAction.type === "create") {
       const newEvent: CalendarEvent = {
         id:
-          typeof crypto !== "undefined" &&
-          crypto.randomUUID
+          typeof crypto !== "undefined" && crypto.randomUUID
             ? crypto.randomUUID()
             : `${Date.now()}-${Math.random()}`,
         title: pendingAction.title,
         date: pendingAction.date,
         time: pendingAction.time,
-        description:
-          pendingAction.description?.trim() ||
-          undefined,
+        description: pendingAction.description || undefined,
       };
 
-      setEvents((current) => [
-        ...current,
-        newEvent,
-      ]);
+      setEvents((prev) => [...prev, newEvent]);
 
-      const eventDate = new Date(
-        `${pendingAction.date}T12:00:00`
+      const createdDate = new Date(
+        `${pendingAction.date}T${pendingAction.time || "00:00"}`
       );
 
-      if (!Number.isNaN(eventDate.getTime())) {
-        setSelectedDate(eventDate);
-        setCurrentDate(eventDate);
+      if (!Number.isNaN(createdDate.getTime())) {
+        setSelectedDate(createdDate);
+        setCurrentDate(createdDate);
       }
 
       setMonoblocReply(
-        `Done — **${pendingAction.title}** is now on your calendar.`
+        `Added "${pendingAction.title}" to your calendar.`
       );
     }
 
-    if (pendingAction.action === "delete") {
-      const targetTitle =
-        pendingAction.eventTitle
-          ?.trim()
-          .toLowerCase();
+    if (pendingAction.type === "delete") {
+      const normalizedTitle = pendingAction.title
+        .toLowerCase()
+        .trim();
 
-      if (!targetTitle) {
-        setMonoblocReply(
-          "I couldn't determine which event you wanted to delete."
-        );
+      let deleted = false;
 
-        setPendingAction(null);
+      setEvents((prev) => {
+        const next = prev.filter((event) => {
+          const titleMatches =
+            event.title.toLowerCase().includes(normalizedTitle) ||
+            normalizedTitle.includes(event.title.toLowerCase());
 
-        return;
-      }
+          const dateMatches =
+            !pendingAction.date || event.date === pendingAction.date;
 
-      const matches = events.filter((event) => {
-        const titleLower =
-          event.title.toLowerCase();
+          if (titleMatches && dateMatches && !deleted) {
+            deleted = true;
+            return false;
+          }
 
-        const titleMatches =
-          titleLower === targetTitle ||
-          titleLower.includes(targetTitle) ||
-          targetTitle.includes(titleLower);
+          return true;
+        });
 
-        const dateMatches =
-          !pendingAction.date ||
-          event.date === pendingAction.date;
-
-        return titleMatches && dateMatches;
+        return next;
       });
 
-      if (matches.length === 0) {
-        setMonoblocReply(
-          `I couldn't find a matching event called "${pendingAction.eventTitle}".`
-        );
-
-        setPendingAction(null);
-
-        return;
-      }
-
-      const idsToDelete = new Set(
-        matches.map((event) => event.id)
-      );
-
-      setEvents((current) =>
-        current.filter(
-          (event) => !idsToDelete.has(event.id)
-        )
-      );
-
       setMonoblocReply(
-        `Done — removed ${matches.length} event${
-          matches.length === 1 ? "" : "s"
-        } from your calendar.`
+        deleted
+          ? `Removed "${pendingAction.title}" from your calendar.`
+          : `I couldn't find an event matching "${pendingAction.title}".`
       );
     }
 
     setPendingAction(null);
-    setMonoblocPrompt("");
   };
 
   const cancelMonoblocAction = () => {
     setPendingAction(null);
-    setMonoblocReply(
-      "Okay, I didn't make any changes."
-    );
+    setMonoblocReply("Action cancelled.");
   };
 
-  const currentTime = now
-    ? now.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      })
-    : "--:--:--";
+  const formattedTime = now.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
-  const currentDateText = now
-    ? now.toLocaleDateString("en-US", {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      })
-    : "Loading...";
+  const formattedDate = now.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
 
   return (
-    <div className="relative min-h-screen bg-[#070707] p-4 font-sans text-white antialiased">
-      {/* FLOATING SIDEBAR */}
+    <div className="min-h-screen bg-black text-white">
       <FloatingSidebar />
 
-      {/* MAIN WORKSPACE */}
-      <div className="mx-auto max-w-[1600px] overflow-hidden rounded-[32px] border border-white/10 bg-[#14131a] p-8 pl-20 shadow-2xl sm:pl-24">
-        {/* HEADER */}
-        <header className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-center">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-purple-500/20 bg-purple-500/10 text-purple-400">
-                <CalendarDays size={20} />
-              </div>
-
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-purple-400">
-                  Monobloc / CALENDAR
-                </p>
-
-                <p className="mt-0.5 text-[10px] text-slate-500">
-                  Intelligent scheduling
-                </p>
-              </div>
-            </div>
-
-            <h1 className="mt-4 text-3xl font-semibold tracking-tight text-white">
-              Calendar
-            </h1>
-
-            <p className="mt-1 text-xs text-slate-400">
-              Stay organized. Monobloc keeps your schedule under control.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="hidden rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-right lg:block">
-              <p className="font-mono text-sm font-semibold text-purple-300">
-                {currentTime}
-              </p>
-
-              <p className="mt-0.5 text-[9px] text-slate-500">
-                {currentDateText}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white"
-            >
-              <Bell size={18} />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedDate(new Date());
-                setShowCreate(true);
-              }}
-              className="flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-purple-500/20 transition hover:opacity-90"
-            >
-              <Plus size={16} />
-              Add Event
-            </button>
-
-            <div className="ml-1 flex items-center gap-3 rounded-full border border-white/10 bg-white/5 p-1.5 pr-4">
-              <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-purple-400 to-pink-400 p-0.5">
-                <div className="h-full w-full rounded-full bg-[#17151f]" />
-              </div>
-
-              <div className="text-left">
-                <p className="text-xs font-medium text-white">
-                  Monobloc User
-                </p>
-
-                <p className="text-[10px] text-slate-500">
-                  user@Monobloc.app
-                </p>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* METRICS */}
-        <section className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <MetricCard
-            icon={<CalendarDays size={16} />}
-            label="Events"
-            value={String(events.length)}
-            subtext="Total scheduled"
-          />
-
-          <MetricCard
-            icon={<Clock3 size={16} />}
-            label="Today"
-            value={String(
-              events.filter(
-                (event) => event.date === todayKey
-              ).length
-            )}
-            subtext="Today's events"
-          />
-
-          <MetricCard
-            icon={<Activity size={16} />}
-            label="Upcoming"
-            value={String(
-              events.filter(
-                (event) => event.date >= todayKey
-              ).length
-            )}
-            subtext="Future events"
-          />
-
-          <MetricCard
-            icon={<Target size={16} />}
-            label="System"
-            value="ON"
-            subtext="Calendar active"
-          />
-        </section>
-
-        {/* AI PROGRESS / COMMAND BANNER */}
-        <section className="relative mb-6 overflow-hidden rounded-3xl border border-white/5 bg-gradient-to-r from-[#251f33] via-[#1b1924] to-[#181622] p-6">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-500/10 text-purple-400">
-                  <Sparkles size={16} />
+      <main className="min-h-screen pl-0 lg:pl-[76px]">
+        <div className="min-h-screen bg-black">
+          {/* HEADER */}
+          <header className="border-b border-white/[0.07] px-6 py-5 lg:px-10">
+            <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/[0.08] bg-[#080808]">
+                  <CalendarDays size={19} strokeWidth={1.7} />
                 </div>
 
-                <span className="text-xs font-semibold uppercase tracking-wider text-purple-400">
-                  Monobloc Intelligence
-                </span>
+                <div>
+                  <div className="mb-0.5 text-[10px] font-medium uppercase tracking-[0.22em] text-neutral-500">
+                    Monobloc
+                  </div>
+
+                  <h1 className="text-xl font-semibold tracking-tight">
+                    Calendar
+                  </h1>
+
+                  <p className="mt-0.5 text-xs text-neutral-500">
+                    Your schedule, organized by Monobloc.
+                  </p>
+                </div>
               </div>
 
-              <h2 className="mt-3 text-xl font-semibold text-white sm:text-2xl">
-                Your schedule, handled by Monobloc.
-              </h2>
+              <div className="hidden items-center gap-7 md:flex">
+                <div className="text-right">
+                  <div className="flex items-center justify-end gap-2 text-xs text-neutral-500">
+                    <Clock3 size={13} />
+                    Local time
+                  </div>
 
-              <p className="mt-1 text-xs text-slate-400">
-                Ask Monobloc to create events, remove events, or tell you what is coming up.
-              </p>
+                  <div className="mt-1 text-sm font-medium text-neutral-200">
+                    {formattedTime}
+                  </div>
+                </div>
 
-              <div className="mt-5 flex gap-2">
-                <input
-                  value={monoblocPrompt}
-                  onChange={(e) =>
-                    setMonoblocPrompt(e.target.value)
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      sendToMonobloc();
-                    }
-                  }}
-                  placeholder='Try: "Schedule physics tomorrow at 6 PM"'
-                  disabled={isThinking}
-                  className="h-11 min-w-0 flex-1 rounded-xl border border-white/10 bg-[#14131a] px-4 text-xs text-white outline-none transition placeholder:text-slate-600 focus:border-purple-500/50 disabled:opacity-60"
-                />
+                <div className="h-8 w-px bg-white/[0.08]" />
+
+                <div className="text-right">
+                  <div className="text-xs text-neutral-500">Today</div>
+
+                  <div className="mt-1 text-sm font-medium text-neutral-200">
+                    {formattedDate}
+                  </div>
+                </div>
 
                 <button
                   type="button"
-                  onClick={sendToMonobloc}
-                  disabled={
-                    !monoblocPrompt.trim() ||
-                    isThinking
-                  }
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.08] bg-[#080808] text-neutral-400 transition hover:border-white/[0.15] hover:bg-[#111111] hover:text-white"
                 >
-                  {isThinking ? (
-                    <Loader2
-                      size={17}
-                      className="animate-spin"
-                    />
-                  ) : (
-                    <Send size={16} />
-                  )}
+                  <Bell size={16} />
                 </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowCreate(true)}
+                className="flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-black transition hover:bg-neutral-200"
+              >
+                <Plus size={16} />
+                Add Event
+              </button>
+            </div>
+          </header>
+
+          <div className="mx-auto max-w-[1600px] px-6 py-7 lg:px-10">
+            {/* METRICS */}
+            <section className="mb-7 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <MetricCard
+                label="Events"
+                value={events.length}
+                icon={<CalendarDays size={15} />}
+              />
+
+              <MetricCard
+                label="Today"
+                value={
+                  events.filter((event) => event.date === todayKey).length
+                }
+                icon={<Clock3 size={15} />}
+              />
+
+              <MetricCard
+                label="Upcoming"
+                value={upcomingEvents.length}
+                icon={<ArrowRight size={15} />}
+              />
+
+              <MetricCard
+                label="System"
+                value="Ready"
+                icon={<Zap size={15} />}
+              />
+            </section>
+
+            {/* MONOBLOC INTELLIGENCE */}
+            <section className="mb-7 rounded-2xl border border-white/[0.07] bg-[#050505] p-5">
+              <div className="mb-4 flex items-start justify-between gap-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/[0.08] bg-[#0A0A0A]">
+                    <Sparkles size={16} />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-sm font-medium">
+                        Monobloc Intelligence
+                      </h2>
+
+                      <span className="rounded-full border border-white/[0.08] px-2 py-0.5 text-[9px] uppercase tracking-wider text-neutral-500">
+                        AI
+                      </span>
+                    </div>
+
+                    <p className="mt-1 text-xs text-neutral-500">
+                      Tell Monobloc what you need to schedule.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <div className="relative flex-1">
+                  <input
+                    value={monoblocPrompt}
+                    onChange={(event) =>
+                      setMonoblocPrompt(event.target.value)
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        sendToMonobloc();
+                      }
+                    }}
+                    placeholder='Try "Schedule a meeting tomorrow at 4pm"...'
+                    className="h-11 w-full rounded-lg border border-white/[0.08] bg-[#0A0A0A] px-4 pr-12 text-sm text-white outline-none placeholder:text-neutral-600 focus:border-white/[0.18]"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={sendToMonobloc}
+                    disabled={!monoblocPrompt.trim() || isThinking}
+                    className="absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-md bg-white text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-neutral-600"
+                  >
+                    {isThinking ? (
+                      <Loader2 size={15} className="animate-spin" />
+                    ) : (
+                      <Send size={15} />
+                    )}
+                  </button>
+                </div>
               </div>
 
               <div className="mt-3 flex flex-wrap gap-2">
                 {[
-                  "Schedule study tomorrow at 6 PM",
-                  "What do I have this week?",
-                  "Add a meeting Monday at 4 PM",
+                  "What's on my calendar today?",
+                  "Schedule a meeting tomorrow at 4pm",
+                  "Delete my meeting tomorrow",
                 ].map((example) => (
                   <button
                     key={example}
                     type="button"
-                    onClick={() =>
-                      setMonoblocPrompt(example)
-                    }
-                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[9px] text-slate-400 transition hover:bg-white/10 hover:text-white"
+                    onClick={() => setMonoblocPrompt(example)}
+                    className="rounded-md border border-white/[0.06] bg-[#080808] px-3 py-1.5 text-[11px] text-neutral-500 transition hover:border-white/[0.12] hover:bg-[#111111] hover:text-neutral-300"
                   >
                     {example}
                   </button>
                 ))}
               </div>
 
-              {(MonoblocReply || isThinking) && (
-                <div className="mt-4 rounded-2xl border border-white/10 bg-[#14131a] p-4">
-                  <div className="flex gap-3">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-purple-500/10 text-purple-400">
-                      <Bot size={14} />
+              {monoblocReply && (
+                <div className="mt-4 rounded-xl border border-white/[0.07] bg-[#080808] p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5">
+                      <Sparkles size={14} className="text-neutral-400" />
                     </div>
 
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-purple-400">
-                        Monobloc
+                    <div className="flex-1">
+                      <p className="text-sm leading-6 text-neutral-300">
+                        {monoblocReply}
                       </p>
 
-                      {isThinking ? (
-                        <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
-                          <Loader2
-                            size={13}
-                            className="animate-spin text-purple-400"
-                          />
-                          Thinking through your schedule...
-                        </div>
-                      ) : (
-                        <p className="mt-1 text-xs leading-6 text-slate-300">
-                          {MonoblocReply}
-                        </p>
-                      )}
-
                       {pendingAction &&
-                        !isThinking && (
-                          <div className="mt-4 flex flex-wrap gap-2">
+                        (pendingAction.type === "create" ||
+                          pendingAction.type === "delete") && (
+                          <div className="mt-3 flex gap-2">
                             <button
                               type="button"
-                              onClick={
-                                confirmMonoblocAction
-                              }
-                              className="flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-2 text-[10px] font-semibold text-white transition hover:opacity-90"
+                              onClick={confirmMonoblocAction}
+                              className="flex items-center gap-2 rounded-md bg-white px-3 py-2 text-xs font-medium text-black transition hover:bg-neutral-200"
                             >
                               <Check size={13} />
                               Confirm
@@ -813,10 +622,8 @@ ${userMessage}`;
 
                             <button
                               type="button"
-                              onClick={
-                                cancelMonoblocAction
-                              }
-                              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[10px] font-medium text-slate-400 transition hover:bg-white/10 hover:text-white"
+                              onClick={cancelMonoblocAction}
+                              className="rounded-md border border-white/[0.08] px-3 py-2 text-xs text-neutral-400 transition hover:bg-[#111111] hover:text-white"
                             >
                               Cancel
                             </button>
@@ -826,519 +633,438 @@ ${userMessage}`;
                   </div>
                 </div>
               )}
-            </div>
+            </section>
 
-            {/* UPCOMING SUMMARY */}
-            <div className="min-w-[220px] lg:pr-5">
+            {/* UPCOMING */}
+            <section className="mb-7">
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                  Upcoming
-                </p>
-
-                <CalendarDays
-                  size={15}
-                  className="text-purple-400"
-                />
+                <div>
+                  <h2 className="text-sm font-medium">Upcoming</h2>
+                  <p className="mt-0.5 text-xs text-neutral-600">
+                    Your next scheduled events.
+                  </p>
+                </div>
               </div>
 
               {upcomingEvents.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-5 text-center">
-                  <p className="text-xs text-slate-500">
-                    Nothing upcoming.
+                <div className="rounded-xl border border-dashed border-white/[0.07] bg-[#050505] px-5 py-8 text-center">
+                  <CalendarDays
+                    size={18}
+                    className="mx-auto mb-2 text-neutral-700"
+                  />
+                  <p className="text-xs text-neutral-600">
+                    No upcoming events.
                   </p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="grid gap-3 md:grid-cols-3">
                   {upcomingEvents.map((event) => (
-                    <div
+                    <button
                       key={event.id}
-                      className="rounded-xl border border-white/5 bg-white/[0.03] p-3"
-                    >
-                      <p className="truncate text-xs font-medium text-white">
-                        {event.title}
-                      </p>
+                      type="button"
+                      onClick={() => {
+                        const date = new Date(`${event.date}T${event.time}`);
 
-                      <p className="mt-1 text-[10px] text-purple-400">
-                        {event.date} · {event.time}
-                      </p>
-                    </div>
+                        if (!Number.isNaN(date.getTime())) {
+                          setSelectedDate(date);
+                          setCurrentDate(date);
+                        }
+                      }}
+                      className="group rounded-xl border border-white/[0.07] bg-[#050505] p-4 text-left transition hover:border-white/[0.13] hover:bg-[#080808]"
+                    >
+                      <div className="mb-3 flex items-center justify-between">
+                        <span className="text-[10px] uppercase tracking-[0.15em] text-neutral-600">
+                          {event.date}
+                        </span>
+
+                        <span className="text-xs text-neutral-500">
+                          {event.time}
+                        </span>
+                      </div>
+
+                      <div className="truncate text-sm font-medium text-neutral-200">
+                        {event.title}
+                      </div>
+
+                      {event.description && (
+                        <p className="mt-1 truncate text-xs text-neutral-600">
+                          {event.description}
+                        </p>
+                      )}
+                    </button>
                   ))}
                 </div>
               )}
-            </div>
-          </div>
-        </section>
+            </section>
 
-        {/* MAIN GRID */}
-        <div className="grid gap-6 xl:grid-cols-12">
-          {/* CALENDAR */}
-          <section className="rounded-3xl border border-white/5 bg-[#1b1924] p-6 xl:col-span-8">
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <CalendarDays
-                    size={16}
-                    className="text-purple-400"
-                  />
+            {/* CALENDAR + SIDE PANEL */}
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_310px]">
+              {/* CALENDAR */}
+              <section className="overflow-hidden rounded-2xl border border-white/[0.07] bg-[#050505]">
+                <div className="flex flex-col gap-4 border-b border-white/[0.07] p-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold tracking-tight">
+                      {monthName} {year}
+                    </h2>
 
-                  <h3 className="text-sm font-semibold text-white">
-                    Calendar
-                  </h3>
+                    <p className="mt-1 text-xs text-neutral-600">
+                      Select a date to view or manage events.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={goToday}
+                      className="mr-2 rounded-md border border-white/[0.07] px-3 py-2 text-xs text-neutral-400 transition hover:bg-[#111111] hover:text-white"
+                    >
+                      Today
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={previousMonth}
+                      className="flex h-8 w-8 items-center justify-center rounded-md border border-white/[0.07] text-neutral-500 transition hover:bg-[#111111] hover:text-white"
+                    >
+                      <ChevronLeft size={15} />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={nextMonth}
+                      className="flex h-8 w-8 items-center justify-center rounded-md border border-white/[0.07] text-neutral-500 transition hover:bg-[#111111] hover:text-white"
+                    >
+                      <ChevronRight size={15} />
+                    </button>
+                  </div>
                 </div>
 
-                <p className="mt-1 text-[10px] text-slate-500">
-                  Select a date to view scheduled events.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={goToday}
-                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-medium text-slate-400 transition hover:bg-white/10 hover:text-white"
-                >
-                  Today
-                </button>
-
-                <button
-                  type="button"
-                  onClick={previousMonth}
-                  aria-label="Previous month"
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white"
-                >
-                  <ChevronLeft size={15} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={nextMonth}
-                  aria-label="Next month"
-                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white"
-                >
-                  <ChevronRight size={15} />
-                </button>
-              </div>
-            </div>
-
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">
-                {monthName} {year}
-              </h2>
-
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-purple-400" />
-                <span className="text-[10px] text-slate-500">
-                  {events.length} events
-                </span>
-              </div>
-            </div>
-
-            {/* WEEKDAYS */}
-            <div className="mb-2 grid grid-cols-7">
-              {[
-                "SUN",
-                "MON",
-                "TUE",
-                "WED",
-                "THU",
-                "FRI",
-                "SAT",
-              ].map((day) => (
-                <div
-                  key={day}
-                  className="py-2 text-center text-[9px] font-semibold tracking-[0.15em] text-slate-600"
-                >
-                  {day}
-                </div>
-              ))}
-            </div>
-
-            {/* CALENDAR GRID */}
-            <div className="grid grid-cols-7 overflow-hidden rounded-2xl border border-white/5">
-              {calendarDays.map((day, index) => {
-                if (day === null) {
-                  return (
+                <div className="grid grid-cols-7 border-b border-white/[0.07]">
+                  {[
+                    "SUN",
+                    "MON",
+                    "TUE",
+                    "WED",
+                    "THU",
+                    "FRI",
+                    "SAT",
+                  ].map((day) => (
                     <div
-                      key={`empty-${index}`}
-                      className="min-h-[105px] border-b border-r border-white/5 bg-black/10"
-                    />
-                  );
-                }
-
-                const date = new Date(
-                  year,
-                  month,
-                  day
-                );
-
-                const key = getDateKey(date);
-
-                const dayEvents = events.filter(
-                  (event) => event.date === key
-                );
-
-                const isToday =
-                  key === todayKey;
-
-                const isSelected =
-                  key === selectedDateKey;
-
-                return (
-                  <button
-                    type="button"
-                    key={day}
-                    onClick={() =>
-                      setSelectedDate(date)
-                    }
-                    className={`group relative min-h-[105px] min-w-0 border-b border-r border-white/5 p-2.5 text-left transition ${
-                      isSelected
-                        ? "bg-purple-500/[0.08]"
-                        : "bg-white/[0.01] hover:bg-white/[0.04]"
-                    }`}
-                  >
-                    <div
-                      className={`flex h-7 w-7 items-center justify-center rounded-lg text-xs font-semibold transition ${
-                        isToday
-                          ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/20"
-                          : isSelected
-                          ? "bg-purple-500/10 text-purple-300"
-                          : "text-slate-500 group-hover:text-white"
-                      }`}
+                      key={day}
+                      className="border-r border-white/[0.05] px-2 py-3 text-center text-[9px] font-medium tracking-[0.15em] text-neutral-600 last:border-r-0"
                     >
                       {day}
                     </div>
-
-                    <div className="mt-2 space-y-1">
-                      {dayEvents
-                        .slice(0, 2)
-                        .map((event) => (
-                          <div
-                            key={event.id}
-                            className="truncate rounded-md border border-purple-500/10 bg-purple-500/10 px-1.5 py-1 text-[9px] text-purple-300"
-                          >
-                            {event.title}
-                          </div>
-                        ))}
-
-                      {dayEvents.length > 2 && (
-                        <p className="px-1 text-[9px] text-slate-600">
-                          +
-                          {dayEvents.length - 2}{" "}
-                          more
-                        </p>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          {/* RIGHT SIDE */}
-          <aside className="space-y-6 xl:col-span-4">
-            {/* SELECTED DATE */}
-            <section className="rounded-3xl border border-white/5 bg-[#1b1924] p-6">
-              <div className="mb-5 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                    Selected Date
-                  </p>
-
-                  <h2 className="mt-1 text-lg font-semibold text-white">
-                    {selectedDate.toLocaleDateString(
-                      "en-US",
-                      {
-                        weekday: "long",
-                        month: "short",
-                        day: "numeric",
-                      }
-                    )}
-                  </h2>
+                  ))}
                 </div>
 
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
-                  <Clock3 size={17} />
-                </div>
-              </div>
-
-              {selectedEvents.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/[0.01] p-8 text-center">
-                  <CalendarDays
-                    size={25}
-                    className="text-slate-600"
-                  />
-
-                  <p className="mt-3 text-xs font-medium text-slate-400">
-                    Nothing scheduled
-                  </p>
-
-                  <p className="mt-1 text-[10px] text-slate-600">
-                    This day is currently clear.
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowCreate(true)
+                <div className="grid grid-cols-7">
+                  {calendarDays.map((day, index) => {
+                    if (!day) {
+                      return (
+                        <div
+                          key={`empty-${index}`}
+                          className="min-h-[105px] border-b border-r border-white/[0.05] bg-[#020202]"
+                        />
+                      );
                     }
-                    className="mt-4 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[10px] font-medium text-slate-300 transition hover:bg-white/10 hover:text-white"
-                  >
-                    Add Event
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {selectedEvents.map(
-                    (event) => (
-                      <div
-                        key={event.id}
-                        className="group rounded-2xl border border-white/5 bg-white/[0.02] p-4 transition hover:bg-white/5"
+
+                    const date = new Date(year, month, day);
+                    const dateKey = getDateKey(date);
+
+                    const dayEvents = events
+                      .filter((event) => event.date === dateKey)
+                      .sort((a, b) =>
+                        a.time.localeCompare(b.time)
+                      );
+
+                    const isToday = dateKey === todayKey;
+                    const isSelected = dateKey === selectedDateKey;
+
+                    return (
+                      <button
+                        key={dateKey}
+                        type="button"
+                        onClick={() => setSelectedDate(date)}
+                        className={`group relative min-h-[105px] border-b border-r border-white/[0.05] p-2 text-left transition ${
+                          isSelected
+                            ? "bg-[#0A0A0A]"
+                            : "bg-black hover:bg-[#080808]"
+                        }`}
                       >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="break-words text-xs font-semibold text-white">
-                              {event.title}
-                            </p>
-
-                            <p className="mt-1.5 flex items-center gap-1.5 text-[10px] text-purple-400">
-                              <Clock3 size={11} />
-                              {event.time}
-                            </p>
-
-                            {event.description && (
-                              <p className="mt-2 break-words text-[10px] leading-5 text-slate-500">
-                                {event.description}
-                              </p>
-                            )}
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              deleteEvent(
-                                event.id
-                              )
-                            }
-                            className="shrink-0 opacity-0 transition group-hover:opacity-100"
-                            aria-label={`Delete ${event.title}`}
+                        <div className="flex items-center justify-between">
+                          <span
+                            className={`flex h-7 w-7 items-center justify-center rounded-full text-xs ${
+                              isToday
+                                ? "bg-white font-semibold text-black"
+                                : isSelected
+                                ? "border border-white/[0.12] text-white"
+                                : "text-neutral-500 group-hover:text-neutral-300"
+                            }`}
                           >
-                            <Trash2
-                              size={14}
-                              className="text-slate-600 transition hover:text-rose-400"
-                            />
-                          </button>
+                            {day}
+                          </span>
+
+                          {dayEvents.length > 0 && (
+                            <span className="text-[9px] text-neutral-700">
+                              {dayEvents.length}
+                            </span>
+                          )}
                         </div>
+
+                        <div className="mt-2 space-y-1">
+                          {dayEvents.slice(0, 3).map((event) => (
+                            <div
+                              key={event.id}
+                              className="truncate rounded border border-white/[0.06] bg-[#0A0A0A] px-1.5 py-1 text-[9px] text-neutral-400"
+                            >
+                              <span className="mr-1 text-neutral-600">
+                                {event.time}
+                              </span>
+                              {event.title}
+                            </div>
+                          ))}
+
+                          {dayEvents.length > 3 && (
+                            <div className="px-1.5 text-[9px] text-neutral-700">
+                              +{dayEvents.length - 3} more
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* RIGHT PANEL */}
+              <aside className="space-y-5">
+                {/* SELECTED DATE */}
+                <section className="rounded-2xl border border-white/[0.07] bg-[#050505] p-5">
+                  <div className="mb-4 flex items-start justify-between">
+                    <div>
+                      <div className="text-[9px] font-medium uppercase tracking-[0.18em] text-neutral-600">
+                        Selected date
                       </div>
-                    )
+
+                      <h3 className="mt-1 text-base font-medium">
+                        {selectedDate.toLocaleDateString("en-US", {
+                          weekday: "long",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </h3>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowCreate(true)}
+                      className="flex h-8 w-8 items-center justify-center rounded-md border border-white/[0.07] text-neutral-400 transition hover:bg-[#111111] hover:text-white"
+                    >
+                      <Plus size={15} />
+                    </button>
+                  </div>
+
+                  {selectedEvents.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-white/[0.07] px-4 py-7 text-center">
+                      <p className="text-xs text-neutral-600">
+                        Nothing scheduled.
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowCreate(true)}
+                        className="mt-3 text-xs text-neutral-400 underline underline-offset-4 hover:text-white"
+                      >
+                        Create an event
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedEvents.map((event) => (
+                        <div
+                          key={event.id}
+                          className="group rounded-lg border border-white/[0.06] bg-[#080808] p-3"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-white" />
+
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="truncate text-xs font-medium text-neutral-200">
+                                    {event.title}
+                                  </div>
+
+                                  <div className="mt-1 text-[10px] text-neutral-600">
+                                    {event.time}
+                                  </div>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => deleteEvent(event.id)}
+                                  className="opacity-0 transition group-hover:opacity-100"
+                                >
+                                  <Trash2
+                                    size={13}
+                                    className="text-red-400/70 hover:text-red-400"
+                                  />
+                                </button>
+                              </div>
+
+                              {event.description && (
+                                <p className="mt-2 text-[10px] leading-4 text-neutral-600">
+                                  {event.description}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
-                </div>
-              )}
-            </section>
+                </section>
 
-            {/* SYSTEM STATUS */}
-            <section className="rounded-3xl border border-white/5 bg-[#1b1924] p-6">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
-                  <Zap size={16} />
-                </div>
+                {/* SYSTEM STATUS */}
+                <section className="rounded-2xl border border-white/[0.07] bg-[#050505] p-5">
+                  <div className="mb-4 text-[9px] font-medium uppercase tracking-[0.18em] text-neutral-600">
+                    System status
+                  </div>
 
-                <div>
-                  <h3 className="text-sm font-semibold text-white">
-                    Calendar System
-                  </h3>
+                  <div className="space-y-3">
+                    <StatusRow
+                      label="Calendar"
+                      value="Synced"
+                      active
+                    />
 
-                  <p className="mt-0.5 text-[10px] text-slate-500">
-                    AI-assisted workspace
-                  </p>
-                </div>
-              </div>
+                    <StatusRow
+                      label="Local storage"
+                      value="Connected"
+                      active
+                    />
 
-              <div className="mt-5 space-y-2.5">
-                <StatusRow
-                  label="Calendar System"
-                  value="ONLINE"
-                  active
-                />
+                    <StatusRow
+                      label="Monobloc AI"
+                      value={isThinking ? "Thinking" : "Ready"}
+                      active={!isThinking}
+                    />
+                  </div>
+                </section>
 
-                <StatusRow
-                  label="Monobloc Intelligence"
-                  value="ONLINE"
-                  active
-                />
+                {/* QUICK NAVIGATION */}
+                <section className="rounded-2xl border border-white/[0.07] bg-[#050505] p-5">
+                  <div className="mb-4 text-[9px] font-medium uppercase tracking-[0.18em] text-neutral-600">
+                    Quick navigation
+                  </div>
 
-                <StatusRow
-                  label="Events Stored"
-                  value={String(events.length)}
-                  active={
-                    events.length > 0
-                  }
-                />
+                  <div className="space-y-1">
+                    <QuickLink
+                      label="Previous month"
+                      icon={<ArrowLeft size={13} />}
+                      onClick={previousMonth}
+                    />
 
-                <StatusRow
-                  label="Storage"
-                  value="LOCAL"
-                  active
-                />
-              </div>
-            </section>
+                    <QuickLink
+                      label="Today"
+                      icon={<CalendarDays size={13} />}
+                      onClick={goToday}
+                    />
 
-            {/* QUICK LINKS */}
-            <section className="rounded-3xl border border-white/5 bg-[#1b1924] p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-white">
-                  Quick Navigation
-                </h3>
-
-                <ArrowRight
-                  size={15}
-                  className="text-slate-600"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <QuickLink
-                  href="/tasks"
-                  icon={<Target size={14} />}
-                  label="Mission Control"
-                />
-
-                <QuickLink
-                  href="/goals"
-                  icon={<Target size={14} />}
-                  label="Goals"
-                />
-
-                <QuickLink
-                  href="/tutor"
-                  icon={<Sparkles size={14} />}
-                  label="Monobloc Tutor"
-                />
-              </div>
-            </section>
-          </aside>
+                    <QuickLink
+                      label="Next month"
+                      icon={<ArrowRight size={13} />}
+                      onClick={nextMonth}
+                    />
+                  </div>
+                </section>
+              </aside>
+            </div>
+          </div>
         </div>
-      </div>
+      </main>
 
       {/* CREATE EVENT MODAL */}
       {showCreate && (
-        <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/75 px-5 backdrop-blur-sm"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
-              setShowCreate(false);
-            }
-          }}
-        >
-          <div className="w-full max-w-[460px] rounded-3xl border border-white/10 bg-[#1b1924] p-6 shadow-2xl">
-            <div className="mb-6 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-white/[0.09] bg-[#080808] shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-purple-400">
-                  New Event
-                </p>
+                <h2 className="text-sm font-medium">Create event</h2>
 
-                <h2 className="mt-1 text-xl font-semibold text-white">
-                  Add to Calendar
-                </h2>
+                <p className="mt-1 text-xs text-neutral-600">
+                  {selectedDate.toLocaleDateString("en-US", {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </p>
               </div>
 
               <button
                 type="button"
-                onClick={() =>
-                  setShowCreate(false)
-                }
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-slate-500 transition hover:bg-white/10 hover:text-white"
+                onClick={() => setShowCreate(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-md text-neutral-500 transition hover:bg-[#111111] hover:text-white"
               >
                 <X size={16} />
               </button>
             </div>
 
-            <div className="mb-5 rounded-2xl border border-purple-500/10 bg-purple-500/[0.05] px-4 py-3">
-              <p className="text-[10px] text-purple-300">
-                Scheduling for{" "}
-                {selectedDate.toLocaleDateString(
-                  "en-US",
-                  {
-                    weekday: "long",
-                    month: "long",
-                    day: "numeric",
-                  }
-                )}
-              </p>
-            </div>
-
-            <div className="space-y-4">
+            <div className="space-y-4 p-5">
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-300">
-                  Event Name
+                <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.15em] text-neutral-600">
+                  Title
                 </label>
 
                 <input
                   value={title}
-                  onChange={(e) =>
-                    setTitle(e.target.value)
-                  }
-                  placeholder="What do you need to remember?"
-                  className="h-11 w-full rounded-2xl border border-white/10 bg-[#14131a] px-4 text-xs text-white outline-none transition placeholder:text-slate-600 focus:border-purple-500/50"
+                  onChange={(event) => setTitle(event.target.value)}
                   autoFocus
+                  placeholder="Event title"
+                  className="h-11 w-full rounded-lg border border-white/[0.08] bg-[#0A0A0A] px-3 text-sm text-white outline-none placeholder:text-neutral-700 focus:border-white/[0.18]"
                 />
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-300">
+                <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.15em] text-neutral-600">
                   Time
                 </label>
 
                 <input
                   type="time"
                   value={time}
-                  onChange={(e) =>
-                    setTime(e.target.value)
-                  }
-                  className="h-11 w-full rounded-2xl border border-white/10 bg-[#14131a] px-4 text-xs text-white outline-none focus:border-purple-500/50"
+                  onChange={(event) => setTime(event.target.value)}
+                  className="h-11 w-full rounded-lg border border-white/[0.08] bg-[#0A0A0A] px-3 text-sm text-white outline-none focus:border-white/[0.18]"
                 />
               </div>
 
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-slate-300">
+                <label className="mb-2 block text-[10px] font-medium uppercase tracking-[0.15em] text-neutral-600">
                   Description
                 </label>
 
                 <textarea
                   value={description}
-                  onChange={(e) =>
-                    setDescription(
-                      e.target.value
-                    )
+                  onChange={(event) =>
+                    setDescription(event.target.value)
                   }
-                  placeholder="Optional details..."
                   rows={3}
-                  className="w-full resize-none rounded-2xl border border-white/10 bg-[#14131a] p-4 text-xs text-white outline-none placeholder:text-slate-600 focus:border-purple-500/50"
+                  placeholder="Optional description"
+                  className="w-full resize-none rounded-lg border border-white/[0.08] bg-[#0A0A0A] px-3 py-3 text-sm text-white outline-none placeholder:text-neutral-700 focus:border-white/[0.18]"
                 />
               </div>
 
-              <div className="flex gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowCreate(false)
-                  }
-                  className="flex-1 rounded-full border border-white/10 bg-white/5 py-2.5 text-xs font-medium text-slate-400 transition hover:bg-white/10 hover:text-white"
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="button"
-                  onClick={createEvent}
-                  disabled={
-                    !title.trim() || !time
-                  }
-                  className="flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 py-2.5 text-xs font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30"
-                >
-                  <Plus size={15} />
-                  Create Event
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={createEvent}
+                disabled={!title.trim()}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-white text-sm font-medium text-black transition hover:bg-neutral-200 disabled:cursor-not-allowed disabled:bg-neutral-800 disabled:text-neutral-600"
+              >
+                <Check size={15} />
+                Create event
+              </button>
             </div>
           </div>
         </div>
@@ -1347,40 +1073,28 @@ ${userMessage}`;
   );
 }
 
-/* =========================================================
-   COMPONENTS
-========================================================= */
-
 function MetricCard({
-  icon,
   label,
   value,
-  subtext,
+  icon,
 }: {
-  icon: React.ReactNode;
   label: string;
-  value: string;
-  subtext: string;
+  value: string | number;
+  icon: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-white/5 bg-[#1b1924] p-4 transition hover:bg-white/5">
+    <div className="rounded-xl border border-white/[0.07] bg-[#050505] p-4">
       <div className="flex items-center justify-between">
-        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/5 text-slate-300">
-          {icon}
-        </div>
-
-        <span className="text-[10px] text-slate-500">
+        <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-neutral-600">
           {label}
         </span>
+
+        <span className="text-neutral-600">{icon}</span>
       </div>
 
-      <p className="mt-3 text-2xl font-bold text-white">
+      <div className="mt-3 text-xl font-semibold tracking-tight">
         {value}
-      </p>
-
-      <p className="mt-0.5 text-[10px] text-slate-400">
-        {subtext}
-      </p>
+      </div>
     </div>
   );
 }
@@ -1388,54 +1102,48 @@ function MetricCard({
 function StatusRow({
   label,
   value,
-  active,
+  active = false,
 }: {
   label: string;
   value: string;
-  active: boolean;
+  active?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] p-2.5">
-      <span className="text-xs text-slate-400">
-        {label}
-      </span>
+    <div className="flex items-center justify-between">
+      <span className="text-xs text-neutral-500">{label}</span>
 
-      <span
-        className={`text-xs font-semibold ${
-          active
-            ? "text-purple-400"
-            : "text-slate-500"
-        }`}
-      >
-        {value}
-      </span>
+      <div className="flex items-center gap-2">
+        <span
+          className={`h-1.5 w-1.5 rounded-full ${
+            active ? "bg-white" : "bg-neutral-700"
+          }`}
+        />
+
+        <span className="text-[10px] text-neutral-600">
+          {value}
+        </span>
+      </div>
     </div>
   );
 }
 
 function QuickLink({
-  href,
-  icon,
   label,
+  icon,
+  onClick,
 }: {
-  href: string;
-  icon: React.ReactNode;
   label: string;
+  icon: React.ReactNode;
+  onClick: () => void;
 }) {
   return (
-    <a
-      href={href}
-      className="flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] px-3.5 py-3 text-xs text-slate-400 transition hover:bg-white/5 hover:text-white"
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-xs text-neutral-500 transition hover:bg-[#0A0A0A] hover:text-white"
     >
-      <span className="flex items-center gap-2">
-        <span className="text-purple-400">
-          {icon}
-        </span>
-
-        {label}
-      </span>
-
-      <ArrowRight size={13} />
-    </a>
+      <span className="text-neutral-600">{icon}</span>
+      {label}
+    </button>
   );
 }
